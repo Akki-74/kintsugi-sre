@@ -406,7 +406,7 @@ def engineer_temporal_and_multimodal_features(df: pd.DataFrame, baseline_stats: 
 
 def build_pipeline():
     print("=================================================================")
-    print("🚀 KUBEPULSE AI — PHASE 1 MULTI-MODAL DATA PIPELINE (NEZHA)")
+    print("🚀 KINTSUGI-AI — PHASE 1 MULTI-MODAL DATA PIPELINE (NEZHA)")
     print("=================================================================")
 
     rc_path = NEZHA_PATH / "construct_data" / "root_cause_hipster.json"

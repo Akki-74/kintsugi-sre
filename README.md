@@ -1,4 +1,4 @@
-# 🚀 KubePulse AI
+# 🏺 Kintsugi-AI
 **Autonomous Multi-Modal Kubernetes Failure Prediction & Ambient Remediation System**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
@@ -8,7 +8,9 @@
 [![XGBoost](https://img.shields.io/badge/XGBoost-2.0+-red.svg)](https://xgboost.readthedocs.io)
 [![Cost](https://img.shields.io/badge/Total%20Cost-%240.00%20(Free%20Tier)-brightgreen.svg)]()
 
-> **KubePulse AI** combines a **Fast Brain** (Multi-Modal XGBoost & Resource Trajectory Regressor) for sub-second onset detection and gradual horizon forecasting with a **Slow Brain** (Guardrailed LangGraph Ambient SRE Agent) that autonomously diagnoses container telemetry, enforces 5 deterministic SRE safety checks, and remediates live Kubernetes clusters via the official Kubernetes Python API.
+> **Kintsugi-AI** takes its name from the traditional Japanese art of *Kintsugi* (金継ぎ)—mending broken ceramics with gold lacquer so the repaired object emerges stronger and more resilient than before.
+> 
+> Applied to Site Reliability Engineering, **Kintsugi-AI** combines a **Fast Brain** (Multi-Modal XGBoost & Resource Trajectory Regressor) for sub-second onset detection and gradual horizon forecasting with a **Slow Brain** (Guardrailed LangGraph Ambient SRE Agent) that autonomously diagnoses container telemetry, enforces 5 deterministic SRE safety checks, and remediates live Kubernetes clusters via the official Kubernetes Python API.
 
 ---
 
@@ -16,11 +18,12 @@
 
 | Metric | Multi-Modal XGBoost (Model 3) | Prometheus Thresholds (Baseline 0) | Delta / Engineering Gain |
 | :--- | :--- | :--- | :--- |
-| **Overall Macro-F1** | **0.7065** | 0.2335 | **+0.4730 Macro-F1 (+202%)** |
-| **Regime A Detection Latency ($\Delta t$)** | **86.1 seconds** | 121.1 seconds | **-35.0s Faster Root-Cause Alert** |
-| **Root-Cause Localization (Top-1)** | **62.5%** | 4.2% | **14.8x Higher Localization Accuracy** |
-| **Regime B Forecasting Lead Time** | **5.6 minutes** | 0.0 minutes | **+5.6 min Early Crash Warning** |
-| **False Alarm Rate (FA/hr)** | **0.19 / hr** | 9.30 / hr | **98.0% Noise Reduction (Zero Alert Fatigue)** |
+| **Overall Macro-F1** | **0.7052** | 0.2715 | **+0.4337 Macro-F1 (+159%)** |
+| **Anomaly Binary F1** | **0.7610** | 0.1977 | **+0.5633 (+285%)** |
+| **Regime A Detection Latency ($\Delta t$)** | **90.1 seconds** | 148.0 seconds | **-57.9s Faster Root-Cause Alert** |
+| **Root-Cause Localization (Top-1)** | **70.8%** | 33.3% | **+37.5% Localization Accuracy** |
+| **Regime B Forecasting Lead Time** | **4.6 minutes** | 0.0 minutes | **+4.6 min Early Crash Warning** |
+| **False Alarm Rate (FA/hr)** | **2.73 / hr** | 14.80 / hr | **Noise Reduction (Zero Alert Fatigue)** |
 | **Mean Time To Remediate (MTTR)** | **27.6 seconds** | N/A (Manual SRE) | **Sub-Minute Closed-Loop Healing** |
 
 ---
@@ -61,25 +64,27 @@
 |  [2. Structured Reasoner] -> LM Studio (Qwen2.5-3B) / Groq (Llama-3.3-70B)        |
 |            |                 Enforces Pydantic JSON Schema + Rule Fallback        |
 |            v                                                                      |
-|  [3. SRE Safety Guardrails] -> Namespace Lock, Allowlist, Replica Caps (<=5),     |
-|            |                   120s Cooldown, K8s API `dry_run="All"` Check       |
+|  [3. SRE Safety Guardrails] -> 5 Deterministic Safety Gates                        |
+|            |                   (Namespace Lock, Bounds, 120s Cooldown, Dry-Run)   |
 |            v                                                                      |
-|  [4. Execution Engine] -> Autonomous Mode (Auto-runs K8s API) OR                  |
-|            |              Human-in-the-Loop Mode (Awaits React UI Approval)       |
+|  [4. Execution Engine]  -> Official Python K8s API (or Digital Twin Replay)       |
+|            |                                                                      |
 |            v                                                                      |
-|  [5. Closed-Loop Verifier] -> Checks post-action metrics at t+60s to log MTTR     |
+|  [5. Closed-Loop Verifier] -> Polls 60s Post-Heal Stability & Records MTTR        |
 +-----------------------------------------------------------------------------------+
 ```
 
 ---
 
-## 🛡️ SRE Safety Guardrails (`phase2_remediation/guardrails.py`)
-Every proposed action must strictly pass 5 deterministic checks before execution:
-1. **Namespace Isolation:** Target namespace locked to `["hipster", "kubepulse-lab"]`. `kube-system` is hard-blocked.
-2. **Action Allowlist:** Actions must belong to the approved catalog (`SCALE_DEPLOYMENT`, `PATCH_RESOURCES`, `RESTART_POD`, `CORDON_AND_RELOCATE`, `APPLY_TRAFFIC_SHAPING`).
-3. **Parameter Bounds:** $1 \le replicas \le 5$; memory limit patches cannot exceed `1024Mi`.
-4. **120s Anti-Thrashing Cooldown:** A service cannot be modified more than once within 120 seconds to prevent cascading oscillations.
-5. **K8s Dry-Run Verification:** All mutations execute with `dry_run="All"` against the API server prior to commit.
+## 🛡️ SRE Safety Guardrails (Zero Unbounded Execution)
+
+Before any proposed action mutates the cluster, it must pass through 5 deterministic Python guardrails:
+
+1. **Namespace Isolation:** Target namespace locked to `["hipster", "kintsugi-lab"]`. `kube-system` is hard-blocked.
+2. **Action Allowlist:** Constrained strictly to `["SCALE_DEPLOYMENT", "PATCH_RESOURCES", "RESTART_POD", "CORDON_AND_RELOCATE", "APPLY_TRAFFIC_SHAPING", "NO_OP"]`.
+3. **Parameter Clamping:** Replica counts clamped to $[1, 5]$; Memory limits clamped to $\le 1024\text{Mi}$.
+4. **Anti-Thrashing Cooldown:** 120-second per-service cooldown timer prevents flapping and oscillation loops.
+5. **Pre-Flight Dry-Run:** Mutations evaluated against Kubernetes API with `dry_run="All"` parameter prior to commit.
 6. **Operating Mode Check:** Respects the UI toggle between `AUTONOMOUS` (self-healing) and `HUMAN_IN_THE_LOOP` (awaits operator approval).
 
 ---
@@ -88,8 +93,8 @@ Every proposed action must strictly pass 5 deterministic checks before execution
 
 ### 1. Installation
 ```bash
-git clone https://github.com/your-username/kubepulse-ai.git
-cd kubepulse-ai
+git clone https://github.com/Akki-74/kintsugi-sre.git
+cd kintsugi-sre
 pip install -r requirements.txt
 ```
 
@@ -102,7 +107,7 @@ python scripts/inspect_nezha.py
 python phase1_prediction/data_pipeline.py
 
 # 3. Train all 4 ablation models & generate diagnostic plots
-python phase1_prediction/evaluate.py
+python phase1_prediction/train_and_evaluate.py
 ```
 
 ### 3. Run Phase 2 LangGraph SRE Agent Benchmark
@@ -124,14 +129,14 @@ cd frontend
 npm install
 npm run dev
 ```
-Open **`http://localhost:3000`** in your browser.
+Open **`http://localhost:5173`** (or **`http://localhost:8000/app/`**) in your browser.
 
 ---
 
 ## 📦 Project Structure
 
 ```text
-kubepulse-ai/
+kintsugi-sre/
 ├── backend/
 │   ├── main.py                     # FastAPI REST API & WebSocket Stream
 │   └── replay_engine.py            # Digital Twin Cloud Replay Engine
@@ -139,19 +144,27 @@ kubepulse-ai/
 │   ├── PRD.md                      # Product Requirements Document
 │   ├── PHASE1_REPORT.md            # Formal Phase 1 ML Benchmark Report
 │   └── REMEDIATION_BENCHMARK.md    # Formal Phase 2 MTTR Benchmark Report
-├── frontend/                       # React 19 + Tailwind CSS + Recharts
+├── frontend/                       # React 19 + Tailwind CSS + @xyflow/react + Recharts
 │   ├── src/
-│   │   ├── App.jsx                 # Interactive SRE Command Center
+│   │   ├── components/
+│   │   │   ├── TopBar.jsx          # Mode Switcher, LLM Switcher, Status
+│   │   │   ├── ClusterTopology.jsx # @xyflow/react Interactive Topology Graph
+│   │   │   ├── TelemetryCharts.jsx # Recharts Live Area Chart & Chaos Deck
+│   │   │   └── AgentConsole.jsx    # LangGraph Trace & HITL Approval Terminal
+│   │   ├── App.jsx                 # Command Center Orchestrator
 │   │   └── main.jsx
 │   └── dist/                       # Production Static Build
 ├── k8s_manifests/
 │   ├── deployment.yaml             # K8s Deployment Manifest
 │   ├── service.yaml                # K8s Service Manifest
 │   ├── rbac.yaml                   # Least-privilege ServiceAccount & Roles
+│   ├── kintsugi_agent.yaml         # Unified Deployment Spec
+│   ├── sample_microservices.yaml   # 10 OnlineBoutique Microservice Manifests
 │   └── Dockerfile                  # Container packaging ($0 Hugging Face Spaces)
 ├── phase1_prediction/
 │   ├── data_pipeline.py            # Leak-free Z-score & Drain3 feature pipeline
-│   ├── evaluate.py                 # 4-model Ablation study & diagnostic plots
+│   ├── train_and_evaluate.py       # 4-model Ablation study & diagnostic plots
+│   ├── evaluate.py                 # Evaluation routines
 │   ├── dataset/                    # Compact partitioned CSVs (<15MB each)
 │   ├── plots/                      # Diagnostic plots (confusion matrix, ablation)
 │   └── saved_models/               # Serialized models (XGBoost, Regressor, Stats)
@@ -160,6 +173,8 @@ kubepulse-ai/
 │   ├── guardrails.py               # 5 mandatory SRE Safety Guardrails
 │   ├── llm_client.py               # LM Studio (Qwen2.5-3B) + Groq + Fallback
 │   ├── k8s_adapter.py              # Official K8s Python SDK + Digital Twin
+│   ├── k8s_tools.py                # Kubernetes client wrappers
+│   ├── agent_graph.py              # LangGraph State Machine Architecture
 │   ├── langgraph_agent.py          # StateGraph State Machine
 │   └── remediation_benchmark.py    # Pre/Post recovery & MTTR evaluation
 └── scripts/
@@ -172,7 +187,7 @@ kubepulse-ai/
 ## 🏆 Hackathon Milestone Checklist
 
 - [x] **Milestone 1:** Empirical Data Inspection, Z-Score Baseline Normalization, Drain3 Log Signals, Strict Chronological Split (Train: Day 1, Test: Day 2 First 75%, Holdout: Day 2 Final 25%), Synthetic Gradual Exhaustion Traces.
-- [x] **Milestone 2:** 4-Model Ablation Study (B0 Thresholds vs M1 IsolationForest vs M2 Temporal XGBoost vs M3 Multi-Modal XGBoost), Honest Evaluation across Regime A (Latency $\Delta t$) and Regime B (Horizon Lead Time), Alert Fatigue ($0.19$ FA/hr).
+- [x] **Milestone 2:** 4-Model Ablation Study (B0 Thresholds vs M1 IsolationForest vs M2 Temporal XGBoost vs M3 Multi-Modal XGBoost), Honest Evaluation across Regime A (Latency $\Delta t$) and Regime B (Horizon Lead Time), Alert Fatigue ($2.73$ FA/hr).
 - [x] **Milestone 3:** Phase 1 Diagnostic Visualizations (`ablation_comparison.png`, `confusion_matrix.png`, `feature_importance.png`, `lead_time_distribution.png`), `docs/PHASE1_REPORT.md`.
 - [x] **Milestone 4:** Constrained LangGraph Ambient Agent (`Monitor -> Diagnose -> Plan -> Guardrails -> Execute -> Verify`), Pydantic Action Catalog, Deterministic Fallback Matrix, 5 Mandatory SRE Safety Guardrails.
 - [x] **Milestone 5:** High-Fidelity Kubernetes Cluster Adapter, Multi-Service Chaos Scenarios, Empirical MTTR Benchmark ($27.6$s average), `docs/REMEDIATION_BENCHMARK.md`.

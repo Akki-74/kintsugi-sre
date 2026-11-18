@@ -1,5 +1,5 @@
 """
-KubePulse AI — Phase 2 LangGraph StateGraph Architecture
+Kintsugi-AI — Phase 2 LangGraph StateGraph Architecture
 =========================================================
 Implements the LangGraph State Machine specified in PRD Section 4:
   [monitor_node] -> [investigate_node] -> [plan_node] -> [guardrail_node] -> [execute_node] -> [verify_node]

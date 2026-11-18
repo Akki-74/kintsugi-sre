@@ -1,25 +1,25 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: kubepulse-ai-backend
+  name: kintsugi-ai-backend
   namespace: hipster
   labels:
-    app: kubepulse-ai
+    app: kintsugi-ai
     tier: control-plane
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: kubepulse-ai
+      app: kintsugi-ai
   template:
     metadata:
       labels:
-        app: kubepulse-ai
+        app: kintsugi-ai
     spec:
-      serviceAccountName: kubepulse-sre-agent
+      serviceAccountName: kintsugi-sre-agent
       containers:
-        - name: kubepulse-engine
-          image: ghcr.io/kubepulse-ai/backend:v1.0.0
+        - name: kintsugi-engine
+          image: ghcr.io/akki-74/kintsugi-sre:v1.0.0
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8000
@@ -30,7 +30,7 @@ spec:
             - name: GROQ_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: kubepulse-secrets
+                  name: kintsugi-secrets
                   key: groq-api-key
                   optional: true
           resources:

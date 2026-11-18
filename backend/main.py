@@ -1,5 +1,5 @@
 """
-KubePulse AI — FastAPI & WebSocket Command Center Backend
+Kintsugi-AI — FastAPI & WebSocket Command Center Backend
 =========================================================
 Bridges Phase 1 Multi-Modal Predictions, Phase 2 LangGraph Agent,
 and the React SRE Command Center UI.
@@ -23,7 +23,7 @@ from pydantic import BaseModel
 from backend.replay_engine import DigitalTwinReplayEngine
 
 app = FastAPI(
-    title="KubePulse AI Backend",
+    title="Kintsugi-AI Backend",
     description="Autonomous Multi-Modal Kubernetes Failure Prediction & Ambient Remediation Engine",
     version="1.0.0"
 )
@@ -60,7 +60,7 @@ class ModeRequest(BaseModel):
 @app.get("/")
 def root():
     return {
-        "system": "KubePulse AI",
+        "system": "Kintsugi-AI",
         "tagline": "Autonomous Multi-Modal Kubernetes Failure Prediction & Ambient Remediation System",
         "status": "ONLINE",
         "mode": engine.agent.k8s.mode,

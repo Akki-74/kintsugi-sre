@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 
-PROJECT_ROOT = Path("c:/Users/akank/Downloads/k8/kubepulse-ai")
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 NEZHA_PATH = Path("c:/Users/akank/Downloads/k8/Nezha")
 
 def test_steps():

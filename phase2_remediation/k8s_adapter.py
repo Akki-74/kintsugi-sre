@@ -1,5 +1,5 @@
 """
-KubePulse AI — Kubernetes Client & High-Fidelity Digital Twin Adapter
+Kintsugi-AI — Kubernetes Client & High-Fidelity Digital Twin Adapter
 =====================================================================
 Dual-mode executor:
   1. Live Kubernetes Mode: Executes real mutations via official Python kubernetes SDK
@@ -13,7 +13,7 @@ import logging
 from typing import Dict, Any, Optional
 from phase2_remediation.actions import RemediationPlan, ActionType, RemediationExecutionResult
 
-logger = logging.getLogger("KubePulse.K8sAdapter")
+logger = logging.getLogger("Kintsugi.K8sAdapter")
 
 try:
     from kubernetes import client as k8s_client, config as k8s_config

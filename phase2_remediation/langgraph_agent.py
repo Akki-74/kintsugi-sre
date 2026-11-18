@@ -1,5 +1,5 @@
 """
-KubePulse AI — Phase 2 LangGraph Ambient Remediation Agent
+Kintsugi-AI — Phase 2 LangGraph Ambient Remediation Agent
 ==========================================================
 Autonomous event-driven state machine:
   [1. Monitor]       -> Ingests multi-modal prediction & telemetry
@@ -26,7 +26,7 @@ from phase2_remediation.guardrails import SREGuardrailEngine
 from phase2_remediation.llm_client import LLMRemediationClient
 from phase2_remediation.k8s_adapter import KubernetesClusterAdapter
 
-logger = logging.getLogger("KubePulse.Agent")
+logger = logging.getLogger("Kintsugi.Agent")
 
 
 class AgentState(TypedDict):

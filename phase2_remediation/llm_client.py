@@ -1,5 +1,5 @@
 """
-KubePulse AI — Phase 2 Structured LLM Client & Fallback Engine
+Kintsugi-AI — Phase 2 Structured LLM Client & Fallback Engine
 ==============================================================
 Provides structured reasoning selecting strictly from the ActionCatalog.
 Supports:
@@ -17,10 +17,10 @@ import urllib.request
 import urllib.error
 from phase2_remediation.actions import RemediationPlan, FaultToActionMatrix, ActionType
 
-logger = logging.getLogger("KubePulse.LLMClient")
+logger = logging.getLogger("Kintsugi.LLMClient")
 
 
-SYSTEM_PROMPT = """You are KubePulse AI SRE Brain, an autonomous Kubernetes Site Reliability Engineering agent.
+SYSTEM_PROMPT = """You are Kintsugi-AI SRE Brain, an autonomous Kubernetes Site Reliability Engineering agent.
 Your mission is to diagnose multi-modal Kubernetes telemetry anomalies and select the safest, most effective remediation action.
 
 You MUST respond strictly with a valid JSON object matching the following schema.

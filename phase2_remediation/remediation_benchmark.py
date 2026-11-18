@@ -1,5 +1,5 @@
 """
-KubePulse AI — Phase 2 Remediation Effectiveness Benchmark
+Kintsugi-AI — Phase 2 Remediation Effectiveness Benchmark
 ==========================================================
 Evaluates the end-to-end healing pipeline (Phase 1 Fast Brain + Phase 2 LangGraph Agent).
 Records:
@@ -85,7 +85,7 @@ SCENARIOS = [
 
 def run_benchmark() -> List[Dict[str, Any]]:
     print("=" * 80)
-    print("🚀 KUBEPULSE AI — PHASE 2 REMEDIATION EFFECTIVENESS BENCHMARK")
+    print("🚀 KINTSUGI-AI — PHASE 2 REMEDIATION EFFECTIVENESS BENCHMARK")
     print("=" * 80)
 
     agent = AmbientRemediationAgent()
@@ -178,7 +178,7 @@ def generate_markdown_benchmark_report(records: List[Dict[str, Any]]):
     success_rate = (sum(1 for r in records if r["execution_status"] == "SUCCESS") / len(records)) * 100.0
 
     report_path = REPORTS_DIR / "REMEDIATION_BENCHMARK.md"
-    md = f"""# KubePulse AI — Phase 2 Remediation Benchmark Report
+    md = f"""# Kintsugi-AI — Phase 2 Remediation Benchmark Report
 **Autonomous Multi-Modal Kubernetes Ambient Remediation Benchmark**
 
 | Aggregate Metric | Score / Value | Status |
@@ -228,7 +228,7 @@ t=60s: [████████████████████████
 ---
 
 ## 3. Engineering Guardrail Verifications
-- **Zero Namespace Breach:** All mutations targeted `hipster` or `kubepulse-lab`. `kube-system` attempts are blocked at the kernel.
+- **Zero Namespace Breach:** All mutations targeted `hipster` or `kintsugi-lab`. `kube-system` attempts are blocked at the kernel.
 - **Replica Cap Protection:** Scaling actions are strictly bounded between $1 \le replicas \le 5$.
 - **Cooldown Lock Active:** Subsequent alerts on the same microservice within 120 seconds are quarantined to prevent flapping.
 - **Dry-Run Enforcement:** All patches verified via Kubernetes API `dry_run="All"` before commit.

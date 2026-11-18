@@ -186,7 +186,7 @@ export default function AgentConsole({
               <div className="p-2.5 rounded-lg bg-slate-900/80 border border-emerald-800/40 flex items-center justify-between">
                 <span className="text-slate-300 font-semibold">1. Namespace Lock</span>
                 <span className="text-emerald-400 font-bold text-[10px] px-2 py-0.5 rounded bg-emerald-950 border border-emerald-700">
-                  hipster / kubepulse-lab ONLY
+                  hipster / kintsugi-lab ONLY
                 </span>
               </div>
               <div className="p-2.5 rounded-lg bg-slate-900/80 border border-emerald-800/40 flex items-center justify-between">

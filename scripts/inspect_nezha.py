@@ -1,5 +1,5 @@
 """
-KubePulse AI — Nezha Dataset Inspector
+Kintsugi-AI — Nezha Dataset Inspector
 Extracts exact CSV column names, timestamp format, fault durations, 
 sampling intervals, and Drain3 log templates for pipeline design.
 """
@@ -23,7 +23,7 @@ def section(title: str):
 def inspect():
     if not os.path.isdir(NEZHA_PATH):
         print(f"ERROR: Nezha path not found: {NEZHA_PATH}")
-        print("Set NEZHA_PATH env var or place Nezha alongside kubepulse-ai/")
+        print("Set NEZHA_PATH env var or place Nezha alongside kintsugi-sre/")
         sys.exit(1)
     
     print(f"Nezha dataset location: {NEZHA_PATH}")

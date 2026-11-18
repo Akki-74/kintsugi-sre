@@ -1,5 +1,5 @@
 """
-KubePulse AI — Phase 2 Kubernetes Tools & Adapters
+Kintsugi-AI — Phase 2 Kubernetes Tools & Adapters
 ===================================================
 Wraps official Python kubernetes client operations with an automatic fallback
 to a high-fidelity in-memory Digital Twin sandbox.

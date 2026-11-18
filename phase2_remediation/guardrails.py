@@ -1,8 +1,8 @@
 """
-KubePulse AI — Phase 2 SRE Safety Guardrails
+Kintsugi-AI — Phase 2 SRE Safety Guardrails
 ============================================
 Enforces deterministic safety policies before any action touches Kubernetes:
-  1. Namespace Lock (hipster / kubepulse-lab only; kube-system hard blocked)
+  1. Namespace Lock (hipster / kintsugi-lab only; kube-system hard blocked)
   2. Action Allowlist (strictly mapped to verified ActionCatalog)
   3. Parameter Bounds (replicas in [1, 5], memory <= 1024Mi, CPU <= 2000m)
   4. 120s Per-Service Anti-Thrashing Cooldown Timer
@@ -17,7 +17,7 @@ from phase2_remediation.actions import RemediationPlan, GuardrailValidationResul
 
 
 class SREGuardrailEngine:
-    ALLOWED_NAMESPACES = {"hipster", "kubepulse-lab"}
+    ALLOWED_NAMESPACES = {"hipster", "kintsugi-lab"}
     FORBIDDEN_NAMESPACES = {"kube-system", "kube-public", "kube-node-lease", "default"}
 
     REPLICA_MIN = 1

@@ -1,5 +1,5 @@
 """
-KubePulse AI — Phase 1: Train & Evaluate Multi-Modal Ablation Suite
+Kintsugi-AI — Phase 1: Train & Evaluate Multi-Modal Ablation Suite
 ===================================================================
 Implements the full Phase 1 ML specification:
   - Feature sets: METRIC_FEATURES, LOG_FEATURES, MULTIMODAL_FEATURES
@@ -345,7 +345,7 @@ def generate_diagnostic_plots(
     plt.figure(figsize=(10, 5))
     df_melt = ablation_df.melt(id_vars=["model"], value_vars=["precision", "recall", "macro_f1"], var_name="Metric", value_name="Score")
     ax = sns.barplot(data=df_melt, x="model", y="Score", hue="Metric", palette="crest")
-    plt.title("KubePulse AI — 4-Model Ablation Study Comparison", fontsize=14, fontweight="bold", pad=12)
+    plt.title("Kintsugi-AI — 4-Model Ablation Study Comparison", fontsize=14, fontweight="bold", pad=12)
     plt.ylim(0, 1.05)
     plt.xlabel("Model Configuration", fontsize=11)
     plt.ylabel("Score (0.0 - 1.0)", fontsize=11)
@@ -412,7 +412,7 @@ def generate_diagnostic_plots(
 
 def main():
     print("=" * 70)
-    print("🚀 KUBEPULSE AI — PHASE 1: PREDICTION ENGINE & ABLATION STUDY")
+    print("🚀 KINTSUGI-AI — PHASE 1: PREDICTION ENGINE & ABLATION STUDY")
     print("=" * 70)
 
     # 1. Load Data

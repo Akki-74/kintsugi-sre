@@ -9,13 +9,13 @@ metadata:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: kubepulse-sre-agent
+  name: kintsugi-sre-agent
   namespace: hipster
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: kubepulse-sre-agent-role
+  name: kintsugi-sre-agent-role
 rules:
   - apiGroups: [""]
     resources: ["pods", "pods/log", "services", "nodes"]
@@ -30,37 +30,37 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: kubepulse-sre-agent-binding
+  name: kintsugi-sre-agent-binding
 subjects:
   - kind: ServiceAccount
-    name: kubepulse-sre-agent
+    name: kintsugi-sre-agent
     namespace: hipster
 roleRef:
   kind: ClusterRole
-  name: kubepulse-sre-agent-role
+  name: kintsugi-sre-agent-role
   apiGroup: rbac.authorization.k8s.io
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: kubepulse-ai-agent
+  name: kintsugi-ai-agent
   namespace: hipster
   labels:
-    app: kubepulse-ai
+    app: kintsugi-ai
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: kubepulse-ai
+      app: kintsugi-ai
   template:
     metadata:
       labels:
-        app: kubepulse-ai
+        app: kintsugi-ai
     spec:
-      serviceAccountName: kubepulse-sre-agent
+      serviceAccountName: kintsugi-sre-agent
       containers:
         - name: agent
-          image: ghcr.io/kubepulse-ai/backend:latest
+          image: ghcr.io/akki-74/kintsugi-sre:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8000
@@ -86,12 +86,12 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: kubepulse-ai-service
+  name: kintsugi-ai-service
   namespace: hipster
 spec:
   type: ClusterIP
   selector:
-    app: kubepulse-ai
+    app: kintsugi-ai
   ports:
     - name: http
       port: 8000

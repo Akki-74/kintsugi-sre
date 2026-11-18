@@ -1,5 +1,5 @@
 """
-KubePulse AI — Phase 2 Action Catalog & Data Schemas
+Kintsugi-AI — Phase 2 Action Catalog & Data Schemas
 ====================================================
 Defines strict Pydantic schemas, action enums, and the deterministic SRE fallback matrix.
 """
@@ -31,7 +31,7 @@ class RemediationPlan(BaseModel):
     """Structured Pydantic schema enforced on LLM output."""
     diagnosed_root_cause: str = Field(..., description="Brief technical root-cause diagnosis")
     target_service: str = Field(..., description="Target microservice (e.g. 'checkoutservice')")
-    target_namespace: str = Field("hipster", description="K8s namespace (must be 'hipster' or 'kubepulse-lab')")
+    target_namespace: str = Field("hipster", description="K8s namespace (must be 'hipster' or 'kintsugi-lab')")
     selected_action: ActionType = Field(..., description="Action from strictly allowed catalog")
     parameters: RemediationParameters = Field(default_factory=RemediationParameters)
     confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence score [0.0 - 1.0]")

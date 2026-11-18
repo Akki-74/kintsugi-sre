@@ -1,5 +1,5 @@
 """
-KubePulse AI — Cloud Held-Out Digital Twin Replay Engine
+Kintsugi-AI — Cloud Held-Out Digital Twin Replay Engine
 ========================================================
 Streams held-out telemetry ticks from k8s_multimodal_replay_holdout.csv,
 runs live Phase 1 inference, and triggers Phase 2 LangGraph ambient remediation.

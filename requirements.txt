@@ -1,4 +1,4 @@
-# KubePulse AI — Phase 1 Requirements
+# Kintsugi-AI — Phase 1 & 2 Requirements
 # Install: pip install -r requirements.txt
 
 # Data Processing

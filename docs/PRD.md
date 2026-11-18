@@ -1,4 +1,4 @@
-# Product Requirements Document (PRD): KubePulse AI
+# Product Requirements Document (PRD): Kintsugi-AI
 **Autonomous Multi-Modal Kubernetes Failure Prediction & Ambient Remediation System**
 
 | Metadata | Details |
@@ -14,7 +14,7 @@
 ## 1. Problem Statement & Engineering Philosophy
 Kubernetes clusters experience multi-layered operational failures ranging from abrupt traffic/CPU saturation and network degradation to gradual memory leaks and code-level exceptions. Standard threshold alerting is either **too late** (firing only after SLA violation) or **too noisy** (causing alert fatigue). Furthermore, manual diagnosis and remediation inflate Mean Time to Resolution (MTTR).
 
-**KubePulse AI** solves this using a disciplined **Two-Brain Architecture**:
+**Kintsugi-AI** solves this using a disciplined **Two-Brain Architecture**:
 1. **Phase 1 — The Fast Brain (Multi-Modal Tabular ML):** Continuously monitors baseline-normalized container metrics and parsed container log templates. It distinguishes between **Rapid Onset Detection** (catching abrupt faults within seconds of onset before cascading failure) and **Horizon Forecasting** (predicting gradual resource exhaustion minutes before pod death).
 2. **Phase 2 — The Slow Brain (Guardrailed Ambient Agent):** An event-driven **LangGraph** state machine that wakes up only on high-confidence predictions, inspects pod logs/events, selects a verified remediation from a strict action catalog via structured LLM inference, enforces deterministic SRE safety guardrails, and verifies post-action cluster recovery.
 
@@ -164,7 +164,7 @@ To ensure 100% reliability on small local models (Qwen2.5-3B-Instruct via LM Stu
 ### 5.3 Mandatory SRE Safety Guardrails (`guardrails.py`)
 Every proposed action must pass 5 deterministic checks before execution:
 
-1. **Namespace Isolation:** Target namespace must be in `["hipster", "kubepulse-lab"]`. `kube-system` is hard-blocked.
+1. **Namespace Isolation:** Target namespace must be in `["hipster", "kintsugi-lab"]`. `kube-system` is hard-blocked.
 2. **Parameter Bounds:** `replicas` must be between 1 and 5; memory limit patches cannot exceed `1024Mi` on the local laptop cluster.
 3. **Cooldown Lock:** A service cannot be modified more than once within a 120-second window to prevent thrashing.
 4. **K8s Dry-Run Verification:** All patches run with `dry_run="All"` against the Kubernetes API server first.
@@ -182,4 +182,4 @@ Remediation effectiveness is evaluated and documented in two distinct tables:
 
 - **Frontend** (`frontend/`): React (Vite) + Tailwind CSS + React Flow (live 10-service OnlineBoutique dependency graph with color-coded health states) + Recharts (real-time metric & anomaly probability curves) + Chaos Control Deck + Agent Reasoning & Approval Console.
 - **Backend** (`backend/`): FastAPI with WebSockets streaming telemetry ticks, Phase 1 predictions, and Phase 2 LangGraph state updates.
-- **Consume K8s Bonus** (`k8s_manifests/`): Includes Dockerfile, Deployment, Service, and least-privilege Role / RoleBinding (ServiceAccount) so KubePulse AI runs natively inside Kubernetes.
+- **Consume K8s Bonus** (`k8s_manifests/`): Includes Dockerfile, Deployment, Service, and least-privilege Role / RoleBinding (ServiceAccount) so Kintsugi-AI runs natively inside Kubernetes.

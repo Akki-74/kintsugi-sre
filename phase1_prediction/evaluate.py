@@ -1,5 +1,5 @@
 """
-KubePulse AI — Phase 1 Modeling & Ablation Suite
+Kintsugi-AI — Phase 1 Modeling & Ablation Suite
 =================================================
 Trains and rigorously benchmarks 4 models in an honest ablation study:
   - Baseline 0: Static Prometheus Threshold Alerting
@@ -476,7 +476,7 @@ def generate_plots(ablation_results: List[Dict], y_test: np.ndarray, m3_preds: n
 
 def run_ablation_suite():
     print("==================================================================")
-    print("🔬 KUBEPULSE AI — PHASE 1 ABLATION SUITE & BENCHMARK")
+    print("🔬 KINTSUGI-AI — PHASE 1 ABLATION SUITE & BENCHMARK")
     print("==================================================================")
 
     train_df, test_df, holdout_df = load_datasets()
@@ -653,7 +653,7 @@ def run_ablation_suite():
 def generate_markdown_report(report_path: Path, ablation_df: pd.DataFrame,
                              m3_f1: float, reg_a: Dict, reg_b: Dict, fa_hr: float):
     """Generates the formal Phase 1 Technical Checkpoint Report."""
-    md = f"""# KubePulse AI — Phase 1 Technical Milestone Report
+    md = f"""# Kintsugi-AI — Phase 1 Technical Milestone Report
 **Multi-Modal Kubernetes Failure Prediction Engine ("Fast Brain")**
 
 | Metric | Multi-Modal XGBoost (Model 3) | Industry Threshold (Baseline 0) | Delta / Improvement |
@@ -667,7 +667,7 @@ def generate_markdown_report(report_path: Path, ablation_df: pd.DataFrame,
 ---
 
 ## 1. Executive Summary & Verification Checkpoint
-Phase 1 delivers the production **Fast Brain** of the KubePulse AI system: a multi-modal temporal prediction engine trained on the empirical **Nezha** (*OnlineBoutique*) benchmark dataset and validated against gradual resource exhaustion trajectories. 
+Phase 1 delivers the production **Fast Brain** of the Kintsugi-AI system: a multi-modal temporal prediction engine trained on the empirical **Nezha** (*OnlineBoutique*) benchmark dataset and validated against gradual resource exhaustion trajectories. 
 
 The engine processes 19 Kubernetes pod metrics transformed via **Baseline-Relative Z-Score Normalization** alongside structured **Drain3 Log Template Signals** (error counts, HTTP 5xx frequencies, template hits). 
 

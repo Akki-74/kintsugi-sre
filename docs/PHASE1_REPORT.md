@@ -1,4 +1,4 @@
-# KubePulse AI — Phase 1 Technical Milestone Report
+# Kintsugi-AI — Phase 1 Technical Milestone Report
 **Multi-Modal Kubernetes Failure Prediction Engine ("Fast Brain")**
 
 | Metric | Multi-Modal XGBoost (Model 3) | Industry Threshold (Baseline 0) | Delta / Improvement |
@@ -13,7 +13,7 @@
 ---
 
 ## 1. Executive Summary & Verification Checkpoint
-Phase 1 delivers the production **Fast Brain** of the KubePulse AI system: a multi-modal temporal prediction engine trained on the empirical **Nezha** (*OnlineBoutique*) benchmark dataset and validated against gradual resource exhaustion trajectories. 
+Phase 1 delivers the production **Fast Brain** of the Kintsugi-AI system: a multi-modal temporal prediction engine trained on the empirical **Nezha** (*OnlineBoutique*) benchmark dataset and validated against gradual resource exhaustion trajectories. 
 
 The engine processes 76 temporal metric features transformed via **Baseline-Relative Z-Score Normalization** alongside 13 structured **Drain3 Log Signals** (error counts, HTTP 5xx frequencies, root-cause template hits, and latency maxima). 
 
