@@ -1,4 +1,5 @@
 {
+  "timestamp": "2026-11-18T09:48:20Z",
   "features": [
     "CpuUsage(m)",
     "CpuUsageRate(%)",
@@ -183,7 +184,7 @@
     "delta1_log_took_ms_max",
     "log_error_rate"
   ],
-  "class_names": [
+  "classes": [
     "NORMAL",
     "CPU_EXHAUSTION",
     "MEMORY_EXHAUSTION",
@@ -191,18 +192,59 @@
     "NETWORK_DEGRADATION",
     "SERVICE_DISRUPTION_LOG"
   ],
-  "class_to_id": {
-    "NORMAL": 0,
-    "CPU_EXHAUSTION": 1,
-    "MEMORY_EXHAUSTION": 2,
-    "DISK_EXHAUSTION": 3,
-    "NETWORK_DEGRADATION": 4,
-    "SERVICE_DISRUPTION_LOG": 5
+  "ablation_results": [
+    {
+      "model": "Baseline 0 (Prometheus Rules)",
+      "precision": 0.2549,
+      "recall": 0.3495,
+      "macro_f1": 0.2715,
+      "anomaly_f1": 0.1977
+    },
+    {
+      "model": "Model 1 (IsolationForest)",
+      "precision": 0.3182,
+      "recall": 0.3398,
+      "macro_f1": 0.283,
+      "anomaly_f1": 0.1885
+    },
+    {
+      "model": "Model 2 (Temporal XGBoost - Metrics)",
+      "precision": 0.4926,
+      "recall": 0.5801,
+      "macro_f1": 0.5253,
+      "anomaly_f1": 0.6289
+    },
+    {
+      "model": "Model 3 (Multi-Modal XGBoost)",
+      "precision": 0.6878,
+      "recall": 0.728,
+      "macro_f1": 0.7052,
+      "anomaly_f1": 0.761
+    }
+  ],
+  "regime_a": {
+    "mean_latency_sec": 90.1,
+    "top1_localization_pct": 70.8,
+    "detected_episodes": 17,
+    "total_episodes": 24
   },
-  "overall_macro_f1": 0.7064511698935511,
-  "regime_a_latency_sec": 86.125,
-  "regime_b_lead_time_min": 5.6,
-  "false_alarm_rate_per_hr": 0.1866028708133971,
-  "top1_accuracy": 0.625,
-  "tte_mae_minutes": 0.8992496937513351
+  "regime_b": {
+    "mean_lead_time_min": 4.6,
+    "mae_min": 0.9,
+    "r2_score": 0.739
+  },
+  "alert_quality": {
+    "threshold_075": {
+      "threshold": 0.75,
+      "false_alarms": 19,
+      "normal_hours": 7.0,
+      "fa_per_hour": 2.73
+    },
+    "threshold_085": {
+      "threshold": 0.85,
+      "false_alarms": 15,
+      "normal_hours": 7.0,
+      "fa_per_hour": 2.15
+    }
+  }
 }

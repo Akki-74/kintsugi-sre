@@ -16,6 +16,7 @@ class ActionType(str, Enum):
     CORDON_AND_RELOCATE = "CORDON_AND_RELOCATE"
     APPLY_TRAFFIC_SHAPING = "APPLY_TRAFFIC_SHAPING"
     NO_ACTION = "NO_ACTION"
+    NO_OP = "NO_OP"
 
 
 class RemediationParameters(BaseModel):

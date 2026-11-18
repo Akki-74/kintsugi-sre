@@ -34,7 +34,7 @@ class DigitalTwinReplayEngine:
         self.agent = agent or AmbientRemediationAgent()
         self.is_running = False
         self.current_tick_idx = 0
-        self.tick_speed_sec = 2.0  # Telemetry emitted every 2 seconds
+        self.tick_speed_sec = 1.0  # Telemetry emitted every 1 second
         self.autonomous_mode = True
         self.pending_hitl_plan = None
         

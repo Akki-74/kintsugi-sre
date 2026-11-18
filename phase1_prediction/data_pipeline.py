@@ -5,7 +5,7 @@ import glob
 import time
 import warnings
 from pathlib import Path
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 from collections import defaultdict
 
 import numpy as np
@@ -179,7 +179,7 @@ def parse_logs_for_date_parallel(folder_type: str, date_str: str, rc_keywords: d
     print(f"   -> Parallel parsing {len(log_files)} log files in {folder_type}/{date_str}/log/ ...")
     args_list = [(f, service_phrases) for f in log_files]
 
-    with ProcessPoolExecutor(max_workers=min(8, os.cpu_count() or 4)) as executor:
+    with ThreadPoolExecutor(max_workers=4) as executor:
         all_results = list(executor.map(_parse_single_log_worker, args_list))
 
     flat_rows = [row for file_rows in all_results for row in file_rows]
@@ -476,6 +476,10 @@ def build_pipeline():
     test_df = day2_feat[day2_feat["epoch_sec"] <= split_ts].copy()
     replay_df = day2_feat[day2_feat["epoch_sec"] > split_ts].copy()
 
+    train_df["Time"] = train_df["Time"].astype(str).str.slice(0, 19)
+    test_df["Time"] = test_df["Time"].astype(str).str.slice(0, 19)
+    replay_df["Time"] = replay_df["Time"].astype(str).str.slice(0, 19)
+
     train_path = DATASET_DIR / "k8s_multimodal_train.csv"
     test_path = DATASET_DIR / "k8s_multimodal_test.csv"
     replay_path = DATASET_DIR / "k8s_multimodal_replay_holdout.csv"
@@ -483,6 +487,11 @@ def build_pipeline():
     train_df.to_csv(train_path, index=False, float_format="%.3f")
     test_df.to_csv(test_path, index=False, float_format="%.3f")
     replay_df.to_csv(replay_path, index=False, float_format="%.3f")
+
+    # Also save standard short names
+    train_df.to_csv(DATASET_DIR / "train.csv", index=False, float_format="%.3f")
+    test_df.to_csv(DATASET_DIR / "test.csv", index=False, float_format="%.3f")
+    replay_df.to_csv(DATASET_DIR / "replay_holdout.csv", index=False, float_format="%.3f")
 
     print("\n================ DATASET BUILD SUMMARY ================")
     for name, d, p in [

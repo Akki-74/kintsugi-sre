@@ -70,6 +70,7 @@ def root():
 
 
 @app.get("/health")
+@app.get("/api/status")
 def health():
     return {
         "status": "healthy",

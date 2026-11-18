@@ -130,3 +130,7 @@ class SREGuardrailEngine:
             cooldown_remaining_sec=remaining if in_cd else 0.0,
             dry_run_passed=dry_run_passed
         )
+
+
+# Backward-compatible and PRD naming alias
+SREGuardrails = SREGuardrailEngine
