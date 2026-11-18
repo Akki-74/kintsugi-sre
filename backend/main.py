@@ -52,7 +52,12 @@ active_connections: list[WebSocket] = []
 # Mount static frontend build if present
 frontend_dist = PROJECT_ROOT / "frontend" / "dist"
 if frontend_dist.exists():
+    # Mount /app for the SPA
     app.mount("/app", StaticFiles(directory=str(frontend_dist), html=True), name="frontend")
+    # Also mount /assets at root so absolute asset URLs from Vite (/assets/...) resolve cleanly
+    assets_dir = frontend_dist / "assets"
+    if assets_dir.exists():
+        app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
 
 
 class ChaosRequest(BaseModel):
