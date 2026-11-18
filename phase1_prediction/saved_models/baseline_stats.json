@@ -1,0 +1,782 @@
+{
+  "adservice": {
+    "CpuUsage(m)": {
+      "mean": 1.3575569037909807,
+      "std": 1.573375911830429
+    },
+    "CpuUsageRate(%)": {
+      "mean": 4.6048423427303895,
+      "std": 6.10680584648129
+    },
+    "MemoryUsage(Mi)": {
+      "mean": 203.75866353489636,
+      "std": 18.21972151539956
+    },
+    "MemoryUsageRate(%)": {
+      "mean": 86.72886596959108,
+      "std": 5.419580597189536
+    },
+    "SyscallRead": {
+      "mean": 1105.653837212233,
+      "std": 1065.4918605226017
+    },
+    "SyscallWrite": {
+      "mean": 2474.037293273701,
+      "std": 438.6940596640864
+    },
+    "NetworkReceiveBytes": {
+      "mean": 31161.26703993004,
+      "std": 5593.500386598815
+    },
+    "NetworkTransmitBytes": {
+      "mean": 77357.04068247438,
+      "std": 13052.246633061051
+    },
+    "PodClientLatencyP90(s)": {
+      "mean": 0.09376448937273198,
+      "std": 0.09122174568972878
+    },
+    "PodServerLatencyP90(s)": {
+      "mean": 0.04492998777067887,
+      "std": 0.13312606424314638
+    },
+    "PodClientLatencyP95(s)": {
+      "mean": 0.1013431052358735,
+      "std": 0.09966133682751149
+    },
+    "PodServerLatencyP95(s)": {
+      "mean": 0.06702418355853126,
+      "std": 0.15961173881370927
+    },
+    "PodClientLatencyP99(s)": {
+      "mean": 0.10740599792638673,
+      "std": 0.10644724578893429
+    },
+    "PodServerLatencyP99(s)": {
+      "mean": 0.14941322244822142,
+      "std": 0.2431588798320498
+    },
+    "PodWorkload(Ops)": {
+      "mean": 4.840411020482547,
+      "std": 0.691132996063811
+    },
+    "PodSuccessRate(%)": {
+      "mean": 0.0,
+      "std": 0.001
+    },
+    "NodeCpuUsageRate(%)": {
+      "mean": 1.7720460130663522,
+      "std": 0.4582827099691021
+    },
+    "NodeMemoryUsageRate(%)": {
+      "mean": 7.975020252257076,
+      "std": 0.07094948247009075
+    },
+    "NodeNetworkReceiveBytes": {
+      "mean": 31865.30655017736,
+      "std": 6000.0502328821285
+    }
+  },
+  "cartservice": {
+    "CpuUsage(m)": {
+      "mean": 1.9979910632172562,
+      "std": 1.480770559889374
+    },
+    "CpuUsageRate(%)": {
+      "mean": 6.6853779947138,
+      "std": 5.293435313978047
+    },
+    "MemoryUsage(Mi)": {
+      "mean": 34.153236318005185,
+      "std": 6.156520742026564
+    },
+    "MemoryUsageRate(%)": {
+      "mean": 26.68221587344155,
+      "std": 4.809781829708252
+    },
+    "SyscallRead": {
+      "mean": 528.3968548377853,
+      "std": 60.922692513230814
+    },
+    "SyscallWrite": {
+      "mean": 493.685976010992,
+      "std": 60.591342273807065
+    },
+    "NetworkReceiveBytes": {
+      "mean": 6150.231562056923,
+      "std": 3279.428443052732
+    },
+    "NetworkTransmitBytes": {
+      "mean": 42570.22881645883,
+      "std": 12778.3771405159
+    },
+    "PodClientLatencyP90(s)": {
+      "mean": 0.027903056994818654,
+      "std": 0.02658604092937609
+    },
+    "PodServerLatencyP90(s)": {
+      "mean": 0.005709241878329776,
+      "std": 0.017927359025605185
+    },
+    "PodClientLatencyP95(s)": {
+      "mean": 0.030355673575129524,
+      "std": 0.029080414256423888
+    },
+    "PodServerLatencyP95(s)": {
+      "mean": 0.006233288614767963,
+      "std": 0.021743409486798256
+    },
+    "PodClientLatencyP99(s)": {
+      "mean": 0.03231776683937821,
+      "std": 0.031083294659797006
+    },
+    "PodServerLatencyP99(s)": {
+      "mean": 0.010319469003042028,
+      "std": 0.03234686092790798
+    },
+    "PodWorkload(Ops)": {
+      "mean": 8.151742808298426,
+      "std": 1.1226627946314316
+    },
+    "PodSuccessRate(%)": {
+      "mean": 0.0,
+      "std": 0.001
+    },
+    "NodeCpuUsageRate(%)": {
+      "mean": 50.674741423978304,
+      "std": 25.508258327860474
+    },
+    "NodeMemoryUsageRate(%)": {
+      "mean": 49.494344840283375,
+      "std": 1.0340367456866448
+    },
+    "NodeNetworkReceiveBytes": {
+      "mean": 4252596.641659216,
+      "std": 255710.1622575094
+    }
+  },
+  "checkoutservice": {
+    "CpuUsage(m)": {
+      "mean": 1.2615275549804637,
+      "std": 0.9925098416107049
+    },
+    "CpuUsageRate(%)": {
+      "mean": 6.405987944370944,
+      "std": 5.894203207220154
+    },
+    "MemoryUsage(Mi)": {
+      "mean": 43.31559464054404,
+      "std": 14.79723992007156
+    },
+    "MemoryUsageRate(%)": {
+      "mean": 33.84030831292503,
+      "std": 11.560343687555907
+    },
+    "SyscallRead": {
+      "mean": 2395.6735751295337,
+      "std": 754.2424948125046
+    },
+    "SyscallWrite": {
+      "mean": 2086.59170984456,
+      "std": 659.2217257533415
+    },
+    "NetworkReceiveBytes": {
+      "mean": 5802.24751205346,
+      "std": 3184.500065095465
+    },
+    "NetworkTransmitBytes": {
+      "mean": 136332.99242375852,
+      "std": 39353.30376779009
+    },
+    "PodClientLatencyP90(s)": {
+      "mean": 0.06173456973625147,
+      "std": 0.25025882986118086
+    },
+    "PodServerLatencyP90(s)": {
+      "mean": 0.6467188779075572,
+      "std": 0.9156776138789501
+    },
+    "PodClientLatencyP95(s)": {
+      "mean": 0.10810100888447963,
+      "std": 0.37908849496037883
+    },
+    "PodServerLatencyP95(s)": {
+      "mean": 0.7293593952780272,
+      "std": 1.040441507195804
+    },
+    "PodClientLatencyP99(s)": {
+      "mean": 0.24128435030627904,
+      "std": 0.6908457827234475
+    },
+    "PodServerLatencyP99(s)": {
+      "mean": 0.7955574136468004,
+      "std": 1.1465699224770658
+    },
+    "PodWorkload(Ops)": {
+      "mean": 0.29930914452535295,
+      "std": 0.13698377723005215
+    },
+    "PodSuccessRate(%)": {
+      "mean": 0.0,
+      "std": 0.001
+    },
+    "NodeCpuUsageRate(%)": {
+      "mean": 19.442239367548645,
+      "std": 0.7783150780709843
+    },
+    "NodeMemoryUsageRate(%)": {
+      "mean": 31.03032825064266,
+      "std": 0.8059450246240122
+    },
+    "NodeNetworkReceiveBytes": {
+      "mean": 5296756.960028368,
+      "std": 330795.96280418086
+    }
+  },
+  "currencyservice": {
+    "CpuUsage(m)": {
+      "mean": 11.75829576293106,
+      "std": 2.4001052732081254
+    },
+    "CpuUsageRate(%)": {
+      "mean": 58.74392197396133,
+      "std": 12.041197353489146
+    },
+    "MemoryUsage(Mi)": {
+      "mean": 36.37830715673575,
+      "std": 6.343828836982449
+    },
+    "MemoryUsageRate(%)": {
+      "mean": 28.420552466199805,
+      "std": 4.956116278892539
+    },
+    "SyscallRead": {
+      "mean": 3411.082901554404,
+      "std": 426.59333185199523
+    },
+    "SyscallWrite": {
+      "mean": 15979.064248704663,
+      "std": 1937.899854896175
+    },
+    "NetworkReceiveBytes": {
+      "mean": 29158.587175886187,
+      "std": 4905.174337724194
+    },
+    "NetworkTransmitBytes": {
+      "mean": 114518.40764082472,
+      "std": 19915.209328983172
+    },
+    "PodClientLatencyP90(s)": {
+      "mean": 0.006311595252344955,
+      "std": 0.001997700314612856
+    },
+    "PodServerLatencyP90(s)": {
+      "mean": 0.11920833327535607,
+      "std": 0.2881742066861581
+    },
+    "PodClientLatencyP95(s)": {
+      "mean": 0.012113524259121614,
+      "std": 0.007152817933548367
+    },
+    "PodServerLatencyP95(s)": {
+      "mean": 0.17612181986542313,
+      "std": 0.36336789625996346
+    },
+    "PodClientLatencyP99(s)": {
+      "mean": 0.049438410013035866,
+      "std": 0.032207509420918566
+    },
+    "PodServerLatencyP99(s)": {
+      "mean": 0.41075237258163444,
+      "std": 0.4378229594826679
+    },
+    "PodWorkload(Ops)": {
+      "mean": 25.642356029145308,
+      "std": 3.4028915423709636
+    },
+    "PodSuccessRate(%)": {
+      "mean": 0.0,
+      "std": 0.001
+    },
+    "NodeCpuUsageRate(%)": {
+      "mean": 19.442239367548645,
+      "std": 0.7783150780709843
+    },
+    "NodeMemoryUsageRate(%)": {
+      "mean": 31.03032825064266,
+      "std": 0.8059450246240122
+    },
+    "NodeNetworkReceiveBytes": {
+      "mean": 5296756.960028368,
+      "std": 330795.96280418086
+    }
+  },
+  "emailservice": {
+    "CpuUsage(m)": {
+      "mean": 0.19190901303472827,
+      "std": 1.2762690789829632
+    },
+    "CpuUsageRate(%)": {
+      "mean": 1.058501807896236,
+      "std": 7.1801031053015665
+    },
+    "MemoryUsage(Mi)": {
+      "mean": 24.716568167098444,
+      "std": 3.3844659070472836
+    },
+    "MemoryUsageRate(%)": {
+      "mean": 4.827454720136415,
+      "std": 0.6610284974701724
+    },
+    "SyscallRead": {
+      "mean": 35.263217068752176,
+      "std": 12.119423916652677
+    },
+    "SyscallWrite": {
+      "mean": 72.09638253130746,
+      "std": 24.646072956444392
+    },
+    "NetworkReceiveBytes": {
+      "mean": 1071.9383302798215,
+      "std": 2408.2479017200285
+    },
+    "NetworkTransmitBytes": {
+      "mean": 12080.585883498026,
+      "std": 3899.39562896863
+    },
+    "PodClientLatencyP90(s)": {
+      "mean": 0.011341072371896459,
+      "std": 0.027615986223504092
+    },
+    "PodServerLatencyP90(s)": {
+      "mean": 0.0127322563559322,
+      "std": 0.1351688866969363
+    },
+    "PodClientLatencyP95(s)": {
+      "mean": 0.012095655044902226,
+      "std": 0.029897872125027834
+    },
+    "PodServerLatencyP95(s)": {
+      "mean": 0.014182600635593179,
+      "std": 0.15389296811022143
+    },
+    "PodClientLatencyP99(s)": {
+      "mean": 0.01269932118330692,
+      "std": 0.03173448178347837
+    },
+    "PodServerLatencyP99(s)": {
+      "mean": 0.015323808262711843,
+      "std": 0.16927087316338182
+    },
+    "PodWorkload(Ops)": {
+      "mean": 0.29609659191784643,
+      "std": 0.1400406896381515
+    },
+    "PodSuccessRate(%)": {
+      "mean": 0.0,
+      "std": 0.001
+    },
+    "NodeCpuUsageRate(%)": {
+      "mean": 1.920915365016519,
+      "std": 0.24195750444290867
+    },
+    "NodeMemoryUsageRate(%)": {
+      "mean": 11.009508728872794,
+      "std": 0.1172997845217173
+    },
+    "NodeNetworkReceiveBytes": {
+      "mean": 555980.2760869754,
+      "std": 88936.83811257433
+    }
+  },
+  "frontend": {
+    "CpuUsage(m)": {
+      "mean": 4.647559100905092,
+      "std": 1.5292704384411633
+    },
+    "CpuUsageRate(%)": {
+      "mean": 23.296240224538366,
+      "std": 7.99520520719653
+    },
+    "MemoryUsage(Mi)": {
+      "mean": 21.323137953367876,
+      "std": 3.2245317906819193
+    },
+    "MemoryUsageRate(%)": {
+      "mean": 16.61174556751943,
+      "std": 1.953945589556273
+    },
+    "SyscallRead": {
+      "mean": 21826.908863217926,
+      "std": 2878.0757171727523
+    },
+    "SyscallWrite": {
+      "mean": 15248.271230024557,
+      "std": 1877.245357450824
+    },
+    "NetworkReceiveBytes": {
+      "mean": 34072.999895830195,
+      "std": 5270.072319996075
+    },
+    "NetworkTransmitBytes": {
+      "mean": 298824.68200055015,
+      "std": 58625.502877933606
+    },
+    "PodClientLatencyP90(s)": {
+      "mean": 0.07886013395574651,
+      "std": 0.29395329289343947
+    },
+    "PodServerLatencyP90(s)": {
+      "mean": 0.8156972090883898,
+      "std": 2.624508371813305
+    },
+    "PodClientLatencyP95(s)": {
+      "mean": 0.15297138117890538,
+      "std": 0.6490109972012289
+    },
+    "PodServerLatencyP95(s)": {
+      "mean": 1.0837092108739503,
+      "std": 2.9244953629685972
+    },
+    "PodClientLatencyP99(s)": {
+      "mean": 0.36601021615546264,
+      "std": 1.1945265929917697
+    },
+    "PodServerLatencyP99(s)": {
+      "mean": 1.771228327434398,
+      "std": 3.51919943352926
+    },
+    "PodWorkload(Ops)": {
+      "mean": 8.504501741507585,
+      "std": 0.975415633233481
+    },
+    "PodSuccessRate(%)": {
+      "mean": 0.0,
+      "std": 0.001
+    },
+    "NodeCpuUsageRate(%)": {
+      "mean": 2.8068435887527436,
+      "std": 0.2645146701560372
+    },
+    "NodeMemoryUsageRate(%)": {
+      "mean": 11.447111897139196,
+      "std": 0.03365782738067585
+    },
+    "NodeNetworkReceiveBytes": {
+      "mean": 34821.58195931878,
+      "std": 6067.617539676878
+    }
+  },
+  "paymentservice": {
+    "CpuUsage(m)": {
+      "mean": 0.13090584395801153,
+      "std": 0.8985109065481425
+    },
+    "CpuUsageRate(%)": {
+      "mean": 0.6909218249959377,
+      "std": 5.026029450125643
+    },
+    "MemoryUsage(Mi)": {
+      "mean": 32.284672522668394,
+      "std": 3.7438426765413717
+    },
+    "MemoryUsageRate(%)": {
+      "mean": 25.222400408334682,
+      "std": 2.924877091047947
+    },
+    "SyscallRead": {
+      "mean": 44.38341934401841,
+      "std": 36.96554055013254
+    },
+    "SyscallWrite": {
+      "mean": 92.71295222868045,
+      "std": 31.00449934265393
+    },
+    "NetworkReceiveBytes": {
+      "mean": 1329.1372019101218,
+      "std": 3079.5907456345044
+    },
+    "NetworkTransmitBytes": {
+      "mean": 21036.774593701346,
+      "std": 6585.173512469891
+    },
+    "PodClientLatencyP90(s)": {
+      "mean": 0.006378790849450874,
+      "std": 0.014770122619065743
+    },
+    "PodServerLatencyP90(s)": {
+      "mean": 0.005267207962283918,
+      "std": 0.010522433039684953
+    },
+    "PodClientLatencyP95(s)": {
+      "mean": 0.007103114649450385,
+      "std": 0.0178379303208932
+    },
+    "PodServerLatencyP95(s)": {
+      "mean": 0.005559219486642183,
+      "std": 0.01172033998478854
+    },
+    "PodClientLatencyP99(s)": {
+      "mean": 0.007661796319099072,
+      "std": 0.020413254476330536
+    },
+    "PodServerLatencyP99(s)": {
+      "mean": 0.005792828706128846,
+      "std": 0.012701452708414154
+    },
+    "PodWorkload(Ops)": {
+      "mean": 0.30404101119430144,
+      "std": 0.14121721758217162
+    },
+    "PodSuccessRate(%)": {
+      "mean": 0.0,
+      "std": 0.001
+    },
+    "NodeCpuUsageRate(%)": {
+      "mean": 8.551213406336215,
+      "std": 2.2318250724230304
+    },
+    "NodeMemoryUsageRate(%)": {
+      "mean": 26.40890223529816,
+      "std": 0.9660043270606593
+    },
+    "NodeNetworkReceiveBytes": {
+      "mean": 4979349.630164355,
+      "std": 964808.3785344817
+    }
+  },
+  "productcatalogservice": {
+    "CpuUsage(m)": {
+      "mean": 7.751336341775308,
+      "std": 5.13282033542397
+    },
+    "CpuUsageRate(%)": {
+      "mean": 37.58812360444023,
+      "std": 10.11842789643818
+    },
+    "MemoryUsage(Mi)": {
+      "mean": 14.531523235103627,
+      "std": 2.3737913818218215
+    },
+    "MemoryUsageRate(%)": {
+      "mean": 11.352752527424709,
+      "std": 1.854524517048298
+    },
+    "SyscallRead": {
+      "mean": 44444.7837046939,
+      "std": 6165.493827721005
+    },
+    "SyscallWrite": {
+      "mean": 33776.77994562304,
+      "std": 4413.292884874711
+    },
+    "NetworkReceiveBytes": {
+      "mean": 167995.2169350611,
+      "std": 27112.23292175053
+    },
+    "NetworkTransmitBytes": {
+      "mean": 316327.02555511927,
+      "std": 50461.718719507364
+    },
+    "PodClientLatencyP90(s)": {
+      "mean": 0.3846933074265976,
+      "std": 0.17071867117758543
+    },
+    "PodServerLatencyP90(s)": {
+      "mean": 0.037768858305957415,
+      "std": 0.5259079570344776
+    },
+    "PodClientLatencyP95(s)": {
+      "mean": 0.4282792962003454,
+      "std": 0.1976002748063683
+    },
+    "PodServerLatencyP95(s)": {
+      "mean": 0.06249505424426057,
+      "std": 0.7552354081040349
+    },
+    "PodClientLatencyP99(s)": {
+      "mean": 0.46314808721934364,
+      "std": 0.22002323579595598
+    },
+    "PodServerLatencyP99(s)": {
+      "mean": 0.11706335110074345,
+      "std": 0.9492013945985015
+    },
+    "PodWorkload(Ops)": {
+      "mean": 45.99960903235094,
+      "std": 6.433620623124696
+    },
+    "PodSuccessRate(%)": {
+      "mean": 0.0,
+      "std": 0.001
+    },
+    "NodeCpuUsageRate(%)": {
+      "mean": 7.880458100973008,
+      "std": 2.804015072733808
+    },
+    "NodeMemoryUsageRate(%)": {
+      "mean": 21.874097473623113,
+      "std": 6.2759663347335035
+    },
+    "NodeNetworkReceiveBytes": {
+      "mean": 3129786.8619478564,
+      "std": 2541054.9825897026
+    }
+  },
+  "recommendationservice": {
+    "CpuUsage(m)": {
+      "mean": 1.392653094251877,
+      "std": 1.2054498313918955
+    },
+    "CpuUsageRate(%)": {
+      "mean": 7.145533774606935,
+      "std": 7.401033140056342
+    },
+    "MemoryUsage(Mi)": {
+      "mean": 25.262139734455957,
+      "std": 3.368006444838601
+    },
+    "MemoryUsageRate(%)": {
+      "mean": 5.613808829879103,
+      "std": 0.7484458766308001
+    },
+    "SyscallRead": {
+      "mean": 683.3617588753633,
+      "std": 99.02435498955494
+    },
+    "SyscallWrite": {
+      "mean": 1408.9815537100233,
+      "std": 186.8852635936776
+    },
+    "NetworkReceiveBytes": {
+      "mean": 13523.598093659593,
+      "std": 3902.1231038029227
+    },
+    "NetworkTransmitBytes": {
+      "mean": 26966.52020793448,
+      "std": 7934.7126258279695
+    },
+    "PodClientLatencyP90(s)": {
+      "mean": 0.06483251388487207,
+      "std": 0.8639580299855403
+    },
+    "PodServerLatencyP90(s)": {
+      "mean": 0.11196241693467267,
+      "std": 1.1727076476809224
+    },
+    "PodClientLatencyP95(s)": {
+      "mean": 0.0866431572934601,
+      "std": 0.9323150852866493
+    },
+    "PodServerLatencyP95(s)": {
+      "mean": 0.13816610074539823,
+      "std": 1.2437265366183312
+    },
+    "PodClientLatencyP99(s)": {
+      "mean": 0.1530713497910282,
+      "std": 0.9947323697413856
+    },
+    "PodServerLatencyP99(s)": {
+      "mean": 0.212442474904922,
+      "std": 1.4149464633316988
+    },
+    "PodWorkload(Ops)": {
+      "mean": 6.03125815020565,
+      "std": 0.8576107851364425
+    },
+    "PodSuccessRate(%)": {
+      "mean": 0.0,
+      "std": 0.001
+    },
+    "NodeCpuUsageRate(%)": {
+      "mean": 3.6919528928077314,
+      "std": 1.106500050242971
+    },
+    "NodeMemoryUsageRate(%)": {
+      "mean": 13.202985335475002,
+      "std": 0.4432933706705038
+    },
+    "NodeNetworkReceiveBytes": {
+      "mean": 168899.67263892828,
+      "std": 90636.32576949193
+    }
+  },
+  "shippingservice": {
+    "CpuUsage(m)": {
+      "mean": 0.6389152909642546,
+      "std": 1.2753191064157676
+    },
+    "CpuUsageRate(%)": {
+      "mean": 3.2992135793004813,
+      "std": 7.290236092380743
+    },
+    "MemoryUsage(Mi)": {
+      "mean": 16.240048170336788,
+      "std": 9.593426300881925
+    },
+    "MemoryUsageRate(%)": {
+      "mean": 12.687537633075616,
+      "std": 7.494864297564004
+    },
+    "SyscallRead": {
+      "mean": 665.5172981937565,
+      "std": 110.1761189484437
+    },
+    "SyscallWrite": {
+      "mean": 1414.3900630680591,
+      "std": 234.33707186361778
+    },
+    "NetworkReceiveBytes": {
+      "mean": 2390.0026215348453,
+      "std": 3386.625302198055
+    },
+    "NetworkTransmitBytes": {
+      "mean": 23011.976320441245,
+      "std": 6947.580399743
+    },
+    "PodClientLatencyP90(s)": {
+      "mean": 0.022001683937823837,
+      "std": 0.03794011827766725
+    },
+    "PodServerLatencyP90(s)": {
+      "mean": 0.007586826816638086,
+      "std": 0.04172123203011315
+    },
+    "PodClientLatencyP95(s)": {
+      "mean": 0.024113665803108805,
+      "std": 0.04206266613543006
+    },
+    "PodServerLatencyP95(s)": {
+      "mean": 0.00867462789270764,
+      "std": 0.0497240752066279
+    },
+    "PodClientLatencyP99(s)": {
+      "mean": 0.025803251295336758,
+      "std": 0.045364206542861656
+    },
+    "PodServerLatencyP99(s)": {
+      "mean": 0.01143518176022857,
+      "std": 0.06345023962705831
+    },
+    "PodWorkload(Ops)": {
+      "mean": 2.408014512854634,
+      "std": 0.5187042631106493
+    },
+    "PodSuccessRate(%)": {
+      "mean": 0.0,
+      "std": 0.001
+    },
+    "NodeCpuUsageRate(%)": {
+      "mean": 17.368543388849606,
+      "std": 1.2028294591701545
+    },
+    "NodeMemoryUsageRate(%)": {
+      "mean": 35.96590432827976,
+      "std": 1.2850260881659485
+    },
+    "NodeNetworkReceiveBytes": {
+      "mean": 4206957.178870587,
+      "std": 254507.13443053534
+    }
+  }
+}
