@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kubepulse-ai-backend
+  namespace: hipster
+  labels:
+    app: kubepulse-ai
+    tier: control-plane
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kubepulse-ai
+  template:
+    metadata:
+      labels:
+        app: kubepulse-ai
+    spec:
+      serviceAccountName: kubepulse-sre-agent
+      containers:
+        - name: kubepulse-engine
+          image: ghcr.io/kubepulse-ai/backend:v1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+              name: http
+          env:
+            - name: LM_STUDIO_URL
+              value: "http://host.docker.internal:1234/v1/chat/completions"
+            - name: GROQ_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: kubepulse-secrets
+                  key: groq-api-key
+                  optional: true
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "1000m"
+              memory: "512Mi"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 15

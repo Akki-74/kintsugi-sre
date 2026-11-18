@@ -1,0 +1,222 @@
+[
+  {
+    "scenario_id": "scenario_01_cpu_contention",
+    "name": "CPU Contention on CheckoutService",
+    "target_service": "checkoutservice",
+    "fault_class": "CPU_EXHAUSTION",
+    "primary_metric": "CpuUsageRate(%)",
+    "pre_value": 92.4,
+    "post_value_t60": 36.14,
+    "selected_action": "SCALE_DEPLOYMENT",
+    "reasoning_source": "DETERMINISTIC_FALLBACK_MATRIX",
+    "guardrail_status": "PASSED",
+    "execution_status": "SUCCESS",
+    "mttr_seconds": 22.0,
+    "recovery_curve": [
+      {
+        "t_sec": 0,
+        "val": 92.4
+      },
+      {
+        "t_sec": 10,
+        "val": 74.93
+      },
+      {
+        "t_sec": 20,
+        "val": 61.99
+      },
+      {
+        "t_sec": 30,
+        "val": 52.4
+      },
+      {
+        "t_sec": 40,
+        "val": 45.3
+      },
+      {
+        "t_sec": 50,
+        "val": 40.04
+      },
+      {
+        "t_sec": 60,
+        "val": 36.14
+      }
+    ]
+  },
+  {
+    "scenario_id": "scenario_02_memory_leak",
+    "name": "Progressive Sawtooth Memory Leak on CartService",
+    "target_service": "cartservice",
+    "fault_class": "MEMORY_EXHAUSTION",
+    "primary_metric": "MemoryUsageRate(%)",
+    "pre_value": 94.8,
+    "post_value_t60": 32.73,
+    "selected_action": "PATCH_RESOURCES",
+    "reasoning_source": "DETERMINISTIC_FALLBACK_MATRIX",
+    "guardrail_status": "PASSED",
+    "execution_status": "SUCCESS",
+    "mttr_seconds": 28.0,
+    "recovery_curve": [
+      {
+        "t_sec": 0,
+        "val": 94.8
+      },
+      {
+        "t_sec": 10,
+        "val": 73.37
+      },
+      {
+        "t_sec": 20,
+        "val": 58.53
+      },
+      {
+        "t_sec": 30,
+        "val": 48.23
+      },
+      {
+        "t_sec": 40,
+        "val": 41.1
+      },
+      {
+        "t_sec": 50,
+        "val": 36.16
+      },
+      {
+        "t_sec": 60,
+        "val": 32.73
+      }
+    ]
+  },
+  {
+    "scenario_id": "scenario_03_app_exception",
+    "name": "Payment Gateway Inner Exception Burst on PaymentService",
+    "target_service": "paymentservice",
+    "fault_class": "SERVICE_DISRUPTION_LOG",
+    "primary_metric": "PodSuccessRate(%)",
+    "pre_value": 42.0,
+    "post_value_t60": 97.64,
+    "selected_action": "RESTART_POD",
+    "reasoning_source": "DETERMINISTIC_FALLBACK_MATRIX",
+    "guardrail_status": "PASSED",
+    "execution_status": "SUCCESS",
+    "mttr_seconds": 18.0,
+    "recovery_curve": [
+      {
+        "t_sec": 0,
+        "val": 42.0
+      },
+      {
+        "t_sec": 10,
+        "val": 65.97
+      },
+      {
+        "t_sec": 20,
+        "val": 80.04
+      },
+      {
+        "t_sec": 30,
+        "val": 88.29
+      },
+      {
+        "t_sec": 40,
+        "val": 93.13
+      },
+      {
+        "t_sec": 50,
+        "val": 95.97
+      },
+      {
+        "t_sec": 60,
+        "val": 97.64
+      }
+    ]
+  },
+  {
+    "scenario_id": "scenario_04_disk_pressure",
+    "name": "Unrotated Container Log Fill on ProductCatalogService",
+    "target_service": "productcatalogservice",
+    "fault_class": "DISK_EXHAUSTION",
+    "primary_metric": "PodServerLatencyP95(s)",
+    "pre_value": 100.0,
+    "post_value_t60": 9.21,
+    "selected_action": "CORDON_AND_RELOCATE",
+    "reasoning_source": "DETERMINISTIC_FALLBACK_MATRIX",
+    "guardrail_status": "PASSED",
+    "execution_status": "SUCCESS",
+    "mttr_seconds": 35.0,
+    "recovery_curve": [
+      {
+        "t_sec": 0,
+        "val": 100.0
+      },
+      {
+        "t_sec": 10,
+        "val": 67.08
+      },
+      {
+        "t_sec": 20,
+        "val": 45.02
+      },
+      {
+        "t_sec": 30,
+        "val": 30.22
+      },
+      {
+        "t_sec": 40,
+        "val": 20.31
+      },
+      {
+        "t_sec": 50,
+        "val": 13.66
+      },
+      {
+        "t_sec": 60,
+        "val": 9.21
+      }
+    ]
+  },
+  {
+    "scenario_id": "scenario_05_network_delay",
+    "name": "Downstream Istio Envoy Proxy Latency Spike on Frontend",
+    "target_service": "frontend",
+    "fault_class": "NETWORK_DEGRADATION",
+    "primary_metric": "PodServerLatencyP95(s)",
+    "pre_value": 2.8,
+    "post_value_t60": 0.31,
+    "selected_action": "APPLY_TRAFFIC_SHAPING",
+    "reasoning_source": "DETERMINISTIC_FALLBACK_MATRIX",
+    "guardrail_status": "PASSED",
+    "execution_status": "SUCCESS",
+    "mttr_seconds": 35.0,
+    "recovery_curve": [
+      {
+        "t_sec": 0,
+        "val": 2.8
+      },
+      {
+        "t_sec": 10,
+        "val": 1.81
+      },
+      {
+        "t_sec": 20,
+        "val": 1.19
+      },
+      {
+        "t_sec": 30,
+        "val": 0.8
+      },
+      {
+        "t_sec": 40,
+        "val": 0.56
+      },
+      {
+        "t_sec": 50,
+        "val": 0.41
+      },
+      {
+        "t_sec": 60,
+        "val": 0.31
+      }
+    ]
+  }
+]
