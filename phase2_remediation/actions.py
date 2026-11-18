@@ -149,3 +149,13 @@ class FaultToActionMatrix:
                 confidence=0.99,
                 reasoning_summary="Rule Fallback: Cluster metrics within healthy baseline bounds. No action taken."
             )
+
+    @staticmethod
+    def get_fallback_plan(service: str, fault_class: str, confidence: float = 0.95,
+                          current_replicas: int = 1, namespace: str = "hipster",
+                          telemetry: Optional[Dict[str, Any]] = None) -> RemediationPlan:
+        """Alias for fallback plan resolution matching llm_client caller."""
+        plan = FaultToActionMatrix.resolve_action(fault_class, service, telemetry or {})
+        plan.target_namespace = namespace
+        plan.confidence = confidence
+        return plan

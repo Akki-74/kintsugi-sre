@@ -1,20 +1,8 @@
-"""
-Kintsugi-AI — Phase 2 Dual-Backend Structured LLM Client & Fallback Engine
-============================================================================
-Provides structured reasoning selecting strictly from the ActionCatalog.
-Supports three execution backends (tried in order based on preferred_backend):
-  1. Free Cloud Groq API (Llama-3.3-70B-Versatile) — $0.00, 0 RAM
-  2. Local LM Studio / Ollama (Qwen2.5-3B-Instruct on RTX 500 Ada 4GB VRAM)
-  3. Deterministic SRE Rule-Based Fallback Matrix (100% offline / failure-proof)
-
-The LLM is constrained via Pydantic JSON Schema (RemediationPlan) so it can
-NEVER output arbitrary kubectl/bash commands — only validated action enums.
-"""
-
 import os
+import re
 import json
 import logging
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any, Optional, Tuple, List
 
 try:
     from dotenv import load_dotenv
@@ -22,42 +10,40 @@ try:
 except ImportError:
     pass
 
-import urllib.request
-import urllib.error
+from openai import OpenAI
 from phase2_remediation.actions import RemediationPlan, FaultToActionMatrix, ActionType
 
 logger = logging.getLogger("Kintsugi.LLMClient")
 
-
-SYSTEM_PROMPT = """You are Kintsugi-AI SRE Brain, an autonomous Kubernetes Site Reliability Engineering agent.
+SYSTEM_PROMPT = """You are Kintsugi SRE Brain, an autonomous Kubernetes Site Reliability Engineering agent.
 Your mission is to diagnose multi-modal Kubernetes telemetry anomalies and select the safest, most effective remediation action.
 
 You MUST respond strictly with a valid JSON object matching the following schema.
-Do NOT output Markdown code blocks, markdown text, or any explanations outside the JSON object.
+Do NOT output Markdown code blocks or text outside the JSON object.
 
 Allowed Actions:
 - "SCALE_DEPLOYMENT": for CPU contention/saturation or elevated workload traffic. Parameters: {"replicas": int [1, 5]}.
 - "PATCH_RESOURCES": for gradual memory leaks or resource exhaustion. Parameters: {"memory_limit_mi": int [64, 1024]}.
 - "RESTART_POD": for application exceptions, HTTP 500 bursts, or transient code errors.
-- "CORDON_AND_RELOCATE": for node disk pressure or node degradation. Parameters: {"target_node": "kind-worker"}.
+- "CORDON_AND_RELOCATE": for node disk pressure or node degradation. Parameters: {"target_node": "desktop-worker"}.
 - "APPLY_TRAFFIC_SHAPING": for network latency or downstream timeout cascade. Parameters: {"timeout_ms": int [100, 5000]}.
 - "NO_ACTION": if metrics are healthy and within baseline bounds.
 
 JSON Schema:
 {
-  "diagnosed_root_cause": "string",
+  "diagnosed_root_cause": "Detailed technical root cause referencing the exact metrics and logs",
   "target_service": "string",
   "target_namespace": "hipster",
   "selected_action": "SCALE_DEPLOYMENT" | "PATCH_RESOURCES" | "RESTART_POD" | "CORDON_AND_RELOCATE" | "APPLY_TRAFFIC_SHAPING" | "NO_ACTION",
-  "parameters": {"replicas": 3, "memory_limit_mi": 512, "timeout_ms": 1000},
+  "parameters": {"replicas": 3, "memory_limit_mi": null, "cpu_limit_m": null, "target_node": null, "timeout_ms": null},
   "confidence": 0.95,
-  "reasoning_summary": "string"
+  "reasoning_summary": "Concise SRE justification for why this specific action fixes the root cause"
 }
 """
 
 
 class DualBackendLLMClient:
-    """Dual-backend LLM client with automatic failover and deterministic safety net."""
+    """Dual-backend LLM client (Groq Qwen3.8-27B + Local LM Studio) with deterministic safety net."""
 
     def __init__(self,
                  preferred_backend: Optional[str] = None,
@@ -65,182 +51,140 @@ class DualBackendLLMClient:
                  groq_model: Optional[str] = None,
                  local_url: Optional[str] = None,
                  local_model: Optional[str] = None):
+        load_dotenv(override=True)
         backend_env = os.environ.get("LLM_PROVIDER", "groq")
         self.preferred_backend = (preferred_backend or backend_env).lower().strip()
 
-        # Groq Cloud Config
         self.groq_api_key = groq_api_key or os.environ.get("GROQ_API_KEY", "")
-        self.groq_model = groq_model or os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
-        self.groq_url = "https://api.groq.com/openai/v1/chat/completions"
+        self.groq_model = groq_model or os.environ.get("GROQ_MODEL", "qwen/qwen3.8-27b")
+        self.groq_base_url = "https://api.groq.com/openai/v1"
 
-        # LM Studio / Ollama Local Config
-        self.local_url = local_url or os.environ.get(
-            "LM_STUDIO_BASE_URL",
-            os.environ.get("LM_STUDIO_URL", "http://localhost:1234/v1")
-        ).rstrip("/")
-        if not self.local_url.endswith("/chat/completions"):
-            self.local_url = f"{self.local_url}/chat/completions"
+        raw_local = local_url or os.environ.get("LM_STUDIO_BASE_URL", "http://localhost:1234/v1")
+        self.local_base_url = raw_local.replace("/chat/completions", "").rstrip("/")
         self.local_model = local_model or os.environ.get("LM_STUDIO_MODEL", "qwen2.5-3b-instruct")
 
-        # Track last successful backend for status reporting
-        self.last_backend_used = None
-        self.last_error = None
+        self.last_backend_used: Optional[str] = None
+        self.last_error: Optional[str] = None
+
+    @staticmethod
+    def _extract_clean_json(raw_text: str) -> dict:
+        """Strips <think>...</think> tags and markdown fences from Qwen/LLM output and parses JSON."""
+        cleaned = re.sub(r"<think>.*?</think>", "", raw_text, flags=re.DOTALL).strip()
+        cleaned = re.sub(r"^`(?:json)?\s*", "", cleaned)
+        cleaned = re.sub(r"\s*`$", "", cleaned).strip()
+        start = cleaned.find("{")
+        end = cleaned.rfind("}")
+        if start != -1 and end != -1 and end > start:
+            cleaned = cleaned[start : end + 1]
+        return json.loads(cleaned)
+
+    def _call_openai_compatible(self, base_url: str, api_key: str, model: str, user_prompt: str) -> RemediationPlan:
+        client = OpenAI(base_url=base_url, api_key=api_key, timeout=15.0)
+        response = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=0.1,
+            max_tokens=1024,
+        )
+        content = response.choices[0].message.content or ""
+        parsed_dict = self._extract_clean_json(content)
+
+        # Normalize action aliases if needed
+        act = parsed_dict.get("selected_action", "")
+        if act == "NO_OP":
+            parsed_dict["selected_action"] = "NO_ACTION"
+
+        return RemediationPlan(**parsed_dict)
 
     def generate_remediation_plan(self,
                                    service: str,
                                    fault_class: str,
                                    confidence: float,
                                    metrics_summary: Dict[str, Any],
-                                   recent_logs: list[str],
-                                   current_replicas: int = 1) -> Tuple[RemediationPlan, str]:
-        """Public API matching the user's Step 2.2 test interface."""
-        return self.plan_remediation(
+                                   recent_logs: Optional[List[str]] = None,
+                                   current_replicas: int = 1,
+                                   namespace: str = "hipster") -> Tuple[RemediationPlan, str]:
+        user_prompt = json.dumps({
+            "target_service": service,
+            "target_namespace": namespace,
+            "phase1_predicted_fault": fault_class,
+            "phase1_confidence": round(float(confidence), 4),
+            "current_replicas": current_replicas,
+            "telemetry_metrics": metrics_summary,
+            "recent_pod_logs": (recent_logs or [])[-10:],
+        }, indent=2)
+
+        backends = ["groq", "lm_studio"] if self.preferred_backend != "lm_studio" else ["lm_studio", "groq"]
+        errors = []
+
+        for b in backends:
+            try:
+                if b == "groq":
+                    if not self.groq_api_key or "PASTE" in self.groq_api_key:
+                        raise ValueError("GROQ_API_KEY not configured")
+                    plan = self._call_openai_compatible(
+                        base_url=self.groq_base_url,
+                        api_key=self.groq_api_key,
+                        model=self.groq_model,
+                        user_prompt=user_prompt,
+                    )
+                    self.last_backend_used = f"GROQ_CLOUD ({self.groq_model})"
+                    self.last_error = None
+                    return plan, self.last_backend_used
+                elif b == "lm_studio":
+                    plan = self._call_openai_compatible(
+                        base_url=self.local_base_url,
+                        api_key="lm-studio",
+                        model=self.local_model,
+                        user_prompt=user_prompt,
+                    )
+                    self.last_backend_used = f"LM_STUDIO_LOCAL ({self.local_model})"
+                    self.last_error = None
+                    return plan, self.last_backend_used
+            except Exception as e:
+                errors.append(f"{b}: {str(e)}")
+
+        self.last_error = " | ".join(errors)
+        logger.warning(f"LLM backends failed ({self.last_error}) -> using deterministic SRE matrix.")
+        fallback_plan = FaultToActionMatrix.get_fallback_plan(
+            service=service,
             fault_class=fault_class,
-            predicted_service=service,
             confidence=confidence,
-            telemetry_summary={**metrics_summary, "current_replicas": current_replicas},
-            recent_logs=recent_logs
+            current_replicas=current_replicas,
+            namespace=namespace,
         )
+        self.last_backend_used = "DETERMINISTIC_FALLBACK_MATRIX"
+        return fallback_plan, self.last_backend_used
 
     def plan_remediation(self,
                           fault_class: str,
                           predicted_service: str,
                           confidence: float,
                           telemetry_summary: Dict[str, Any],
-                          recent_logs: list[str]) -> Tuple[RemediationPlan, str]:
-        """
-        Attempts structured reasoning in priority order based on preferred_backend:
-          - If preferred_backend is 'groq': Groq -> LM Studio -> Fallback
-          - If preferred_backend is 'lm_studio': LM Studio -> Groq -> Fallback
-          - Else: Groq -> LM Studio -> Fallback
-        Returns (RemediationPlan, source_used)
-        """
-        user_prompt = f"""Target Anomaly Observation:
-- Predicted Fault Class: {fault_class}
-- Primary Microservice: {predicted_service}
-- ML Classifier Confidence: {confidence:.2f}
-
-Recent Metric Telemetry:
-{json.dumps(telemetry_summary, indent=2)}
-
-Recent Container Logs / Events:
-{json.dumps(recent_logs[-5:] if recent_logs else ["No recent error logs recorded."], indent=2)}
-
-Diagnose root cause and output strict JSON remediation plan:"""
-
-        # Determine backend order
-        if self.preferred_backend in ("lm_studio", "lmstudio", "local", "ollama"):
-            backend_order = [
-                ("LM_STUDIO", self._try_local, {}),
-                ("GROQ", self._try_groq, {}),
-            ]
-        else:
-            backend_order = [
-                ("GROQ", self._try_groq, {}),
-                ("LM_STUDIO", self._try_local, {}),
-            ]
-
-        # Try each backend in order
-        for backend_name, try_fn, kwargs in backend_order:
-            plan, err = try_fn(user_prompt)
-            if plan:
-                self.last_backend_used = backend_name
-                self.last_error = None
-                label = (
-                    f"GROQ ({self.groq_model})" if backend_name == "GROQ"
-                    else f"LM_STUDIO ({self.local_model})"
-                )
-                logger.info(f"LLM plan generated via {label}")
-                return plan, label
-            else:
-                self.last_error = err
-                logger.info(f"{backend_name} failed: {err}")
-
-        # 3. Deterministic SRE Rule-Based Fallback Matrix (never fails)
-        logger.info("All LLM backends failed. Using deterministic SRE fallback matrix.")
-        self.last_backend_used = "FALLBACK_MATRIX"
-        fallback_plan = FaultToActionMatrix.resolve_action(
+                          recent_logs: Optional[List[str]] = None,
+                          current_replicas: int = 1,
+                          namespace: str = "hipster") -> Tuple[RemediationPlan, str]:
+        """LangGraph agent compatibility wrapper."""
+        return self.generate_remediation_plan(
+            service=predicted_service,
             fault_class=fault_class,
-            target_service=predicted_service,
-            telemetry=telemetry_summary
+            confidence=confidence,
+            metrics_summary=telemetry_summary,
+            recent_logs=recent_logs,
+            current_replicas=current_replicas,
+            namespace=namespace
         )
-        return fallback_plan, "DETERMINISTIC_FALLBACK_MATRIX"
-
-    def _try_groq(self, user_prompt: str) -> Tuple[Optional[RemediationPlan], Optional[str]]:
-        """Attempt Groq Cloud API."""
-        if not self.groq_api_key or "PASTE" in self.groq_api_key or len(self.groq_api_key.strip()) < 10:
-            return None, "GROQ_API_KEY not configured in .env"
-        return self._call_openai_compatible(
-            url=self.groq_url,
-            api_key=self.groq_api_key,
-            model=self.groq_model,
-            user_prompt=user_prompt,
-            timeout_sec=8.0
-        )
-
-    def _try_local(self, user_prompt: str) -> Tuple[Optional[RemediationPlan], Optional[str]]:
-        """Attempt local LM Studio / Ollama."""
-        return self._call_openai_compatible(
-            url=self.local_url,
-            api_key="not-needed",
-            model=self.local_model,
-            user_prompt=user_prompt,
-            timeout_sec=6.0
-        )
-
-    def _call_openai_compatible(self, url: str, api_key: str, model: str,
-                                 user_prompt: str, timeout_sec: float):
-        """Calls any OpenAI-compatible chat/completions endpoint."""
-        payload = {
-            "model": model,
-            "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_prompt}
-            ],
-            "temperature": 0.1,
-            "max_tokens": 400,
-            "response_format": {"type": "json_object"}
-        }
-
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}"
-        }
-
-        try:
-            req = urllib.request.Request(
-                url,
-                data=json.dumps(payload).encode("utf-8"),
-                headers=headers,
-                method="POST"
-            )
-            with urllib.request.urlopen(req, timeout=timeout_sec) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
-                raw_text = data["choices"][0]["message"]["content"].strip()
-
-                # Strip markdown code fences if LLM wraps response
-                if raw_text.startswith("```"):
-                    lines = raw_text.split("\n")
-                    # Remove first and last fence lines
-                    lines = [l for l in lines if not l.strip().startswith("```")]
-                    raw_text = "\n".join(lines).strip()
-
-                # Parse and validate with Pydantic
-                clean_json = json.loads(raw_text)
-                plan = RemediationPlan(**clean_json)
-                return plan, None
-        except json.JSONDecodeError as e:
-            return None, f"JSON parse error: {e}"
-        except Exception as e:
-            return None, str(e)
 
     def get_status(self) -> Dict[str, Any]:
-        """Returns current LLM client configuration status."""
+        """Returns status of current LLM configuration for health checks."""
         return {
             "preferred_backend": self.preferred_backend,
-            "groq_configured": bool(self.groq_api_key),
+            "groq_configured": bool(self.groq_api_key and "PASTE" not in self.groq_api_key),
             "groq_model": self.groq_model,
-            "local_url": self.local_url,
+            "local_url": self.local_base_url,
             "local_model": self.local_model,
             "last_backend_used": self.last_backend_used,
             "last_error": self.last_error,
