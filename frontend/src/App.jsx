@@ -7,8 +7,8 @@ import AgentConsole from './components/AgentConsole';
 export default function App() {
   const [isConnected, setIsConnected] = useState(false);
   const [autonomousMode, setAutonomousMode] = useState(true);
-  const [llmBackend, setLlmBackend] = useState('lmstudio');
-  const [clusterSource, setClusterSource] = useState('replay');
+  const [llmBackend, setLlmBackend] = useState('groq');
+  const [clusterSource, setClusterSource] = useState('live');
   const [selectedService, setSelectedService] = useState('frontend');
 
   const [activeTick, setActiveTick] = useState(null);
@@ -19,6 +19,44 @@ export default function App() {
   const [pendingPlan, setPendingPlan] = useState(null);
 
   const wsRef = useRef(null);
+
+  // Sync initial backend state on mount
+  useEffect(() => {
+    fetch('/api/status')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.llm_backend) setLlmBackend(data.llm_backend);
+        if (data.cluster_source) setClusterSource(data.cluster_source);
+        if (data.autonomous_mode !== undefined) setAutonomousMode(data.autonomous_mode);
+      })
+      .catch((err) => console.log('Status sync err:', err));
+  }, []);
+
+  const handleSetLlmBackend = async (backend) => {
+    setLlmBackend(backend);
+    try {
+      await fetch('/api/agent/backend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ backend }),
+      });
+    } catch (e) {
+      console.error('Failed to update LLM backend:', e);
+    }
+  };
+
+  const handleSetClusterSource = async (source) => {
+    setClusterSource(source);
+    try {
+      await fetch('/api/cluster/source', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source }),
+      });
+    } catch (e) {
+      console.error('Failed to update cluster source:', e);
+    }
+  };
 
   // Initialize and maintain resilient WebSocket connection
   useEffect(() => {
@@ -161,9 +199,9 @@ export default function App() {
         autonomousMode={autonomousMode}
         setAutonomousMode={setAutonomousMode}
         llmBackend={llmBackend}
-        setLlmBackend={setLlmBackend}
+        setLlmBackend={handleSetLlmBackend}
         clusterSource={clusterSource}
-        setClusterSource={setClusterSource}
+        setClusterSource={handleSetClusterSource}
         activeTick={activeTick}
       />
 

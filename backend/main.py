@@ -12,6 +12,12 @@ import asyncio
 from pathlib import Path
 from typing import Dict, Any, Optional
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
@@ -58,6 +64,14 @@ class ModeRequest(BaseModel):
     autonomous: bool
 
 
+class BackendRequest(BaseModel):
+    backend: str  # 'groq' or 'lmstudio'
+
+
+class SourceRequest(BaseModel):
+    source: str   # 'live' or 'replay'
+
+
 @app.get("/")
 def root():
     if frontend_dist.exists():
@@ -75,13 +89,37 @@ def root():
 @app.get("/health")
 @app.get("/api/status")
 def health():
+    llm_info = engine.agent.llm_client.get_status() if hasattr(engine.agent, "llm_client") else {}
+    prom_reachable = (
+        getattr(engine.agent.prometheus, "is_reachable", False)
+        if hasattr(engine.agent, "prometheus") and engine.agent.prometheus
+        else False
+    )
     return {
         "status": "healthy",
         "cluster_mode": engine.agent.k8s.mode,
         "is_k8s_connected": engine.agent.k8s.is_connected,
+        "cluster_source": getattr(engine, "cluster_source", "replay"),
+        "prometheus_reachable": prom_reachable,
+        "llm_backend": llm_info.get("preferred_backend", "groq"),
+        "groq_configured": llm_info.get("groq_configured", False),
         "dataset_rows": len(engine.holdout_df),
         "autonomous_mode": engine.autonomous_mode,
     }
+
+
+@app.post("/api/agent/backend")
+def set_agent_backend(req: BackendRequest):
+    """Switch LLM backend between Groq and LM Studio."""
+    active = engine.set_llm_backend(req.backend)
+    return {"preferred_backend": active}
+
+
+@app.post("/api/cluster/source")
+def set_cluster_source(req: SourceRequest):
+    """Switch telemetry source between Live K8s and Digital Twin Replay."""
+    active = engine.set_cluster_source(req.source)
+    return {"cluster_source": active}
 
 
 @app.get("/api/topology")

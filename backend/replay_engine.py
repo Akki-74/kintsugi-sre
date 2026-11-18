@@ -37,6 +37,11 @@ class DigitalTwinReplayEngine:
         self.tick_speed_sec = 1.0  # Telemetry emitted every 1 second
         self.autonomous_mode = True
         self.pending_hitl_plan = None
+        self.cluster_source = (
+            "live"
+            if os.environ.get("CLUSTER_MODE") == "LIVE_K8S" and getattr(self.agent.k8s, "is_connected", False)
+            else "replay"
+        )
         
         # Load trained Phase 1 Multi-Modal Model
         self.classifier = None
@@ -44,6 +49,16 @@ class DigitalTwinReplayEngine:
         self.meta = {}
         self.holdout_df = pd.DataFrame()
         self._load_artifacts()
+
+    def set_cluster_source(self, source: str) -> str:
+        self.cluster_source = source.lower().strip()
+        return self.cluster_source
+
+    def set_llm_backend(self, backend: str) -> str:
+        if hasattr(self.agent, "llm_client"):
+            self.agent.llm_client.preferred_backend = backend.lower().strip()
+            return self.agent.llm_client.preferred_backend
+        return backend
 
     def _load_artifacts(self):
         meta_path = SAVED_MODELS_DIR / "model_metadata.json"
@@ -165,43 +180,83 @@ class DigitalTwinReplayEngine:
 
     def get_next_tick(self) -> Dict[str, Any]:
         """Emits next real telemetry tick with live Phase 1 inference & Phase 2 remediation."""
-        if self.holdout_df.empty:
-            return {"status": "NO_DATA"}
+        is_live = (self.cluster_source == "live")
 
-        idx = self.current_tick_idx % len(self.holdout_df)
-        self.current_tick_idx += 1
-        row = self.holdout_df.iloc[idx]
+        if is_live and getattr(self.agent, "prometheus", None) and self.agent.prometheus.is_reachable:
+            services = list(self.agent.k8s._mock_cluster_state.get("services", {}).keys()) or [
+                "frontend", "checkoutservice", "cartservice", "paymentservice",
+                "productcatalogservice", "currencyservice", "shippingservice",
+                "recommendationservice", "adservice", "emailservice"
+            ]
+            idx = self.current_tick_idx
+            self.current_tick_idx += 1
+            service = services[idx % len(services)]
+            epoch_sec = int(time.time())
+            gt_class = "NORMAL"
 
-        service = row.get("service", "frontend")
-        epoch_sec = int(row.get("epoch_sec", time.time()))
-        gt_class = row.get("fault_class", "NORMAL")
+            live_m = self.agent.prometheus.get_service_metrics(service)
+            cpu_val = live_m.get("cpu_usage_pct", 25.0)
+            mem_val = live_m.get("memory_usage_pct", 30.0)
 
-        # Run Phase 1 inference
-        features = self.meta.get("features", [])
-        if self.classifier and features:
-            x_vec = row[features].to_numpy().reshape(1, -1)
-            pred_id = int(self.classifier.predict(x_vec)[0])
-            pred_probas = self.classifier.predict_proba(x_vec)[0]
-            confidence = float(pred_probas[pred_id])
-            pred_class = CLASS_NAMES[pred_id]
+            metrics = {
+                "CpuUsageRate(%)": float(cpu_val),
+                "MemoryUsageRate(%)": float(mem_val),
+                "PodServerLatencyP95(s)": 0.12,
+                "PodWorkload(Ops)": 15.0,
+                "PodSuccessRate(%)": 100.0,
+                "log_error_count": 0.0,
+            }
+            pred_class = "NORMAL"
+            confidence = 0.98
+            tte_min = None
+
+            # If CPU or memory is elevated in live cluster, mark anomaly
+            if cpu_val > 80.0:
+                pred_class = "CPU_EXHAUSTION"
+                confidence = 0.94
+            elif mem_val > 85.0:
+                pred_class = "MEMORY_EXHAUSTION"
+                confidence = 0.92
+                tte_min = 3.5
+
         else:
-            pred_class = gt_class
-            confidence = 0.95
+            if self.holdout_df.empty:
+                return {"status": "NO_DATA"}
 
-        # TTE prediction for gradual regimes
-        tte_min = None
-        if self.regressor and features and pred_class in ["MEMORY_EXHAUSTION", "DISK_EXHAUSTION"]:
-            tte_min = float(self.regressor.predict(x_vec)[0])
+            idx = self.current_tick_idx % len(self.holdout_df)
+            self.current_tick_idx += 1
+            row = self.holdout_df.iloc[idx]
 
-        # Core metric snapshot
-        metrics = {
-            "CpuUsageRate(%)": float(row.get("CpuUsageRate(%)", 25.0)),
-            "MemoryUsageRate(%)": float(row.get("MemoryUsageRate(%)", 30.0)),
-            "PodServerLatencyP95(s)": float(row.get("PodServerLatencyP95(s)", 0.15)),
-            "PodWorkload(Ops)": float(row.get("PodWorkload(Ops)", 10.0)),
-            "PodSuccessRate(%)": float(row.get("PodSuccessRate(%)", 100.0)),
-            "log_error_count": float(row.get("log_error_count", 0.0)),
-        }
+            service = row.get("service", "frontend")
+            epoch_sec = int(row.get("epoch_sec", time.time()))
+            gt_class = row.get("fault_class", "NORMAL")
+
+            # Run Phase 1 inference
+            features = self.meta.get("features", [])
+            if self.classifier and features:
+                x_vec = row[features].to_numpy().reshape(1, -1)
+                pred_id = int(self.classifier.predict(x_vec)[0])
+                pred_probas = self.classifier.predict_proba(x_vec)[0]
+                confidence = float(pred_probas[pred_id])
+                pred_class = CLASS_NAMES[pred_id]
+            else:
+                pred_class = gt_class
+                confidence = 0.95
+
+            # TTE prediction for gradual regimes
+            tte_min = None
+            if self.regressor and features and pred_class in ["MEMORY_EXHAUSTION", "DISK_EXHAUSTION"]:
+                tte_min = float(self.regressor.predict(x_vec)[0])
+
+            # Core metric snapshot
+            metrics = {
+                "CpuUsageRate(%)": float(row.get("CpuUsageRate(%)", 25.0)),
+                "MemoryUsageRate(%)": float(row.get("MemoryUsageRate(%)", 30.0)),
+                "PodServerLatencyP95(s)": float(row.get("PodServerLatencyP95(s)", 0.15)),
+                "PodWorkload(Ops)": float(row.get("PodWorkload(Ops)", 10.0)),
+                "PodSuccessRate(%)": float(row.get("PodSuccessRate(%)", 100.0)),
+                "log_error_count": float(row.get("log_error_count", 0.0)),
+            }
 
         # Dispatch Phase 2 Ambient Agent if anomaly detected
         agent_event = None

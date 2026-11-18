@@ -296,7 +296,97 @@ class KubernetesClusterAdapter:
             message=msg
         )
 
+    def get_pod_logs(self, service: str, namespace: str = "hipster",
+                     tail_lines: int = 20) -> list[str]:
+        """Fetches the last N log lines from a service's first pod."""
+        if not self.is_connected or not self.core_v1:
+            return [f"[Digital Twin] No live logs available for {service}"]
+        try:
+            pods = self.core_v1.list_namespaced_pod(
+                namespace=namespace,
+                label_selector=f"app={service}",
+                limit=1
+            )
+            if not pods.items:
+                return [f"No pods found for service={service}"]
+            pod_name = pods.items[0].metadata.name
+            log_text = self.core_v1.read_namespaced_pod_log(
+                name=pod_name,
+                namespace=namespace,
+                container="server",
+                tail_lines=tail_lines,
+                timestamps=False
+            )
+            return [line for line in log_text.strip().split("\n") if line]
+        except Exception as e:
+            logger.warning(f"Failed to fetch logs for {service}: {e}")
+            return [f"Error fetching logs: {e}"]
+
+    def get_live_service_state(self, namespace: str = "hipster") -> Dict[str, Dict[str, Any]]:
+        """Reads real deployment replica counts and pod statuses from K8s API."""
+        if not self.is_connected:
+            return self._mock_cluster_state.get("services", {})
+        try:
+            services_state = {}
+            deployments = self.apps_v1.list_namespaced_deployment(namespace=namespace)
+            for dep in deployments.items:
+                name = dep.metadata.name
+                spec_replicas = dep.spec.replicas or 1
+                ready = dep.status.ready_replicas or 0
+                containers = dep.spec.template.spec.containers
+                cpu_limit = "200m"
+                mem_limit = "128Mi"
+                if containers:
+                    res = containers[0].resources
+                    if res and res.limits:
+                        cpu_limit = res.limits.get("cpu", "200m")
+                        mem_limit = res.limits.get("memory", "128Mi")
+                status = "Running" if ready >= spec_replicas else "Degraded"
+                services_state[name] = {
+                    "replicas": spec_replicas,
+                    "ready_replicas": ready,
+                    "cpu_limit": cpu_limit,
+                    "mem_limit": mem_limit,
+                    "status": status,
+                }
+            # Also update mock state so the UI stays in sync
+            for svc, data in services_state.items():
+                self._mock_cluster_state["services"][svc] = {
+                    **self._mock_cluster_state.get("services", {}).get(svc, {}),
+                    **data
+                }
+            return services_state
+        except Exception as e:
+            logger.warning(f"Failed to read live service state: {e}")
+            return self._mock_cluster_state.get("services", {})
+
+    def get_live_node_state(self) -> Dict[str, Dict[str, Any]]:
+        """Reads real node status from K8s API."""
+        if not self.is_connected:
+            return self._mock_cluster_state.get("nodes", {})
+        try:
+            nodes_state = {}
+            nodes = self.core_v1.list_node()
+            for node in nodes.items:
+                name = node.metadata.name
+                cordoned = node.spec.unschedulable or False
+                ready = False
+                for cond in (node.status.conditions or []):
+                    if cond.type == "Ready":
+                        ready = cond.status == "True"
+                        break
+                nodes_state[name] = {"cordoned": cordoned, "ready": ready}
+            self._mock_cluster_state["nodes"] = nodes_state
+            return nodes_state
+        except Exception as e:
+            logger.warning(f"Failed to read live node state: {e}")
+            return self._mock_cluster_state.get("nodes", {})
+
     def get_cluster_snapshot(self) -> Dict[str, Any]:
+        """Returns combined cluster state from live K8s or digital twin."""
+        if self.is_connected:
+            self.get_live_service_state()
+            self.get_live_node_state()
         return {
             "mode": self.mode,
             "is_connected": self.is_connected,

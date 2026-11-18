@@ -6,11 +6,7 @@ to a high-fidelity in-memory Digital Twin sandbox.
 """
 
 from typing import Dict, Any, List, Optional
-from phase2_remediation.k8s_adapter import (
-    KubernetesClusterAdapter,
-    DigitalTwinSandbox,
-    MicroserviceTwinState
-)
+from phase2_remediation.k8s_adapter import KubernetesClusterAdapter
 from phase2_remediation.actions import (
     RemediationPlan,
     RemediationExecutionResult,
@@ -19,8 +15,6 @@ from phase2_remediation.actions import (
 
 __all__ = [
     "KubernetesClusterAdapter",
-    "DigitalTwinSandbox",
-    "MicroserviceTwinState",
     "get_k8s_adapter"
 ]
 
