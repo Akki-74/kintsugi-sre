@@ -251,6 +251,16 @@ class AmbientRemediationAgent:
             "post_remediation_stability": "Normal (Metrics returning to healthy baseline calibration)",
         }
         hist.append(f"VERIFY: Pod recovery confirmed. MTTR: {simulated_recovery_time_sec}s.")
+
+        # Update service node state to VERIFIED_REPAIRED (Kintsugi Gold Seam)
+        if hasattr(self.k8s, "_mock_cluster_state") and "services" in self.k8s._mock_cluster_state:
+            svc_dict = self.k8s._mock_cluster_state["services"].setdefault(plan.target_service, {})
+            svc_dict["is_verified_repaired"] = True
+            svc_dict["is_incident"] = False
+            svc_dict["is_predicted_failure"] = False
+            svc_dict["is_remediating"] = False
+            svc_dict["status"] = "VerifiedRepaired"
+
         return {
             "verification_result": mttr_summary,
             "step_history": hist,

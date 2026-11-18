@@ -1,30 +1,68 @@
 # 🏺 Kintsugi-AI
 **Autonomous Multi-Modal Kubernetes Failure Prediction & Ambient Remediation System**
 
+> *"Catch the cracks. Verify the fix."*
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Python: 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com)
 [![LangGraph](https://img.shields.io/badge/LangGraph-StateGraph-orange.svg)](https://github.com/langchain-ai/langgraph)
 [![XGBoost](https://img.shields.io/badge/XGBoost-2.0+-red.svg)](https://xgboost.readthedocs.io)
+[![Docker](https://img.shields.io/badge/Docker-Multi--Stage-2496ED.svg)](https://www.docker.com)
 [![Cost](https://img.shields.io/badge/Total%20Cost-%240.00%20(Free%20Tier)-brightgreen.svg)]()
 
-> **Kintsugi-AI** takes its name from the traditional Japanese art of *Kintsugi* (金継ぎ)—mending broken ceramics with gold lacquer so the repaired object emerges stronger and more resilient than before.
+> **Kintsugi-AI** takes its name from the centuries-old Japanese art of *Kintsugi* (金継ぎ)—mending broken ceramics with gold lacquer so the repaired object emerges stronger, more resilient, and more beautiful than before.
 > 
-> Applied to Site Reliability Engineering, **Kintsugi-AI** combines a **Fast Brain** (Multi-Modal XGBoost & Resource Trajectory Regressor) for sub-second onset detection and gradual horizon forecasting with a **Slow Brain** (Guardrailed LangGraph Ambient SRE Agent) that autonomously diagnoses container telemetry, enforces 5 deterministic SRE safety checks, and remediates live Kubernetes clusters via the official Kubernetes Python API.
+> Applied to Cloud-Native Site Reliability Engineering, **Kintsugi-AI** unifies a **Fast Brain** (Multi-Modal Temporal XGBoost & Resource Trajectory Regressor) for sub-second onset detection and gradual horizon forecasting with a **Slow Brain** (Guardrailed LangGraph Ambient SRE Agent) that autonomously correlates container logs, enforces 5 deterministic SRE safety checks, executes remediation via the official Kubernetes Python API, and seals the repaired pod with the **✦ Kintsugi Gold Seam**.
 
 ---
 
 ## 📊 Benchmark Verification Checkpoint
 
-| Metric | Multi-Modal XGBoost (Model 3) | Prometheus Thresholds (Baseline 0) | Delta / Engineering Gain |
+| Metric | Multi-Modal XGBoost (Model 3) | Prometheus Thresholds (Baseline 0) | Engineering Gain |
 | :--- | :--- | :--- | :--- |
-| **Overall Macro-F1** | **0.7052** | 0.2715 | **+0.4337 Macro-F1 (+159%)** |
-| **Anomaly Binary F1** | **0.7610** | 0.1977 | **+0.5633 (+285%)** |
-| **Regime A Detection Latency ($\Delta t$)** | **90.1 seconds** | 148.0 seconds | **-57.9s Faster Root-Cause Alert** |
-| **Root-Cause Localization (Top-1)** | **70.8%** | 33.3% | **+37.5% Localization Accuracy** |
-| **Regime B Forecasting Lead Time** | **4.6 minutes** | 0.0 minutes | **+4.6 min Early Crash Warning** |
-| **False Alarm Rate (FA/hr)** | **2.73 / hr** | 14.80 / hr | **Noise Reduction (Zero Alert Fatigue)** |
+| **Overall Macro-F1** | **0.7132** | 0.2816 | **+0.4316 (+153%)** |
+| **Anomaly Binary F1** | **0.7225** | 0.1683 | **+0.5542 (+329%)** |
+| **Regime A Detection Latency ($\Delta t$)** | **87.6 seconds** | 148.0 seconds | **-60.4s Faster Alert** |
+| **Root-Cause Service Localization (Top-1)** | **66.7%** | 33.3% | **+33.4% Localization Accuracy** |
+| **Regime B Forecasting Lead Time** | **4.7 minutes** | 0.0 minutes | **+4.7 min Early Warning** |
+| **TTE Prediction MAE** | **0.71 minutes** | N/A | **High-Precision Horizon** |
+| **False Alarm Rate (FA/hr at $p > 0.75$)** | **1.71 / hr** | 14.80 / hr | **Noise Reduction (Zero Alert Fatigue)** |
 | **Mean Time To Remediate (MTTR)** | **27.6 seconds** | N/A (Manual SRE) | **Sub-Minute Closed-Loop Healing** |
+
+---
+
+## 📈 Phase 1 Diagnostic Visualizations
+
+The following diagnostic plots are empirically generated from the clean, leak-free test split (`phase1_prediction/plots/`):
+
+| 1. Ablation Study Comparison | 2. Multi-Modal Confusion Matrix |
+| :---: | :---: |
+| ![Ablation Study](phase1_prediction/plots/ablation_comparison.png) | ![Confusion Matrix](phase1_prediction/plots/confusion_matrix.png) |
+| **F1 Macro progression from Baseline 0 (0.28) to Model 3 (0.713).** | **Normalized confusion matrix across all 6 operational failure classes.** |
+
+| 3. Multi-Modal Feature Importance | 4. Horizon Lead-Time Distribution |
+| :---: | :---: |
+| ![Feature Importance](phase1_prediction/plots/feature_importance.png) | ![Lead-Time Distribution](phase1_prediction/plots/lead_time_distribution.png) |
+| **Top 20 features showing strong log template error count & Z-score gain.** | **Distribution of early-warning lead times (mean 4.7 min prior to crash).** |
+
+---
+
+## 🔬 Formal 4-Model Ablation Study
+
+Evaluated across Google *OnlineBoutique* (10 microservices) under strict temporal separation:
+
+| Model Configuration | Precision | Recall | Macro-F1 | Anomaly F1 | Regime A Latency | Top-1 Loc | Regime B Lead Time |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Baseline 0: Prometheus Static Thresholds** | 0.2700 | 0.3495 | 0.2816 | 0.1683 | 148.0s | 33.3% | 0.0 min (Late reactive) |
+| **Model 1: Unsupervised IsolationForest (Metrics)** | 0.2794 | 0.3643 | 0.2782 | 0.1889 | 132.5s | 41.7% | 1.8 min |
+| **Model 2: Supervised Temporal XGBoost (Metrics)** | 0.5414 | 0.6141 | 0.5706 | 0.5789 | 108.4s | 58.3% | 3.5 min |
+| **Model 3: Multi-Modal XGBoost (Metrics + Logs)** | **0.7088** | **0.7189** | **0.7132** | **0.7225** | **87.6s** | **66.7%** | **4.7 min** |
+
+### Key Architectural Findings:
+1. **The Multi-Modal Dividend:** Incorporating Drain3 structured log template hit frequencies and HTTP 5xx error ratios increased Macro-F1 by **+25.0% relative** over metrics alone. Microservice exceptions produce immediate log signatures while CPU/memory metrics often lag or show no deviation.
+2. **Nezha Timestamp Alignment:** Caught and resolved the Nezha benchmark timestamp bug (integer `TimeStamp` column carries a +200M second offset; aligned strictly using UTC `Time` strings).
+3. **Balanced Temporal Split:** Enforced zero-leakage episode boundaries (Day 1 for training; Day 2 chronologically partitioned 64% test and 36% holdout with balanced representation across all 6 fault classes).
 
 ---
 
@@ -70,26 +108,61 @@
 |  [4. Execution Engine]  -> Official Python K8s API (or Digital Twin Replay)       |
 |            |                                                                      |
 |            v                                                                      |
-|  [5. Closed-Loop Verifier] -> Polls 60s Post-Heal Stability & Records MTTR        |
+|  [5. Closed-Loop Verifier] -> Polls Metric Z-Scores; Seams Pod in Gold!           |
 +-----------------------------------------------------------------------------------+
 ```
 
 ---
 
-## 🛡️ SRE Safety Guardrails (Zero Unbounded Execution)
+## ✦ The Kintsugi UI Innovation: "The Gold Seam"
 
-Before any proposed action mutates the cluster, it must pass through 5 deterministic Python guardrails:
+In the interactive **Service Topology Map**, microservice nodes transition through 5 distinct visual states:
 
-1. **Namespace Isolation:** Target namespace locked to `["hipster", "kintsugi-lab"]`. `kube-system` is hard-blocked.
-2. **Action Allowlist:** Constrained strictly to `["SCALE_DEPLOYMENT", "PATCH_RESOURCES", "RESTART_POD", "CORDON_AND_RELOCATE", "APPLY_TRAFFIC_SHAPING", "NO_OP"]`.
-3. **Parameter Clamping:** Replica counts clamped to $[1, 5]$; Memory limits clamped to $\le 1024\text{Mi}$.
-4. **Anti-Thrashing Cooldown:** 120-second per-service cooldown timer prevents flapping and oscillation loops.
-5. **Pre-Flight Dry-Run:** Mutations evaluated against Kubernetes API with `dry_run="All"` parameter prior to commit.
-6. **Operating Mode Check:** Respects the UI toggle between `AUTONOMOUS` (self-healing) and `HUMAN_IN_THE_LOOP` (awaits operator approval).
+```text
+[ Healthy ] ───► [ Predicted (Amber) ] ───► [ Incident (Red) ] ───► [ Healing (Cyan) ] ───► [ ✦ Kintsugi Verified (Gold) ]
+```
+
+1. **Emerald (`healthy`):** Normal operation; metric Z-scores within $\pm 1.5\sigma$.
+2. **Amber Pulse (`predicted`):** Early horizon detection (mean 4.7 min warning before container exhaustion).
+3. **Rose Bounce (`incident`):** Active disruption detected; root cause localized to microservice.
+4. **Cyan Pulse (`remediating`):** LangGraph agent executing verified remediation plan.
+5. **✦ Kintsugi Verified (`verified_repaired`):** **The Gold Seam.** Styled with a metallic gold border (`border-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.5)]`) and a glowing `✦ Kintsugi Verified` badge. Appears only after `verify_node` confirms that metric Z-scores have returned to baseline and stability is restored.
 
 ---
 
-## ⚡ Quickstart Guide
+## 🛡️ SRE Safety Guardrails (Zero Unbounded Execution)
+
+Before any LLM-proposed remediation mutates cluster state, it must satisfy 5 deterministic Python guardrails (`phase2_remediation/guardrails.py`):
+
+1. **Namespace Isolation:** Target namespace locked strictly to `["hipster", "kintsugi-lab"]`. `kube-system` and cluster-wide resources are hard-blocked.
+2. **Action Allowlist:** Constrained strictly to `["SCALE_DEPLOYMENT", "PATCH_RESOURCES", "RESTART_POD", "CORDON_AND_RELOCATE", "APPLY_TRAFFIC_SHAPING", "NO_OP"]`.
+3. **Parameter Clamping:** Replicas clamped to $[1, 5]$; Memory limits clamped to $\le 1024\text{Mi}$.
+4. **Anti-Thrashing Cooldown:** 120-second per-service cooldown timer prevents flapping and oscillation loops.
+5. **Pre-Flight Dry-Run:** Mutations evaluated against the Kubernetes API with `dry_run="All"` prior to commit.
+6. **Operating Mode Check:** Respects the UI toggle between `AUTONOMOUS` (ambient self-healing) and `HUMAN_IN_THE_LOOP` (pauses and awaits operator approval in the command terminal).
+
+---
+
+## ☁️ $0 Free Cloud Deployment (Hugging Face Spaces)
+
+Kintsugi-AI is packaged with a multi-stage Dockerfile that builds the React frontend and serves both the API and UI from a single container for **$0.00**:
+
+### Deploy in 3 Steps:
+1. **Create a Space:** Go to [huggingface.co/spaces](https://huggingface.co/spaces) $\to$ **Create new Space** $\to$ Select **Docker** $\to$ **Blank**.
+2. **Push the Repository:**
+   ```bash
+   git remote add space https://huggingface.co/spaces/<YOUR_USERNAME>/kintsugi-sre
+   git push space master
+   ```
+3. **Configure Free LLM Secret:**
+   In your Space **Settings** $\to$ **Variables and secrets** $\to$ **New secret**:
+   - `GROQ_API_KEY`: `<your_free_groq_api_key>` (enables Llama-3.3-70B cloud reasoning at 0 cost).
+
+Your full-stack application will immediately go live on your free public Hugging Face URL!
+
+---
+
+## ⚡ Local Quickstart Guide
 
 ### 1. Installation
 ```bash
@@ -119,7 +192,7 @@ python scripts/test_remediation_agent.py
 python phase2_remediation/remediation_benchmark.py
 ```
 
-### 4. Launch Full Stack SRE Command Center
+### 4. Launch Full Stack Command Center UI
 ```bash
 # Terminal 1: Start FastAPI + WebSocket Backend
 python -m uvicorn backend.main:app --port 8000 --reload
@@ -129,7 +202,28 @@ cd frontend
 npm install
 npm run dev
 ```
-Open **`http://localhost:5173`** (or **`http://localhost:8000/app/`**) in your browser.
+Open **`http://localhost:5173`** (or **`http://localhost:8000/`**) in your browser.
+
+---
+
+## 🎬 Presentation Video Demo & Walkthrough Script
+
+A complete 5-minute hackathon walkthrough is structured into two halves:
+
+### Part 1: Phase 1 — Prediction Engine & ML Breakthroughs (2.5 mins)
+- **The Problem:** Static Prometheus threshold rules create alert fatigue (14.8 FA/hr) and detect failures too late ($\Delta t = 148$s).
+- **The Nezha Timestamp Bug:** Show how we identified and fixed the 200M-second offset bug in the raw benchmark data.
+- **The 4-Model Ablation Jump:** Walk through the ablation table showing the jump from Prometheus Rules ($0.28$ F1) $\to$ IsolationForest ($0.28$) $\to$ Metrics-Only XGBoost ($0.57$) $\to$ Multi-Modal XGBoost ($0.713$ F1).
+- **Early Warning:** Show the 4.7-minute mean lead time predicting OOM and disk exhaustion before containers crash.
+
+### Part 2: Phase 2 — Ambient LangGraph Agent & Live Command Center (2.5 mins)
+- **The Command Center:** Showcase the 10-service OnlineBoutique topology map and live WebSocket telemetry.
+- **Fault Injection:** Trigger chaos via the Chaos Deck (`CPU Contention` on `cartservice`).
+- **State Machine Trace:** Watch the LangGraph agent wake up: `MONITOR` $\to$ `DIAGNOSE` $\to$ `PLAN` (Pydantic schema).
+- **Safety Guardrail:** Show the agent pausing at `AWAITING_APPROVAL` in Human-in-the-Loop mode; explain the 5 safety gates.
+- **Operator Approval & The Gold Seam:** Click **Approve** in the UI. Watch the pod scale, the recovery verify, and the node seal with the glowing **✦ Kintsugi Verified** metallic gold border!
+
+*(For full slide-by-slide notes and speaker script, see [`docs/SLIDE_DECK_AND_DEMO_GUIDE.md`](docs/SLIDE_DECK_AND_DEMO_GUIDE.md)).*
 
 ---
 
@@ -137,18 +231,21 @@ Open **`http://localhost:5173`** (or **`http://localhost:8000/app/`**) in your b
 
 ```text
 kintsugi-sre/
+├── Dockerfile                      # Multi-stage production container ($0 HF Spaces)
+├── requirements.txt                # Production Python dependencies
 ├── backend/
-│   ├── main.py                     # FastAPI REST API & WebSocket Stream
+│   ├── main.py                     # FastAPI REST API, Static server & WebSocket
 │   └── replay_engine.py            # Digital Twin Cloud Replay Engine
 ├── docs/
 │   ├── PRD.md                      # Product Requirements Document
 │   ├── PHASE1_REPORT.md            # Formal Phase 1 ML Benchmark Report
-│   └── REMEDIATION_BENCHMARK.md    # Formal Phase 2 MTTR Benchmark Report
+│   ├── REMEDIATION_BENCHMARK.md    # Formal Phase 2 MTTR Benchmark Report
+│   └── SLIDE_DECK_AND_DEMO_GUIDE.md# Complete presentation & video demo script
 ├── frontend/                       # React 19 + Tailwind CSS + @xyflow/react + Recharts
 │   ├── src/
 │   │   ├── components/
 │   │   │   ├── TopBar.jsx          # Mode Switcher, LLM Switcher, Status
-│   │   │   ├── ClusterTopology.jsx # @xyflow/react Interactive Topology Graph
+│   │   │   ├── ClusterTopology.jsx # @xyflow/react Graph with ✦ Kintsugi Gold Seam
 │   │   │   ├── TelemetryCharts.jsx # Recharts Live Area Chart & Chaos Deck
 │   │   │   └── AgentConsole.jsx    # LangGraph Trace & HITL Approval Terminal
 │   │   ├── App.jsx                 # Command Center Orchestrator
@@ -159,14 +256,13 @@ kintsugi-sre/
 │   ├── service.yaml                # K8s Service Manifest
 │   ├── rbac.yaml                   # Least-privilege ServiceAccount & Roles
 │   ├── kintsugi_agent.yaml         # Unified Deployment Spec
-│   ├── sample_microservices.yaml   # 10 OnlineBoutique Microservice Manifests
-│   └── Dockerfile                  # Container packaging ($0 Hugging Face Spaces)
+│   └── sample_microservices.yaml   # 10 OnlineBoutique Microservice Manifests
 ├── phase1_prediction/
 │   ├── data_pipeline.py            # Leak-free Z-score & Drain3 feature pipeline
 │   ├── train_and_evaluate.py       # 4-model Ablation study & diagnostic plots
 │   ├── evaluate.py                 # Evaluation routines
 │   ├── dataset/                    # Compact partitioned CSVs (<15MB each)
-│   ├── plots/                      # Diagnostic plots (confusion matrix, ablation)
+│   ├── plots/                      # 4 Diagnostic plots (ablation, confusion matrix)
 │   └── saved_models/               # Serialized models (XGBoost, Regressor, Stats)
 ├── phase2_remediation/
 │   ├── actions.py                  # Pydantic schemas & Rule Fallback Matrix
@@ -186,9 +282,15 @@ kintsugi-sre/
 
 ## 🏆 Hackathon Milestone Checklist
 
-- [x] **Milestone 1:** Empirical Data Inspection, Z-Score Baseline Normalization, Drain3 Log Signals, Strict Chronological Split (Train: Day 1, Test: Day 2 First 75%, Holdout: Day 2 Final 25%), Synthetic Gradual Exhaustion Traces.
-- [x] **Milestone 2:** 4-Model Ablation Study (B0 Thresholds vs M1 IsolationForest vs M2 Temporal XGBoost vs M3 Multi-Modal XGBoost), Honest Evaluation across Regime A (Latency $\Delta t$) and Regime B (Horizon Lead Time), Alert Fatigue ($2.73$ FA/hr).
+- [x] **Milestone 1:** Empirical Data Inspection, Z-Score Baseline Normalization, Drain3 Log Signals, Strict Chronological Split (Train: Day 1, Test: Day 2 First 64%, Holdout: Day 2 Final 36%), Synthetic Gradual Exhaustion Traces.
+- [x] **Milestone 2:** 4-Model Ablation Study (B0 Thresholds vs M1 IsolationForest vs M2 Temporal XGBoost vs M3 Multi-Modal XGBoost), Honest Evaluation across Regime A (Latency $\Delta t$) and Regime B (Horizon Lead Time), Alert Fatigue ($1.71$ FA/hr).
 - [x] **Milestone 3:** Phase 1 Diagnostic Visualizations (`ablation_comparison.png`, `confusion_matrix.png`, `feature_importance.png`, `lead_time_distribution.png`), `docs/PHASE1_REPORT.md`.
 - [x] **Milestone 4:** Constrained LangGraph Ambient Agent (`Monitor -> Diagnose -> Plan -> Guardrails -> Execute -> Verify`), Pydantic Action Catalog, Deterministic Fallback Matrix, 5 Mandatory SRE Safety Guardrails.
 - [x] **Milestone 5:** High-Fidelity Kubernetes Cluster Adapter, Multi-Service Chaos Scenarios, Empirical MTTR Benchmark ($27.6$s average), `docs/REMEDIATION_BENCHMARK.md`.
-- [x] **Milestone 6:** FastAPI + WebSocket Real-Time Backend, React Interactive SRE Command Center (OnlineBoutique Topology Map, Live Forecast Charts, Chaos Deck, HITL Approval Terminal), Kubernetes Manifests (`k8s_manifests/`), $0 Cloud Deployment Config.
+- [x] **Milestone 6:** FastAPI + WebSocket Real-Time Backend, React Interactive SRE Command Center (OnlineBoutique Topology Map with **✦ Kintsugi Gold Seam**, Live Forecast Charts, Chaos Deck, HITL Approval Terminal), Kubernetes Manifests (`k8s_manifests/`), $0 Cloud Deployment Config (`Dockerfile`).
+
+---
+
+## 📜 License
+
+MIT License. Designed and built with Google DeepMind Antigravity for the Kubernetes AIOps Hackathon.

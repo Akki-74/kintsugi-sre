@@ -18,6 +18,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 
 from backend.replay_engine import DigitalTwinReplayEngine
@@ -59,6 +60,8 @@ class ModeRequest(BaseModel):
 
 @app.get("/")
 def root():
+    if frontend_dist.exists():
+        return RedirectResponse(url="/app/")
     return {
         "system": "Kintsugi-AI",
         "tagline": "Autonomous Multi-Modal Kubernetes Failure Prediction & Ambient Remediation System",

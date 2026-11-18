@@ -200,5 +200,5 @@
     "SERVICE_DISRUPTION_LOG": 5
   },
   "tuned_probability_threshold": 0.75,
-  "optimal_fa_per_hour": 2.73
+  "optimal_fa_per_hour": 1.71
 }

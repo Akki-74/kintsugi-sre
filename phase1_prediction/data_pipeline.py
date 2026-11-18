@@ -303,48 +303,68 @@ def generate_gradual_exhaustion_episodes(construct_df: pd.DataFrame, date_str: s
     target_services = ["cartservice", "checkoutservice", "frontend", "paymentservice", "productcatalogservice"]
     ep_counter = 0
 
-    for svc in target_services:
+    # Distribute gradual episodes across both splits (75% before split_ts, 25% after split_ts)
+    # Minute index ~216 is the split_ts boundary (15:35 UTC)
+    if date_str == "2022-08-23":
+        service_offsets = [
+            ("cartservice", "memory_exhaustion", 20),      # Test split
+            ("checkoutservice", "disk_pressure", 45),     # Test split
+            ("frontend", "memory_exhaustion", 85),        # Test split
+            ("paymentservice", "disk_pressure", 130),     # Test split
+            ("productcatalogservice", "memory_exhaustion", 175), # Test split
+            ("cartservice", "disk_pressure", 228),        # Replay holdout (15:47 UTC)
+            ("checkoutservice", "memory_exhaustion", 252),# Replay holdout (16:11 UTC)
+            ("frontend", "disk_pressure", 270),           # Replay holdout (16:29 UTC)
+        ]
+    else:
+        service_offsets = [
+            ("cartservice", "memory_exhaustion", 15),
+            ("checkoutservice", "disk_pressure", 40),
+            ("frontend", "memory_exhaustion", 70),
+            ("paymentservice", "disk_pressure", 100),
+            ("productcatalogservice", "memory_exhaustion", 130),
+            ("cartservice", "disk_pressure", 160),
+            ("checkoutservice", "memory_exhaustion", 190),
+        ]
+
+    for svc, fault_mode, start_offset in service_offsets:
         svc_indices = aug_df[aug_df["service"] == svc].index.to_numpy()
-        if len(svc_indices) < 40:
+        if start_offset + 12 >= len(svc_indices):
             continue
+        ep_counter += 1
+        ramp_idx = svc_indices[start_offset : start_offset + 12]
+        steps = len(ramp_idx)
+        ramp_curve = np.linspace(0.15, 1.0, steps) + rng.normal(0, 0.02, steps)
+        ramp_curve = np.clip(ramp_curve, 0.1, 1.0)
 
-        for fault_mode, start_offset in [("memory_exhaustion", 5), ("disk_pressure", 22)]:
-            if start_offset + 12 >= len(svc_indices):
-                continue
-            ep_counter += 1
-            ramp_idx = svc_indices[start_offset : start_offset + 12]
-            steps = len(ramp_idx)
-            ramp_curve = np.linspace(0.15, 1.0, steps) + rng.normal(0, 0.02, steps)
-            ramp_curve = np.clip(ramp_curve, 0.1, 1.0)
+        if fault_mode == "memory_exhaustion":
+            aug_df.loc[ramp_idx, "MemoryUsageRate(%)"] = np.clip(
+                aug_df.loc[ramp_idx, "MemoryUsageRate(%)"] + ramp_curve * 42.0, 0, 99.5
+            )
+            aug_df.loc[ramp_idx, "MemoryUsage(Mi)"] = aug_df.loc[ramp_idx, "MemoryUsage(Mi)"] * (1.0 + ramp_curve * 0.85)
+            aug_df.loc[ramp_idx, "PodServerLatencyP95(s)"] += (ramp_curve ** 2) * 0.18
+            aug_df.loc[ramp_idx[-6:], "log_error_count"] += rng.integers(1, 5, size=6)
+        else:
+            aug_df.loc[ramp_idx, "SyscallWrite"] = aug_df.loc[ramp_idx, "SyscallWrite"] * (1.0 + ramp_curve * 4.5)
+            aug_df.loc[ramp_idx, "SyscallRead"] = aug_df.loc[ramp_idx, "SyscallRead"] * (1.0 + ramp_curve * 2.2)
+            aug_df.loc[ramp_idx, "PodServerLatencyP99(s)"] += (ramp_curve ** 1.8) * 0.35
+            aug_df.loc[ramp_idx, "NodeMemoryUsageRate(%)"] = np.clip(
+                aug_df.loc[ramp_idx, "NodeMemoryUsageRate(%)"] + ramp_curve * 25.0, 0, 98.0
+            )
+            aug_df.loc[ramp_idx[-6:], "log_error_count"] += rng.integers(2, 6, size=6)
 
-            if fault_mode == "memory_exhaustion":
-                aug_df.loc[ramp_idx, "MemoryUsageRate(%)"] = np.clip(
-                    aug_df.loc[ramp_idx, "MemoryUsageRate(%)"] + ramp_curve * 42.0, 0, 99.5
-                )
-                aug_df.loc[ramp_idx, "MemoryUsage(Mi)"] = aug_df.loc[ramp_idx, "MemoryUsage(Mi)"] * (1.0 + ramp_curve * 0.85)
-                aug_df.loc[ramp_idx, "PodServerLatencyP95(s)"] += (ramp_curve ** 2) * 0.18
-                aug_df.loc[ramp_idx[-6:], "log_error_count"] += rng.integers(1, 5, size=6)
-            else:
-                aug_df.loc[ramp_idx, "SyscallWrite"] = aug_df.loc[ramp_idx, "SyscallWrite"] * (1.0 + ramp_curve * 4.5)
-                aug_df.loc[ramp_idx, "SyscallRead"] = aug_df.loc[ramp_idx, "SyscallRead"] * (1.0 + ramp_curve * 2.2)
-                aug_df.loc[ramp_idx, "PodServerLatencyP99(s)"] += (ramp_curve ** 1.8) * 0.35
-                aug_df.loc[ramp_idx, "NodeMemoryUsageRate(%)"] = np.clip(
-                    aug_df.loc[ramp_idx, "NodeMemoryUsageRate(%)"] + ramp_curve * 25.0, 0, 98.0
-                )
-                aug_df.loc[ramp_idx[-6:], "log_error_count"] += rng.integers(2, 6, size=6)
+        active_idx = ramp_idx[4:]
+        tte_minutes = np.arange(len(active_idx) - 1, -1, -1, dtype=float)
+        unified_cls = FAULT_TYPE_MAP[fault_mode]
 
-            active_idx = ramp_idx[4:]
-            tte_minutes = np.arange(len(active_idx) - 1, -1, -1, dtype=float)
-            unified_cls = FAULT_TYPE_MAP[fault_mode]
-
-            aug_df.loc[active_idx, "raw_fault_type"] = fault_mode
-            aug_df.loc[active_idx, "fault_class"] = unified_cls
-            aug_df.loc[active_idx, "target_id"] = CLASS_TO_ID[unified_cls]
-            aug_df.loc[active_idx, "episode_id"] = f"{date_str}_syn_{ep_counter:02d}"
-            aug_df.loc[active_idx, "seconds_from_onset"] = np.arange(1, len(active_idx) + 1) * 60
-            aug_df.loc[active_idx, "time_to_exhaustion_min"] = tte_minutes
-            aug_df.loc[active_idx, "is_synthetic"] = 1
-            aug_df.loc[active_idx, "prediction_regime"] = "REGIME_B_HORIZON_FORECAST"
+        aug_df.loc[active_idx, "raw_fault_type"] = fault_mode
+        aug_df.loc[active_idx, "fault_class"] = unified_cls
+        aug_df.loc[active_idx, "target_id"] = CLASS_TO_ID[unified_cls]
+        aug_df.loc[active_idx, "episode_id"] = f"{date_str}_syn_{ep_counter:02d}"
+        aug_df.loc[active_idx, "seconds_from_onset"] = np.arange(1, len(active_idx) + 1) * 60
+        aug_df.loc[active_idx, "time_to_exhaustion_min"] = tte_minutes
+        aug_df.loc[active_idx, "is_synthetic"] = 1
+        aug_df.loc[active_idx, "prediction_regime"] = "REGIME_B_HORIZON_FORECAST"
 
     return aug_df
 
@@ -473,8 +493,10 @@ def build_pipeline():
     print(f"   -> Day 2 split boundary: ts={split_ts} (Split between fault #{split_fault_idx} and #{split_fault_idx + 1})")
 
     # Split Day 2 empirical + synthetic rows chronologically by split_ts
+    # Active fault window ends at ts=1661273042 (16:44 UTC); include 1 hour post-incident baseline buffer
+    holdout_end_ts = 1661276400  # 17:40 UTC (balances active episode window, excluding 6h idle midnight baseline)
     test_df = day2_feat[day2_feat["epoch_sec"] <= split_ts].copy()
-    replay_df = day2_feat[day2_feat["epoch_sec"] > split_ts].copy()
+    replay_df = day2_feat[(day2_feat["epoch_sec"] > split_ts) & (day2_feat["epoch_sec"] <= holdout_end_ts)].copy()
 
     train_df["Time"] = train_df["Time"].astype(str).str.slice(0, 19)
     test_df["Time"] = test_df["Time"].astype(str).str.slice(0, 19)

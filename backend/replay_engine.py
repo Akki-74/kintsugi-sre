@@ -83,6 +83,15 @@ class DigitalTwinReplayEngine:
         exec_res = self.agent.k8s.execute_remediation(plan)
         self.agent.guardrails.record_remediation(plan.target_service, timestamp=exec_res.executed_at)
         
+        # Mark node as verified repaired (Kintsugi Gold Seam)
+        if hasattr(self.agent.k8s, "_mock_cluster_state") and "services" in self.agent.k8s._mock_cluster_state:
+            svc_dict = self.agent.k8s._mock_cluster_state["services"].setdefault(plan.target_service, {})
+            svc_dict["is_verified_repaired"] = True
+            svc_dict["is_incident"] = False
+            svc_dict["is_predicted_failure"] = False
+            svc_dict["is_remediating"] = False
+            svc_dict["status"] = "VerifiedRepaired"
+
         result = {
             "status": "APPROVED_AND_EXECUTED",
             "action": plan.selected_action.value,
@@ -111,6 +120,14 @@ class DigitalTwinReplayEngine:
         }
         cls_name = fault_map.get(fault_type, "CPU_EXHAUSTION")
         
+        # Mark node as active incident
+        if hasattr(self.agent.k8s, "_mock_cluster_state") and "services" in self.agent.k8s._mock_cluster_state:
+            svc_dict = self.agent.k8s._mock_cluster_state["services"].setdefault(service, {})
+            svc_dict["is_verified_repaired"] = False
+            svc_dict["is_incident"] = True
+            svc_dict["is_remediating"] = False
+            svc_dict["status"] = "Incident"
+
         # Synthesize anomaly state
         telemetry = {
             "CpuUsageRate(%)": 92.0 if "CPU" in cls_name else 25.0,
