@@ -174,8 +174,8 @@ class DigitalTwinReplayEngine:
             "service": service,
             "fault": cls_name,
             "agent_state": state.get("current_state"),
-            "proposed_plan": state.get("proposed_plan").dict() if state.get("proposed_plan") else None,
-            "execution": state.get("execution_result").dict() if state.get("execution_result") else None
+            "proposed_plan": state.get("proposed_plan").model_dump() if state.get("proposed_plan") else None,
+            "execution": state.get("execution_result").model_dump() if state.get("execution_result") else None
         }
 
     def get_next_tick(self) -> Dict[str, Any]:

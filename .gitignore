@@ -42,7 +42,10 @@ venv.bak/
 bin/
 include/
 Lib/
-Scripts/
+# Note: Preserve project scripts/ directory
+!scripts/
+!scripts/**
+scripts/**/__pycache__/
 
 # ------------------------------------------------------------------------------
 # 3. Node.js & Frontend Build Outputs

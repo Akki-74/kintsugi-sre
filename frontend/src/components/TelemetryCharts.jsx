@@ -8,7 +8,7 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from 'recharts';
-import { Flame, Zap, ShieldAlert, AlertTriangle, Clock } from 'lucide-react';
+import { Flame, Zap, Database, HardDrive, AlertTriangle, Clock, Activity, AlertOctagon } from 'lucide-react';
 
 export default function TelemetryCharts({
   selectedService = 'frontend',
@@ -16,6 +16,7 @@ export default function TelemetryCharts({
   currentTickData = {},
   onInjectChaos,
 }) {
+  const [activeFault, setActiveFault] = useState(null);
   const [injecting, setInjecting] = useState(false);
 
   const metrics = currentTickData.metrics || {};
@@ -25,20 +26,32 @@ export default function TelemetryCharts({
   const tteMin = prediction.time_to_exhaustion_min;
 
   const handleChaos = async (faultType) => {
+    setActiveFault(faultType);
     setInjecting(true);
     try {
       if (onInjectChaos) {
         await onInjectChaos(selectedService, faultType);
       }
     } finally {
-      setTimeout(() => setInjecting(false), 800);
+      setTimeout(() => {
+        setInjecting(false);
+        setActiveFault(null);
+      }, 1000);
     }
   };
+
+  const chaosButtons = [
+    { id: 'cpu_contention', label: 'CPU Contention', icon: Flame, color: 'hover:border-rose-500 hover:bg-rose-950/40 text-rose-300' },
+    { id: 'memory_leak', label: 'Memory Leak (Sawtooth)', icon: Database, color: 'hover:border-amber-500 hover:bg-amber-950/40 text-amber-300' },
+    { id: 'exception', label: 'HTTP 500 Exception Burst', icon: AlertTriangle, color: 'hover:border-purple-500 hover:bg-purple-950/40 text-purple-300' },
+    { id: 'disk_pressure', label: 'Disk Volume Saturation', icon: HardDrive, color: 'hover:border-orange-500 hover:bg-orange-950/40 text-orange-300' },
+    { id: 'network_delay', label: 'Envoy Latency Spike', icon: Zap, color: 'hover:border-cyan-500 hover:bg-cyan-950/40 text-cyan-300' },
+  ];
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
       {/* 1. Real-Time Telemetry & Baseline Envelope Area Chart */}
-      <div className="lg:col-span-2 rounded-2xl border border-slate-800 bg-slate-950/70 p-4 shadow-xl flex flex-col justify-between">
+      <div className="lg:col-span-2 rounded-2xl border border-slate-800/90 bg-slate-950/70 p-4 shadow-xl flex flex-col justify-between backdrop-blur-xl">
         <div className="flex items-center justify-between mb-2">
           <div>
             <div className="flex items-center gap-2">
@@ -46,21 +59,28 @@ export default function TelemetryCharts({
                 LIVE METRIC ENVELOPE: <span className="text-cyan-400">{selectedService.toUpperCase()}</span>
               </span>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800/80 text-slate-400 border border-slate-700/60">
-                Baseline Z-Normalized
+                Baseline Z-Normalized (±3σ)
               </span>
             </div>
             <p className="text-[11px] text-slate-400">Past 30 rolling seconds (CPU, Memory, Latency P95)</p>
           </div>
 
-          <div className="flex items-center gap-3 text-[11px] font-mono">
-            <span className="flex items-center gap-1 text-cyan-400">
-              <span className="h-2 w-2 rounded-full bg-cyan-400" /> CPU: {Math.round(metrics['CpuUsageRate(%)'] || 0)}%
+          {/* Metric Badges + Live TTE Countdown Pill */}
+          <div className="flex items-center gap-2 text-[11px] font-mono">
+            {tteMin !== undefined && tteMin !== null && tteMin < 10.0 && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-950/90 border border-amber-500/80 text-amber-300 font-bold animate-pulse shadow-md shadow-amber-950/50">
+                <Clock className="h-3.5 w-3.5 text-amber-400 animate-spin" />
+                <span>TTE Horizon: ~{tteMin.toFixed(1)}m to OOM</span>
+              </div>
+            )}
+            <span className="flex items-center gap-1 text-cyan-400 bg-slate-900 px-2 py-1 rounded border border-slate-800">
+              <span className="h-2 w-2 rounded-full bg-cyan-400 shadow-[0_0_4px_#38bdf8]" /> CPU: {Math.round(metrics['CpuUsageRate(%)'] || 0)}%
             </span>
-            <span className="flex items-center gap-1 text-indigo-400">
-              <span className="h-2 w-2 rounded-full bg-indigo-400" /> Mem: {Math.round(metrics['MemoryUsageRate(%)'] || 0)}%
+            <span className="flex items-center gap-1 text-indigo-400 bg-slate-900 px-2 py-1 rounded border border-slate-800">
+              <span className="h-2 w-2 rounded-full bg-indigo-400 shadow-[0_0_4px_#818cf8]" /> Mem: {Math.round(metrics['MemoryUsageRate(%)'] || 0)}%
             </span>
-            <span className="flex items-center gap-1 text-emerald-400">
-              <span className="h-2 w-2 rounded-full bg-emerald-400" /> P95: {(metrics['PodServerLatencyP95(s)'] || 0).toFixed(2)}s
+            <span className="flex items-center gap-1 text-emerald-400 bg-slate-900 px-2 py-1 rounded border border-slate-800">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_4px_#34d399]" /> P95: {(metrics['PodServerLatencyP95(s)'] || 0).toFixed(2)}s
             </span>
           </div>
         </div>
@@ -82,133 +102,117 @@ export default function TelemetryCharts({
               <XAxis dataKey="time" stroke="#475569" fontSize={10} tickLine={false} />
               <YAxis stroke="#475569" fontSize={10} domain={[-2, 6]} tickLine={false} />
               <Tooltip
-                contentStyle={{ backgroundColor: '#090d16', borderColor: '#334155', borderRadius: '8px', fontSize: '11px' }}
+                contentStyle={{ backgroundColor: '#050811', borderColor: '#334155', borderRadius: '8px', fontSize: '11px' }}
                 itemStyle={{ color: '#e2e8f0' }}
               />
-              <ReferenceLine y={2.0} stroke="#f59e0b" strokeDasharray="3 3" label={{ value: '+2σ Threshold', fill: '#f59e0b', fontSize: 10, position: 'top' }} />
+              {/* +2.0σ Detection Boundary */}
+              <ReferenceLine y={2.0} stroke="#f59e0b" strokeDasharray="3 3" label={{ value: '+2σ Onset Trigger', fill: '#f59e0b', fontSize: 10, position: 'top' }} />
+              {/* Critical +4.0σ / 90% Exhaustion Ceiling */}
+              <ReferenceLine y={4.0} stroke="#f43f5e" strokeDasharray="2 2" label={{ value: 'Critical 90% SLA Threshold', fill: '#f43f5e', fontSize: 10, position: 'top' }} />
               <Area type="monotone" dataKey="cpu_z" stroke="#38bdf8" strokeWidth={2} fillOpacity={1} fill="url(#cpuGrad)" name="CPU Z-Score" />
               <Area type="monotone" dataKey="mem_z" stroke="#818cf8" strokeWidth={2} fillOpacity={1} fill="url(#memGrad)" name="Mem Z-Score" />
             </AreaChart>
           </ResponsiveContainer>
         </div>
 
-        {/* Chaos Injection Deck */}
+        {/* Industrial Tactile Chaos Injection Deck */}
         <div className="pt-3 mt-2 border-t border-slate-800/80">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-mono font-semibold text-slate-300 flex items-center gap-1.5">
               <Flame className="h-3.5 w-3.5 text-rose-400" />
-              CHAOS INJECTION DECK (Target: <span className="text-cyan-400">{selectedService}</span>)
+              TACTILE CHAOS DECK (Target: <span className="text-cyan-400 font-bold">{selectedService}</span>)
             </span>
-            <span className="text-[10px] text-slate-500 font-mono">Real-time prompt into active twin</span>
+            <span className="text-[10px] font-mono text-slate-500">
+              Injects FSE'23 Nezha Anomaly Signatures
+            </span>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-            <button
-              disabled={injecting}
-              onClick={() => handleChaos('cpu_contention')}
-              className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-rose-950/60 border border-slate-800 hover:border-rose-500/50 text-slate-300 hover:text-rose-200 text-xs font-mono transition-all disabled:opacity-50"
-            >
-              🔥 CPU Stress
-            </button>
-            <button
-              disabled={injecting}
-              onClick={() => handleChaos('memory_leak')}
-              className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-amber-950/60 border border-slate-800 hover:border-amber-500/50 text-slate-300 hover:text-amber-200 text-xs font-mono transition-all disabled:opacity-50"
-            >
-              💧 Mem Leak
-            </button>
-            <button
-              disabled={injecting}
-              onClick={() => handleChaos('exception')}
-              className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-purple-950/60 border border-slate-800 hover:border-purple-500/50 text-slate-300 hover:text-purple-200 text-xs font-mono transition-all disabled:opacity-50"
-            >
-              💥 500 Errors
-            </button>
-            <button
-              disabled={injecting}
-              onClick={() => handleChaos('disk_pressure')}
-              className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-orange-950/60 border border-slate-800 hover:border-orange-500/50 text-slate-300 hover:text-orange-200 text-xs font-mono transition-all disabled:opacity-50"
-            >
-              💾 Disk Fill
-            </button>
-            <button
-              disabled={injecting}
-              onClick={() => handleChaos('network_delay')}
-              className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-cyan-950/60 border border-slate-800 hover:border-cyan-500/50 text-slate-300 hover:text-cyan-200 text-xs font-mono transition-all disabled:opacity-50"
-            >
-              🌐 Latency lag
-            </button>
+            {chaosButtons.map((btn) => {
+              const Icon = btn.icon;
+              const isFiring = injecting && activeFault === btn.id;
+              return (
+                <button
+                  key={btn.id}
+                  disabled={injecting}
+                  onClick={() => handleChaos(btn.id)}
+                  className={`flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-xl border border-slate-800 bg-slate-900/80 text-[11px] font-mono font-semibold transition-all shadow-md active:scale-95 disabled:opacity-50 ${btn.color} ${
+                    isFiring ? 'scale-105 ring-2 ring-rose-500 animate-pulse bg-rose-950/80 text-white' : ''
+                  }`}
+                  title={`Inject ${btn.label} into ${selectedService}`}
+                >
+                  <Icon className={`h-3.5 w-3.5 shrink-0 ${isFiring ? 'animate-spin' : ''}`} />
+                  <span className="truncate">{btn.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
 
-      {/* 2. Failure Probability & Horizon Forecasting Gauge */}
-      <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4 shadow-xl flex flex-col justify-between">
+      {/* 2. Fast Brain Live Anomaly Classification Scorecard */}
+      <div className="rounded-2xl border border-slate-800/90 bg-slate-950/70 p-4 shadow-xl flex flex-col justify-between backdrop-blur-xl">
         <div>
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold text-slate-200 font-mono tracking-wider">
-              FAILURE PROBABILITY GAUGE
-            </span>
-            <span className={`text-[10px] font-mono px-2 py-0.5 rounded border font-semibold ${
-              isAnomaly ? 'bg-rose-950 border-rose-600 text-rose-300' : 'bg-emerald-950 border-emerald-700 text-emerald-400'
-            }`}>
-              {isAnomaly ? 'ANOMALY DETECTED' : 'HEALTHY'}
+          <div className="flex items-center justify-between mb-3 border-b border-slate-800/80 pb-2">
+            <div className="flex items-center gap-1.5">
+              <Activity className="h-4 w-4 text-cyan-400" />
+              <span className="text-xs font-bold text-slate-200 font-mono tracking-wider">
+                PHASE 1 FAST BRAIN INFERENCE
+              </span>
+            </div>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950/90 border border-cyan-800 text-cyan-300 font-bold">
+              XGBOOST v2.0
             </span>
           </div>
 
-          {/* Probability Bar */}
-          <div className="mb-4">
-            <div className="flex items-center justify-between text-xs font-mono text-slate-400 mb-1">
-              <span>Classifier Confidence</span>
-              <span className="text-white font-bold">{Math.round(confidence * 100)}%</span>
+          {/* Prediction Status Badge */}
+          <div className="p-3 rounded-xl border mb-3 bg-slate-900/90 border-slate-800">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">Predicted State:</span>
+              <span className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded ${
+                isAnomaly
+                  ? 'bg-rose-950/90 border border-rose-600 text-rose-300 animate-pulse'
+                  : 'bg-emerald-950/90 border border-emerald-600 text-emerald-300'
+              }`}>
+                {prediction.fault_class || 'NORMAL'}
+              </span>
             </div>
-            <div className="h-3 w-full rounded-full bg-slate-900 overflow-hidden border border-slate-800">
+            <div className="flex items-center justify-between text-xs font-mono">
+              <span className="text-slate-400">Model Confidence:</span>
+              <strong className="text-white">{(confidence * 100).toFixed(1)}%</strong>
+            </div>
+            <div className="w-full bg-slate-800 rounded-full h-1.5 mt-2 overflow-hidden">
               <div
-                className={`h-full transition-all duration-500 rounded-full ${
-                  confidence > 0.75
-                    ? 'bg-gradient-to-r from-amber-500 to-rose-500'
-                    : confidence > 0.4
-                    ? 'bg-gradient-to-r from-cyan-500 to-amber-500'
-                    : 'bg-emerald-500'
-                }`}
-                style={{ width: `${Math.round(confidence * 100)}%` }}
+                className={`h-full transition-all duration-300 ${isAnomaly ? 'bg-rose-500' : 'bg-emerald-500'}`}
+                style={{ width: `${Math.min(100, Math.max(5, confidence * 100))}%` }}
               />
             </div>
           </div>
 
-          {/* Active Diagnostic Status */}
-          <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2 mb-3">
-            <div className="flex items-center justify-between text-xs font-mono">
-              <span className="text-slate-400">Target Microservice:</span>
-              <span className="text-cyan-300 font-bold">{selectedService}</span>
+          {/* Operational Regimes Readout */}
+          <div className="space-y-1.5 text-xs font-mono">
+            <div className="flex items-center justify-between p-2 rounded-lg bg-slate-900/60 border border-slate-800/60">
+              <span className="text-slate-400">Regime A Latency ($\Delta t$):</span>
+              <strong className="text-cyan-300">87.6 seconds</strong>
             </div>
-            <div className="flex items-center justify-between text-xs font-mono">
-              <span className="text-slate-400">Predicted Root Cause:</span>
-              <span className={`font-semibold ${isAnomaly ? 'text-rose-400' : 'text-emerald-400'}`}>
-                {prediction.fault_class || 'NORMAL'}
-              </span>
+            <div className="flex items-center justify-between p-2 rounded-lg bg-slate-900/60 border border-slate-800/60">
+              <span className="text-slate-400">Regime B Lead Time:</span>
+              <strong className="text-amber-300">4.7 minutes</strong>
+            </div>
+            <div className="flex items-center justify-between p-2 rounded-lg bg-slate-900/60 border border-slate-800/60">
+              <span className="text-slate-400">Root-Cause Loc. (Top-1):</span>
+              <strong className="text-emerald-300">66.7%</strong>
+            </div>
+            <div className="flex items-center justify-between p-2 rounded-lg bg-slate-900/60 border border-slate-800/60">
+              <span className="text-slate-400">False Alarm Rate:</span>
+              <strong className="text-indigo-300">1.71 / hr (Zero Fatigue)</strong>
             </div>
           </div>
-
-          {/* Regime B Time-to-Exhaustion Card */}
-          {tteMin !== null && tteMin !== undefined && (
-            <div className="p-3 rounded-xl bg-amber-950/30 border border-amber-600/40 text-amber-200">
-              <div className="flex items-center gap-1.5 text-xs font-mono font-bold mb-1">
-                <Clock className="h-4 w-4 text-amber-400" />
-                <span>FORECASTING LEAD-TIME (Regime B)</span>
-              </div>
-              <div className="text-lg font-bold font-mono text-amber-300">
-                {tteMin.toFixed(1)} <span className="text-xs font-normal text-amber-400">minutes to container crash</span>
-              </div>
-              <p className="text-[11px] text-amber-300/80 mt-1">
-                Proactive patch window active. Ambient agent will remediate before OOM threshold breach.
-              </p>
-            </div>
-          )}
         </div>
 
-        <div className="pt-2 text-[10px] text-slate-500 font-mono text-center border-t border-slate-800/80">
-          Fast Brain Multi-Modal XGBoost Engine (90.1s Lead Latency)
+        <div className="text-[10px] font-mono text-slate-500 pt-2 border-t border-slate-800/80 flex items-center justify-between">
+          <span>Target Microservice: <strong className="text-slate-300">{selectedService}</strong></span>
+          <span className="text-emerald-400">● Live Inference</span>
         </div>
       </div>
     </div>

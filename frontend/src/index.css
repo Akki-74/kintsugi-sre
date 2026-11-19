@@ -4,11 +4,27 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --color-obsidian: #050811;
+  --color-kintsugi-gold: #fbbf24;
+  --color-kintsugi-gold-glow: rgba(251, 191, 36, 0.4);
+}
+
 body {
   margin: 0;
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-  background-color: #070d19;
+  background-color: #050811;
   color: #f1f5f9;
+  min-height: 100vh;
+  /* Multi-layered Obsidian Ceramic Background with ambient cyan and gold blooms and cyber-grid */
+  background-image: 
+    radial-gradient(circle at 15% 15%, rgba(56, 189, 248, 0.07) 0%, transparent 45%),
+    radial-gradient(circle at 85% 20%, rgba(251, 191, 36, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 50% 85%, rgba(99, 102, 241, 0.06) 0%, transparent 55%),
+    linear-gradient(to right, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 32px 32px, 32px 32px;
+  background-attachment: fixed;
 }
 
 code, pre, .font-mono {
@@ -21,12 +37,65 @@ code, pre, .font-mono {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #0f172a;
+  background: #090d16;
 }
 ::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: #1e293b;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: #334155;
+}
+
+/* Glassmorphism Surface Utility */
+.glass-panel {
+  background: rgba(10, 15, 29, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.glass-panel-gold {
+  background: rgba(18, 15, 10, 0.85);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  box-shadow: 0 0 25px rgba(251, 191, 36, 0.15);
+}
+
+/* Kintsugi Liquid Gold Pulse & Seam Shimmer */
+@keyframes kintsugiGoldPulse {
+  0%, 100% {
+    box-shadow: 0 0 12px rgba(251, 191, 36, 0.3), inset 0 0 8px rgba(251, 191, 36, 0.2);
+    border-color: rgba(251, 191, 36, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 24px rgba(251, 191, 36, 0.6), inset 0 0 14px rgba(251, 191, 36, 0.35);
+    border-color: rgba(251, 191, 36, 1);
+  }
+}
+
+@keyframes seamShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-kintsugi-gold {
+  animation: kintsugiGoldPulse 2.5s infinite ease-in-out;
+}
+
+.gold-shimmer-text {
+  background: linear-gradient(90deg, #d97706 0%, #fef08a 25%, #fbbf24 50%, #fef08a 75%, #d97706 100%);
+  background-size: 200% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: seamShimmer 4s linear infinite;
+}
+
+.gold-vein-border {
+  border-image: linear-gradient(135deg, #fbbf24 0%, rgba(251, 191, 36, 0.2) 50%, #f59e0b 100%) 1;
 }

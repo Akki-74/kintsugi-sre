@@ -36,8 +36,10 @@ jobs:
           test -f phase1_prediction/saved_models/multimodal_xgboost.json
           test -f phase1_prediction/saved_models/tte_regressor.json
           test -f phase1_prediction/saved_models/baseline_stats.json
-          echo "Executing LangGraph agent & guardrail test suite..."
-          python scripts/test_remediation_agent.py
+          echo "Executing 3-Tier Automated Test Suite (Unit, Integration, System E2E)..."
+          python -m pytest tests/ -v
+          echo "Executing SARIMA vs XGBoost Horizon Benchmark..."
+          python scripts/benchmark_sarima.py
 
       - name: Verify Frontend Production Bundle Exists
         run: |
