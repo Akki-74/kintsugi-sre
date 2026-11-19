@@ -32,3 +32,10 @@ openai>=1.12.0
 langgraph>=0.0.30
 langchain-core>=0.1.30
 kubernetes>=28.0.0
+
+# Statistical Forecasting (Milestone 1 SARIMA Benchmark)
+statsmodels>=0.14.0
+
+# Testing & CI/CD Verification
+pytest>=8.0.0
+httpx>=0.27.0
