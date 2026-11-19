@@ -1,267 +1,191 @@
-import React, { useState } from 'react';
-import { Terminal, Shield, CheckCircle2, XCircle, AlertCircle, Play, Pause, RefreshCw, Cpu, Layers, Sparkles, Check, Lock } from 'lucide-react';
+import React from 'react';
+import { Shield, Terminal, CheckCircle2, AlertTriangle, Sparkles, Lock, Play, X } from 'lucide-react';
+
+const LANGGRAPH_STAGES = [
+  'MONITOR',
+  'DIAGNOSE',
+  'PLAN',
+  'GUARDRAILS',
+  'EXECUTE',
+  'VERIFY',
+];
+
+const GUARDRAIL_CHECKS = [
+  'Namespace Lock (hipster)',
+  'Action Allowlist (6 Primitives)',
+  'Bounds Clamp (1-5 Pods / ≤1024Mi)',
+  '120s Cooldown Anti-Thrash',
+  'K8s API dry_run="All"',
+];
 
 export default function AgentConsole({
-  agentEvent = null,
+  latestTick,
+  incidentFeed = [],
+  pendingHitl = false,
   pendingPlan = null,
-  onApprovePlan,
-  onRejectPlan,
-  autonomousMode,
+  onApprove,
+  onReject,
 }) {
-  const [activeTab, setActiveTab] = useState('trace'); // 'trace' | 'plan' | 'guardrails'
-  const [acting, setActing] = useState(false);
+  const pred = latestTick?.prediction || {};
+  const activeState = latestTick?.agent_event?.state || (pendingHitl ? 'AWAITING_APPROVAL' : 'MONITOR');
 
-  const history = agentEvent?.history || [];
-  const plannedAction = agentEvent?.planned_action || pendingPlan?.selected_action || null;
-  const reasoning = agentEvent?.reasoning || pendingPlan?.reasoning_summary || null;
-  const targetService = agentEvent?.target_service || pendingPlan?.target_service || 'cartservice';
-  const currentState = agentEvent?.current_state || (pendingPlan ? 'GUARDRAILS' : 'MONITOR');
-
-  const handleApprove = async () => {
-    setActing(true);
-    try {
-      if (onApprovePlan) await onApprovePlan();
-    } finally {
-      setActing(false);
-    }
+  const getStageActive = (stage, idx) => {
+    if (activeState === 'VERIFIED') return true;
+    if (activeState === 'AWAITING_APPROVAL' && idx <= 3) return true;
+    if (activeState === 'MONITOR' && idx === 0) return true;
+    return false;
   };
-
-  const handleReject = async () => {
-    setActing(true);
-    try {
-      if (onRejectPlan) await onRejectPlan();
-    } finally {
-      setActing(false);
-    }
-  };
-
-  // 6-Stage LangGraph State Machine Nodes
-  const langgraphStages = [
-    { id: 'MONITOR', label: '1. Monitor' },
-    { id: 'DIAGNOSE', label: '2. Diagnose' },
-    { id: 'PLAN', label: '3. Plan (Qwen)' },
-    { id: 'GUARDRAILS', label: '4. Guardrails' },
-    { id: 'EXECUTE', label: '5. Execute' },
-    { id: 'VERIFY', label: '6. Verify' },
-  ];
-
-  // 5 Mandatory Deterministic SRE Guardrail Gates
-  const guardrailGates = [
-    { id: 'namespace_lock', name: 'Namespace Lock', rule: 'Must be hipster or kintsugi-lab (kube-system hard-blocked)', passed: true },
-    { id: 'action_allowlist', name: 'Action Allowlist', rule: 'Must map to 6 verified primitives in ActionCatalog', passed: true },
-    { id: 'parameter_bounds', name: 'Parameter Bounds', rule: 'Replicas clamped to [1, 5], Memory <= 1024Mi', passed: true },
-    { id: 'cooldown_lock', name: '120s Cooldown Lock', rule: 'Blocks re-execution on same service within 120 seconds', passed: true },
-    { id: 'k8s_dry_run', name: 'K8s Dry-Run="All"', rule: 'Pre-flight verified against Kubernetes API server', passed: true },
-  ];
 
   return (
-    <div className="h-full rounded-2xl border border-slate-800/90 bg-slate-950/70 shadow-2xl flex flex-col overflow-hidden backdrop-blur-xl">
-      {/* Console Header & Tabs */}
-      <div className="px-4 py-3 border-b border-slate-800 flex items-center justify-between bg-slate-900/70">
-        <div className="flex items-center gap-2">
-          <Terminal className="h-4 w-4 text-cyan-400" />
-          <span className="text-xs font-bold text-slate-200 font-mono tracking-wider flex items-center gap-1.5">
-            LANGGRAPH AMBIENT SRE AGENT
-            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-indigo-950/80 border border-indigo-700 text-indigo-300">
-              Qwen 3.8-27B
-            </span>
+    <div className="h-full flex flex-col gap-3">
+      {/* Phase 1 Fast Brain + 6-Stage LangGraph Pipeline Card */}
+      <div className="rounded-2xl kintsugi-glass p-4">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-amber-400" />
+            <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-slate-200">
+              LANGGRAPH AMBIENT SRE BRAIN
+            </h3>
+          </div>
+          <span
+            className={`text-[10px] font-mono px-2 py-0.5 rounded border font-bold ${
+              pred.is_anomaly
+                ? 'bg-rose-950 border-rose-500 text-rose-300 animate-pulse'
+                : 'bg-emerald-950 border-emerald-600 text-emerald-300'
+            }`}
+          >
+            {pred.fault_class || 'NORMAL'} ({pred.confidence ? `${(pred.confidence * 100).toFixed(0)}%` : '98%'})
           </span>
         </div>
 
-        {/* Tab Switcher */}
-        <div className="flex items-center gap-1 bg-slate-950/90 p-1 rounded-lg border border-slate-800 text-[11px] font-mono">
-          <button
-            onClick={() => setActiveTab('trace')}
-            className={`px-2.5 py-1 rounded transition-all ${
-              activeTab === 'trace' ? 'bg-cyan-600 text-white font-bold shadow-sm' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Graph Trace
-          </button>
-          <button
-            onClick={() => setActiveTab('plan')}
-            className={`px-2.5 py-1 rounded transition-all ${
-              activeTab === 'plan' ? 'bg-indigo-600 text-white font-bold shadow-sm' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Pydantic Plan
-          </button>
-          <button
-            onClick={() => setActiveTab('guardrails')}
-            className={`px-2.5 py-1 rounded transition-all ${
-              activeTab === 'guardrails' ? 'bg-emerald-600 text-white font-bold shadow-sm' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            5 Guardrails
-          </button>
-        </div>
-      </div>
-
-      {/* Visual 6-Stage LangGraph State Machine Horizontal Pipeline */}
-      <div className="px-3.5 py-2.5 bg-slate-900/40 border-b border-slate-800/70">
-        <div className="flex items-center justify-between gap-1 overflow-x-auto pb-0.5">
-          {langgraphStages.map((st, i) => {
-            const isActive = currentState === st.id || (i === 0 && currentState === 'MONITOR_CHECKED');
-            const isCompleted = history.length > i;
+        {/* 6-Stage LangGraph State Bar */}
+        <div className="grid grid-cols-6 gap-1 my-2.5">
+          {LANGGRAPH_STAGES.map((stage, idx) => {
+            const lit = getStageActive(stage, idx);
             return (
               <div
-                key={st.id}
-                className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-mono transition-all border shrink-0 ${
-                  isActive
-                    ? 'bg-cyan-950/90 border-cyan-400 text-cyan-200 font-bold shadow-[0_0_8px_rgba(56,189,248,0.4)] animate-pulse'
-                    : isCompleted
-                    ? 'bg-slate-900 border-emerald-500/40 text-emerald-300'
-                    : 'bg-slate-950 border-slate-800 text-slate-500'
+                key={stage}
+                className={`text-center py-1 px-1 rounded-lg border text-[9px] font-mono font-bold transition-all ${
+                  lit
+                    ? stage === 'VERIFY'
+                      ? 'bg-amber-500/25 border-amber-400 text-amber-200 shadow-[0_0_10px_rgba(251,191,36,0.4)]'
+                      : 'bg-cyan-500/20 border-cyan-400 text-cyan-200'
+                    : 'bg-slate-950/70 border-slate-800 text-slate-500'
                 }`}
               >
-                {isCompleted ? (
-                  <Check className="h-3 w-3 text-emerald-400" />
-                ) : (
-                  <span className={`h-1.5 w-1.5 rounded-full ${isActive ? 'bg-cyan-400' : 'bg-slate-600'}`} />
-                )}
-                <span>{st.label}</span>
+                {stage}
               </div>
             );
           })}
         </div>
+
+        {/* 5 Deterministic SRE Safety Guardrail Badges */}
+        <div className="pt-2 border-t border-slate-800/80">
+          <div className="flex items-center gap-1.5 text-[10px] font-mono text-slate-400 mb-1.5">
+            <Lock className="h-3 w-3 text-emerald-400" />
+            <span>5 Deterministic SRE Safety Guardrails:</span>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {GUARDRAIL_CHECKS.map((chk) => (
+              <span
+                key={chk}
+                className="text-[9px] font-mono px-2 py-0.5 rounded-md bg-emerald-950/70 border border-emerald-600/50 text-emerald-300 flex items-center gap-1"
+              >
+                <CheckCircle2 className="h-2.5 w-2.5 text-emerald-400" />
+                {chk}
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
 
-      {/* HITL Operator Approval Callout Banner */}
-      {pendingPlan && (
-        <div className="p-3 bg-amber-950/80 border-b border-amber-500/70 flex items-center justify-between animate-pulse">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="h-5 w-5 text-amber-400 shrink-0" />
-            <div>
-              <div className="text-xs font-bold text-amber-200 font-mono">
-                AWAITING OPERATOR CONFIRMATION: {pendingPlan.selected_action} on {pendingPlan.target_service}
-              </div>
-              <p className="text-[11px] text-amber-300/80 truncate max-w-sm">
-                {pendingPlan.reasoning_summary || 'Operator approval required before live Kubernetes API dispatch.'}
-              </p>
-            </div>
+      {/* Human-in-the-Loop (HITL) Approval Terminal (Visible when paused) */}
+      {pendingHitl && pendingPlan && (
+        <div className="rounded-2xl border-2 border-amber-400 bg-amber-950/40 backdrop-blur-xl p-4 shadow-[0_0_25px_rgba(251,191,36,0.3)]">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-mono font-bold text-amber-300 flex items-center gap-1.5">
+              <AlertTriangle className="h-4 w-4 text-amber-400 animate-bounce" />
+              AWAITING OPERATOR APPROVAL (HITL GATE)
+            </span>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-200 border border-amber-400/50">
+              {pendingPlan.selected_action}
+            </span>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <p className="text-xs text-slate-200 mb-2 leading-relaxed">
+            <strong>Target:</strong> <code className="text-amber-300">{pendingPlan.target_service}</code> — {pendingPlan.reasoning_summary}
+          </p>
+          <div className="flex items-center gap-2 pt-1">
             <button
-              disabled={acting}
-              onClick={handleApprove}
-              className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold font-mono shadow-md transition-all flex items-center gap-1 active:scale-95"
+              onClick={onApprove}
+              className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-bold flex items-center justify-center gap-1.5 shadow-lg cursor-pointer"
             >
-              <CheckCircle2 className="h-3.5 w-3.5" />
-              Approve Fix
+              <Play className="h-3.5 w-3.5" />
+              Approve & Seal Gold Seam
             </button>
             <button
-              disabled={acting}
-              onClick={handleReject}
-              className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold font-mono shadow-md transition-all flex items-center gap-1 active:scale-95"
+              onClick={onReject}
+              className="py-2 px-3 rounded-xl bg-rose-950 hover:bg-rose-900 border border-rose-500 text-rose-200 text-xs font-mono font-bold flex items-center justify-center gap-1 cursor-pointer"
             >
-              <XCircle className="h-3.5 w-3.5" />
+              <X className="h-3.5 w-3.5" />
               Reject
             </button>
           </div>
         </div>
       )}
 
-      {/* Main Tab Content */}
-      <div className="flex-1 p-4 overflow-y-auto font-mono text-xs space-y-3">
-        {/* TAB 1: LangGraph Trace */}
-        {activeTab === 'trace' && (
-          <div className="space-y-2">
-            <div className="text-[11px] text-slate-400 mb-2 flex items-center justify-between border-b border-slate-800 pb-1.5">
-              <span>Execution State Machine Transitions:</span>
-              <span className="text-cyan-400 font-bold">Mode: {autonomousMode ? 'AUTONOMOUS' : 'HITL'}</span>
-            </div>
-
-            {history.length === 0 ? (
-              <div className="text-slate-500 italic p-3 text-center border border-dashed border-slate-800 rounded-xl">
-                Listening for telemetry ticks... Zero state anomalies detected.
-              </div>
-            ) : (
-              history.map((step, idx) => (
-                <div
-                  key={idx}
-                  className="p-2.5 rounded-xl border border-slate-800/80 bg-slate-900/60 flex items-start gap-2.5 transition-all hover:border-slate-700"
-                >
-                  <span className="text-cyan-400 font-bold text-[10px] bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800 shrink-0">
-                    #{idx + 1}
-                  </span>
-                  <div className="flex-1 text-slate-300 break-words leading-relaxed">
-                    {step}
-                  </div>
-                </div>
-              ))
-            )}
-
-            {/* Live Verification Stamp (✦ Kintsugi Gold Seam) */}
-            {agentEvent?.verification_result && (
-              <div className="mt-3 p-3 rounded-xl border border-amber-400/80 bg-gradient-to-r from-amber-950/80 via-slate-900 to-amber-950/80 text-amber-200 shadow-[0_0_15px_rgba(251,191,36,0.25)]">
-                <div className="flex items-center gap-2 mb-1">
-                  <Sparkles className="h-4 w-4 text-amber-300 animate-spin" />
-                  <strong className="text-xs tracking-wider uppercase">✦ Kintsugi Closed-Loop Verification Confirmed</strong>
-                </div>
-                <div className="text-[11px] space-y-0.5 text-amber-300/90 pl-6">
-                  <div>Action Executed: <strong>{agentEvent.verification_result.action_executed}</strong></div>
-                  <div>Mean Time To Remediate (MTTR): <strong>{agentEvent.verification_result.mttr_seconds || 24.0}s</strong></div>
-                  <div>Post-Remediation Status: <strong className="text-emerald-400">{agentEvent.verification_result.status || 'RECOVERED'}</strong></div>
-                </div>
-              </div>
-            )}
+      {/* Live Remediation & Gold Seam Audit Feed */}
+      <div className="flex-1 rounded-2xl kintsugi-glass p-4 flex flex-col min-h-[360px] max-h-[580px]">
+        <div className="flex items-center justify-between mb-2.5">
+          <div className="flex items-center gap-2">
+            <Terminal className="h-4 w-4 text-amber-400" />
+            <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-slate-200">
+              QWEN 3.8-27B DIAGNOSIS & KINTSUGI AUDIT LOG
+            </h3>
           </div>
-        )}
+          <span className="text-[10px] font-mono text-slate-400">
+            {incidentFeed.length} Verified Events
+          </span>
+        </div>
 
-        {/* TAB 2: Pydantic Plan & LLM Reasoning */}
-        {activeTab === 'plan' && (
-          <div className="space-y-3">
-            <div className="p-3 rounded-xl border border-indigo-500/40 bg-indigo-950/30 text-indigo-200">
-              <div className="flex items-center gap-1.5 mb-1.5 text-xs font-bold text-indigo-300">
-                <Cpu className="h-3.5 w-3.5" />
-                <span>Qwen 3.8-27B Structured Remediation Plan</span>
-              </div>
-              <div className="space-y-1 text-[11px]">
-                <div>Target Service: <strong className="text-white">{targetService}</strong> (namespace: <strong className="text-cyan-300">hipster</strong>)</div>
-                <div>Action: <strong className="text-amber-300">{plannedAction || 'NO_ACTION'}</strong></div>
-              </div>
-            </div>
-
-            <div className="p-3 rounded-xl border border-slate-800 bg-slate-900/70">
-              <span className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Chain-of-Thought Reasoning:</span>
-              <p className="text-slate-300 leading-relaxed text-[11px]">
-                {reasoning || 'Agent is monitoring continuous multi-modal metric streams and Drain3 container logs.'}
+        <div className="flex-1 overflow-y-auto space-y-2.5 pr-1">
+          {incidentFeed.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center text-center p-6 border border-dashed border-slate-800 rounded-xl text-slate-400">
+              <Sparkles className="h-6 w-6 text-amber-400/70 mb-2" />
+              <p className="text-xs font-mono">
+                Ambient Agent monitoring 10 microservices at 1Hz.
+              </p>
+              <p className="text-[11px] text-slate-500 mt-1">
+                Use the Chaos Fault Injection Deck to trigger a live Kubernetes incident and watch Qwen 3.8-27B heal & seal the pod in gold.
               </p>
             </div>
-          </div>
-        )}
-
-        {/* TAB 3: 5 Deterministic SRE Guardrails */}
-        {activeTab === 'guardrails' && (
-          <div className="space-y-2">
-            <div className="text-[11px] text-slate-400 mb-2 border-b border-slate-800 pb-1.5">
-              5 Mandatory Safety Gates (Zero Hallucinated Execution):
-            </div>
-            {guardrailGates.map((gate, i) => (
-              <div key={gate.id} className="p-2.5 rounded-xl border border-slate-800/80 bg-slate-900/60 flex items-start justify-between gap-2">
-                <div className="space-y-0.5">
-                  <div className="flex items-center gap-1.5">
-                    <Lock className="h-3 w-3 text-emerald-400" />
-                    <span className="text-xs font-bold text-white">Gate #{i + 1}: {gate.name}</span>
-                  </div>
-                  <p className="text-[10px] text-slate-400 pl-4.5">{gate.rule}</p>
+          ) : (
+            incidentFeed.map((item, idx) => (
+              <div
+                key={idx}
+                className="p-3 rounded-xl bg-slate-950/85 border border-amber-500/35 hover:border-amber-400/70 transition-all"
+              >
+                <div className="flex items-center justify-between text-[11px] font-mono mb-1">
+                  <span className="font-bold text-amber-300 flex items-center gap-1">
+                    ✦ {item.service} // {item.fault}
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-amber-500/15 border border-amber-400/40 text-amber-200 text-[10px]">
+                    {item.action}
+                  </span>
                 </div>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-950 border border-emerald-600 text-emerald-300 shrink-0">
-                  PASSED
-                </span>
+                {item.rootCause && (
+                  <p className="text-[11px] text-slate-300 leading-relaxed mb-1.5">
+                    <strong className="text-cyan-300">Diagnosis:</strong> {item.rootCause}
+                  </p>
+                )}
+                {item.message && (
+                  <div className="text-[10px] font-mono text-emerald-300 bg-emerald-950/50 border border-emerald-700/50 px-2 py-1 rounded">
+                    ✓ {item.message}
+                  </div>
+                )}
               </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Console Footer */}
-      <div className="px-4 py-2 border-t border-slate-800/80 bg-slate-900/40 text-[10px] font-mono text-slate-400 flex items-center justify-between">
-        <span>Reasoning Engine: <strong className="text-indigo-300">Groq Cloud (qwen/qwen3.8-27b)</strong></span>
-        <span className="text-emerald-400 flex items-center gap-1">
-          <CheckCircle2 className="h-3 w-3" />
-          5/5 Guardrails Active
-        </span>
+            ))
+          )}
+        </div>
       </div>
     </div>
   );

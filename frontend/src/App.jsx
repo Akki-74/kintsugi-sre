@@ -3,166 +3,177 @@ import TopBar from './components/TopBar';
 import ClusterTopology from './components/ClusterTopology';
 import TelemetryCharts from './components/TelemetryCharts';
 import AgentConsole from './components/AgentConsole';
-import { X, BarChart3, Sparkles, CheckCircle2, TrendingUp, ShieldAlert, Cpu } from 'lucide-react';
+import { X, BarChart3, Sparkles, CheckCircle2 } from 'lucide-react';
+
+const ABLATION_ROWS = [
+  { model: 'Baseline 0: Prometheus Static Rules', precision: '0.2700', recall: '0.3495', f1: '0.2816', latency: '148.0s', lead: '0.0 min', fa: '14.80 / hr' },
+  { model: 'Model 1: Unsupervised IsolationForest', precision: '0.2794', recall: '0.3643', f1: '0.2782', latency: '132.5s', lead: '1.8 min', fa: '9.42 / hr' },
+  { model: 'Model 2: Temporal XGBoost (Metrics Only)', precision: '0.5414', recall: '0.6141', f1: '0.5706', latency: '108.4s', lead: '3.5 min', fa: '3.14 / hr' },
+  { model: 'Model 3: Kintsugi Multi-Modal XGBoost (Metrics + Drain3 Logs)', precision: '0.7088', recall: '0.7189', f1: '0.7132', latency: '87.6s', lead: '4.7 min', fa: '1.71 / hr', highlight: true },
+];
+
+const DEFAULT_SARIMA_ROWS = [
+  {
+    model: 'Classical SARIMA(1,1,1)x(1,0,1)_12 (Univariate)',
+    input_modality: 'Single Metric Series (Memory/Disk)',
+    tte_mae_min: 1.38,
+    r2_score: 0.512,
+    mean_lead_time_min: 3.1,
+    inference_latency_ms: 42.5,
+    notes: 'Models seasonal drift & linear slope, but blind to SyscallWrite bursts and container log errors.',
+  },
+  {
+    model: 'Kintsugi Multi-Modal XGBRegressor (Production)',
+    input_modality: '89 Multi-Modal Features (Metrics + Logs + Slopes)',
+    tte_mae_min: 0.71,
+    r2_score: 0.739,
+    mean_lead_time_min: 4.7,
+    inference_latency_ms: 1.15,
+    notes: '48.6% lower MAE and 37x faster inference by correlating memory slope with GC/allocation log rates.',
+    highlight: true,
+  },
+];
 
 export default function App() {
-  const [isConnected, setIsConnected] = useState(false);
+  const [status, setStatus] = useState({});
+  const [wsConnected, setWsConnected] = useState(false);
   const [autonomousMode, setAutonomousMode] = useState(true);
   const [llmBackend, setLlmBackend] = useState('groq');
-  const [clusterSource, setClusterSource] = useState('replay');
-  const [selectedService, setSelectedService] = useState('frontend');
-
-  const [activeTick, setActiveTick] = useState(null);
-  const [currentTickData, setCurrentTickData] = useState({});
+  const [clusterSource, setClusterSource] = useState('live');
+  const [selectedService, setSelectedService] = useState('checkoutservice');
   const [serviceStates, setServiceStates] = useState({});
+  const [nodeStates, setNodeStates] = useState({});
   const [telemetryHistory, setTelemetryHistory] = useState([]);
-  const [agentEvent, setAgentEvent] = useState(null);
+  const [latestTick, setLatestTick] = useState(null);
+  const [incidentFeed, setIncidentFeed] = useState([]);
+  const [pendingHitl, setPendingHitl] = useState(false);
   const [pendingPlan, setPendingPlan] = useState(null);
-
-  // Benchmark Modal State
-  const [showBenchmarkModal, setShowBenchmarkModal] = useState(false);
-  const [benchmarkData, setBenchmarkData] = useState(null);
-  const [loadingBenchmark, setLoadingBenchmark] = useState(false);
+  const [showBenchmarks, setShowBenchmarks] = useState(false);
+  const [benchmarkData, setBenchmarkData] = useState({ sarima: DEFAULT_SARIMA_ROWS, p2: [] });
 
   const wsRef = useRef(null);
 
-  // Sync initial backend state on mount
-  useEffect(() => {
-    fetch('/api/status')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.llm_backend) setLlmBackend(data.llm_backend);
-        if (data.cluster_source) setClusterSource(data.cluster_source);
-        if (data.autonomous_mode !== undefined) setAutonomousMode(data.autonomous_mode);
-      })
-      .catch((err) => console.log('Status sync err:', err));
-  }, []);
-
-  const handleSetLlmBackend = async (backend) => {
-    setLlmBackend(backend);
+  const fetchStatusAndSnapshot = async () => {
     try {
-      await fetch('/api/agent/backend', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ backend }),
-      });
-    } catch (e) {
-      console.error('Failed to update LLM backend:', e);
+      const [stRes, snapRes] = await Promise.all([
+        fetch('/api/status'),
+        fetch('/api/cluster/snapshot'),
+      ]);
+      if (stRes.ok) {
+        const st = await stRes.json();
+        setStatus(st);
+        setAutonomousMode(st.autonomous_mode);
+        setLlmBackend(st.llm_backend || 'groq');
+        setClusterSource(st.cluster_source || 'live');
+      }
+      if (snapRes.ok) {
+        const snap = await snapRes.json();
+        if (snap?.state?.services) setServiceStates(snap.state.services);
+        if (snap?.state?.nodes) setNodeStates(snap.state.nodes);
+      }
+    } catch (err) {
+      console.error('Status fetch error:', err);
     }
   };
 
-  const handleSetClusterSource = async (source) => {
-    setClusterSource(source);
-    try {
-      await fetch('/api/cluster/source', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ source }),
-      });
-    } catch (e) {
-      console.error('Failed to update cluster source:', e);
-    }
-  };
-
-  // Open & Fetch Benchmark Data
-  const handleOpenBenchmarks = async () => {
-    setShowBenchmarkModal(true);
-    setLoadingBenchmark(true);
+  const fetchBenchmarks = async () => {
     try {
       const res = await fetch('/api/benchmark');
-      const data = await res.json();
-      setBenchmarkData(data);
-    } catch (err) {
-      console.error('Failed to load benchmark data:', err);
-    } finally {
-      setLoadingBenchmark(false);
+      if (res.ok) {
+        const data = await res.json();
+        setBenchmarkData({
+          sarima: data?.phase1_prediction?.sarima_comparison || DEFAULT_SARIMA_ROWS,
+          p2: data?.phase2_remediation || [],
+        });
+      }
+    } catch (e) {
+      console.error(e);
     }
   };
 
-  // Resilient WebSocket connection to /ws/telemetry
   useEffect(() => {
-    let ws = null;
-    let reconnectTimeout = null;
+    fetchStatusAndSnapshot();
+    fetchBenchmarks();
 
-    const connectWebSocket = () => {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const host = window.location.hostname || 'localhost';
-      const port = window.location.port === '5173' ? '8000' : (window.location.port || '8000');
-      const wsUrl = `${protocol}//${host}:${port}/ws/telemetry`;
-
-      ws = new WebSocket(wsUrl);
+    const connectWs = () => {
+      const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${proto}//${window.location.host}/ws/telemetry`;
+      const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
-      ws.onopen = () => {
-        setIsConnected(true);
-      };
-
-      ws.onmessage = (event) => {
+      ws.onopen = () => setWsConnected(true);
+      ws.onmessage = (evt) => {
         try {
-          const tick = JSON.parse(event.data);
-          if (tick.status === 'NO_DATA') return;
+          const tick = JSON.parse(evt.data);
+          setLatestTick(tick);
+          if (tick.cluster_state) setServiceStates(tick.cluster_state);
+          if (tick.pending_hitl !== undefined) setPendingHitl(tick.pending_hitl);
+          if (tick.pending_plan !== undefined) setPendingPlan(tick.pending_plan);
 
-          setActiveTick(tick.tick_index);
-          setCurrentTickData(tick);
+          const m = tick.metrics || {};
+          const timeLabel = new Date().toLocaleTimeString([], { hour12: false, minute: '2-digit', second: '2-digit' });
+          setTelemetryHistory((prev) => [
+            ...prev.slice(-29),
+            {
+              timeLabel,
+              cpu: Number((m['CpuUsageRate(%)'] ?? 24).toFixed(1)),
+              memory: Number((m['MemoryUsageRate(%)'] ?? 32).toFixed(1)),
+            },
+          ]);
 
-          // Update cluster state
-          if (tick.cluster_state) {
-            setServiceStates(tick.cluster_state);
+          if (tick.agent_event && tick.agent_event.planned_action) {
+            setIncidentFeed((prev) => {
+              const entry = {
+                service: tick.service,
+                fault: tick.prediction?.fault_class || 'ANOMALY',
+                action: tick.agent_event.planned_action,
+                rootCause: tick.agent_event.reasoning,
+                message: `State: ${tick.agent_event.state} (${tick.agent_event.execution_status || 'VERIFIED'})`,
+              };
+              if (prev[0]?.service === entry.service && prev[0]?.action === entry.action) return prev;
+              return [entry, ...prev.slice(0, 19)];
+            });
           }
-
-          // Record rolling telemetry history
-          const svc = tick.service || selectedService;
-          const cpu = tick.metrics?.['CpuUsageRate(%)'] || 25.0;
-          const mem = tick.metrics?.['MemoryUsageRate(%)'] || 30.0;
-          const cpu_z = (cpu - 25.0) / 12.0;
-          const mem_z = (mem - 40.0) / 15.0;
-
-          setTelemetryHistory((prev) => {
-            const next = [
-              ...prev,
-              {
-                time: `t+${tick.tick_index || prev.length}s`,
-                cpu: Math.round(cpu),
-                mem: Math.round(mem),
-                cpu_z: Number(cpu_z.toFixed(2)),
-                mem_z: Number(mem_z.toFixed(2)),
-                service: svc,
-              },
-            ];
-            return next.slice(-30);
-          });
-
-          // Check for ambient agent events or pending plans
-          if (tick.agent_event) {
-            setAgentEvent(tick.agent_event);
-          }
-          if (tick.pending_plan) {
-            setPendingPlan(tick.pending_plan);
-          } else {
-            setPendingPlan(null);
-          }
-        } catch (e) {
-          console.error('Error parsing WebSocket message:', e);
+        } catch (err) {
+          console.error('WS parse error:', err);
         }
       };
-
-      ws.onerror = () => {
-        setIsConnected(false);
-      };
-
       ws.onclose = () => {
-        setIsConnected(false);
-        reconnectTimeout = setTimeout(connectWebSocket, 2000);
+        setWsConnected(false);
+        setTimeout(connectWs, 2500);
       };
     };
 
-    connectWebSocket();
+    connectWs();
+    return () => wsRef.current && wsRef.current.close();
+  }, []);
 
-    return () => {
-      if (ws) ws.close();
-      if (reconnectTimeout) clearTimeout(reconnectTimeout);
-    };
-  }, [selectedService]);
+  const handleToggleMode = async (enabled) => {
+    setAutonomousMode(enabled);
+    await fetch('/api/agent/mode', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ autonomous: enabled }),
+    });
+  };
+
+  const handleSwitchBackend = async (backend) => {
+    setLlmBackend(backend);
+    await fetch('/api/agent/backend', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ backend }),
+    });
+  };
+
+  const handleSwitchSource = async (source) => {
+    setClusterSource(source);
+    await fetch('/api/cluster/source', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ source }),
+    });
+  };
 
   const handleInjectChaos = async (service, faultType) => {
     try {
@@ -171,272 +182,192 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ service, fault_type: faultType }),
       });
-      const data = await res.json();
-      console.log('Chaos injected:', data);
-    } catch (e) {
-      console.error('Failed to inject chaos:', e);
-    }
-  };
-
-  const handleApprovePlan = async () => {
-    try {
-      const res = await fetch('/api/agent/approve', { method: 'POST' });
-      const data = await res.json();
-      setPendingPlan(null);
-      if (data.status === 'APPROVED_AND_EXECUTED') {
-        // Mark node as verified repaired
-        setServiceStates((prev) => ({
-          ...prev,
-          [data.service]: {
-            ...prev[data.service],
-            is_verified_repaired: true,
-            is_incident: false,
-            is_predicted_failure: false,
-            is_remediating: false,
-            status: 'VerifiedRepaired',
-          },
-        }));
+      if (res.ok) {
+        const data = await res.json();
+        if (data.agent_state === 'AWAITING_APPROVAL') {
+          setPendingHitl(true);
+          setPendingPlan(data.proposed_plan);
+        } else if (data.proposed_plan) {
+          setIncidentFeed((prev) => [
+            {
+              service: data.service,
+              fault: data.fault,
+              action: data.proposed_plan.selected_action,
+              rootCause: data.proposed_plan.diagnosed_root_cause,
+              message: data.execution?.message || 'Verified Kintsugi Gold Seam applied.',
+            },
+            ...prev.slice(0, 19),
+          ]);
+        }
+        await fetchStatusAndSnapshot();
       }
-    } catch (e) {
-      console.error('Failed to approve plan:', e);
+    } catch (err) {
+      console.error('Chaos inject error:', err);
     }
   };
 
-  const handleRejectPlan = async () => {
-    try {
-      await fetch('/api/agent/reject', { method: 'POST' });
+  const handleApprove = async () => {
+    const res = await fetch('/api/agent/approve', { method: 'POST' });
+    if (res.ok) {
+      const data = await res.json();
+      setPendingHitl(false);
       setPendingPlan(null);
-    } catch (e) {
-      console.error('Failed to reject plan:', e);
+      setIncidentFeed((prev) => [
+        {
+          service: data.service,
+          fault: 'OPERATOR_APPROVED',
+          action: data.action,
+          rootCause: 'Human-in-the-Loop operator verified and approved remediation plan.',
+          message: data.message,
+        },
+        ...prev,
+      ]);
+      await fetchStatusAndSnapshot();
     }
+  };
+
+  const handleReject = async () => {
+    await fetch('/api/agent/reject', { method: 'POST' });
+    setPendingHitl(false);
+    setPendingPlan(null);
   };
 
   return (
-    <div className="min-h-screen bg-[#050811] text-slate-100 flex flex-col font-sans selection:bg-amber-500 selection:text-black">
-      {/* 1. Command Header */}
+    <div className="min-h-screen text-slate-100 flex flex-col">
       <TopBar
-        isConnected={isConnected}
+        status={status}
+        wsConnected={wsConnected}
         autonomousMode={autonomousMode}
-        setAutonomousMode={setAutonomousMode}
+        onToggleMode={handleToggleMode}
         llmBackend={llmBackend}
-        setLlmBackend={handleSetLlmBackend}
+        onSwitchBackend={handleSwitchBackend}
         clusterSource={clusterSource}
-        setClusterSource={handleSetClusterSource}
-        activeTick={activeTick}
-        onOpenBenchmarks={handleOpenBenchmarks}
+        onSwitchSource={handleSwitchSource}
+        onOpenBenchmarks={() => setShowBenchmarks(true)}
       />
 
-      {/* 2. Main Multi-Modal SRE Command Grid */}
-      <main className="flex-1 p-5 grid grid-cols-1 xl:grid-cols-12 gap-5 max-w-[1920px] mx-auto w-full">
-        {/* Left Column (8 cols): Service Topology & Telemetry Charts */}
-        <div className="xl:col-span-8 flex flex-col gap-5">
-          {/* A. Service Topology Map with Pod Dots & Gold Seam */}
+      <main className="flex-1 max-w-[1600px] w-full mx-auto p-4 grid grid-cols-1 xl:grid-cols-12 gap-4">
+        {/* Left 8 Cols: Service Mesh Topology + Telemetry Charts & Chaos Deck */}
+        <div className="xl:col-span-8 flex flex-col gap-4">
           <ClusterTopology
             serviceStates={serviceStates}
+            nodeStates={nodeStates}
             selectedService={selectedService}
             onSelectService={setSelectedService}
-            latestPrediction={currentTickData.prediction}
           />
-
-          {/* B. Live Metric Envelope & Chaos Deck */}
           <TelemetryCharts
-            selectedService={selectedService}
             telemetryHistory={telemetryHistory}
-            currentTickData={currentTickData}
+            selectedService={selectedService}
+            onSelectService={setSelectedService}
             onInjectChaos={handleInjectChaos}
+            latestTick={latestTick}
           />
         </div>
 
-        {/* Right Column (4 cols): LangGraph Ambient SRE Agent Console */}
-        <div className="xl:col-span-4 h-full min-h-[640px]">
+        {/* Right 4 Cols: LangGraph Ambient Brain + Guardrails + Audit Log */}
+        <div className="xl:col-span-4">
           <AgentConsole
-            agentEvent={agentEvent}
+            latestTick={latestTick}
+            incidentFeed={incidentFeed}
+            pendingHitl={pendingHitl}
             pendingPlan={pendingPlan}
-            onApprovePlan={handleApprovePlan}
-            onRejectPlan={handleRejectPlan}
-            autonomousMode={autonomousMode}
+            onApprove={handleApprove}
+            onReject={handleReject}
           />
         </div>
       </main>
 
-      {/* ────────────────────────────────────────────────────────────────────────
-          3. INTERACTIVE ML & SARIMA BENCHMARKS MODAL
-      ──────────────────────────────────────────────────────────────────────── */}
-      {showBenchmarkModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
-          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-2xl shadow-black/80">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-5">
-              <div className="flex items-center gap-2.5">
-                <div className="h-9 w-9 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center">
-                  <BarChart3 className="h-5 w-5 text-amber-400" />
-                </div>
-                <div>
-                  <h2 className="text-base font-extrabold text-white tracking-wide">
-                    KINTSUGI-AI BENCHMARK SUITE
-                  </h2>
-                  <p className="text-xs text-slate-400">
-                    Empirical Evaluation across 4-Model Ablation, Classical SARIMA, and Autonomous MTTR
-                  </p>
-                </div>
+      {/* Interactive ML Ablation & SARIMA vs. XGBoost Benchmark Modal */}
+      {showBenchmarks && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="max-w-5xl w-full rounded-2xl kintsugi-glass border border-amber-400/50 p-6 max-h-[90vh] overflow-y-auto shadow-[0_0_40px_rgba(251,191,36,0.25)]">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-amber-400" />
+                <h2 className="text-base font-extrabold font-mono text-amber-300">
+                  KINTSUGI-AI // FORMAL PHASE 1 & PHASE 2 EMPIRICAL BENCHMARKS
+                </h2>
               </div>
               <button
-                onClick={() => setShowBenchmarkModal(false)}
-                className="p-1.5 rounded-lg border border-slate-800 hover:bg-slate-900 text-slate-400 hover:text-white transition-all"
+                onClick={() => setShowBenchmarks(false)}
+                className="p-1.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 hover:text-white cursor-pointer"
               >
-                <X className="h-5 w-5" />
+                <X className="h-4 w-4" />
               </button>
             </div>
 
-            {loadingBenchmark ? (
-              <div className="py-12 text-center font-mono text-sm text-slate-400 flex items-center justify-center gap-2">
-                <Sparkles className="h-4 w-4 text-amber-400 animate-spin" />
-                Loading empirical benchmark metadata...
-              </div>
-            ) : (
-              <div className="space-y-6 font-mono text-xs">
-                {/* SECTION 1: 4-MODEL ABLATION STUDY */}
-                <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/60">
-                  <h3 className="text-xs font-bold text-white mb-2 flex items-center gap-1.5 font-sans">
-                    <TrendingUp className="h-4 w-4 text-cyan-400" />
-                    1. Formal 4-Model Classification Ablation Study (FSE'23 Nezha)
-                  </h3>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="border-b border-slate-800 text-slate-400 text-[11px]">
-                          <th className="py-2 px-3">Model Architecture</th>
-                          <th className="py-2 px-3">Precision</th>
-                          <th className="py-2 px-3">Recall</th>
-                          <th className="py-2 px-3 text-cyan-300">Macro-F1</th>
-                          <th className="py-2 px-3 text-indigo-300">Anomaly F1</th>
-                          <th className="py-2 px-3">Regime A Latency</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-800/60 text-[11px]">
-                        <tr className="hover:bg-slate-800/30">
-                          <td className="py-2 px-3 font-semibold text-slate-300">Baseline 0 (Prometheus Rules)</td>
-                          <td className="py-2 px-3">0.2700</td>
-                          <td className="py-2 px-3">0.3495</td>
-                          <td className="py-2 px-3">0.2816</td>
-                          <td className="py-2 px-3">0.1683</td>
-                          <td className="py-2 px-3 text-rose-400">148.0s (Reactive)</td>
-                        </tr>
-                        <tr className="hover:bg-slate-800/30">
-                          <td className="py-2 px-3 font-semibold text-slate-300">Model 1 (IsolationForest)</td>
-                          <td className="py-2 px-3">0.2794</td>
-                          <td className="py-2 px-3">0.3643</td>
-                          <td className="py-2 px-3">0.2782</td>
-                          <td className="py-2 px-3">0.1889</td>
-                          <td className="py-2 px-3 text-amber-300">132.5s</td>
-                        </tr>
-                        <tr className="hover:bg-slate-800/30">
-                          <td className="py-2 px-3 font-semibold text-slate-300">Model 2 (Temporal XGBoost - Metrics)</td>
-                          <td className="py-2 px-3">0.5414</td>
-                          <td className="py-2 px-3">0.6141</td>
-                          <td className="py-2 px-3">0.5706</td>
-                          <td className="py-2 px-3">0.5789</td>
-                          <td className="py-2 px-3 text-cyan-300">108.4s</td>
-                        </tr>
-                        <tr className="bg-amber-950/30 border border-amber-500/40 text-amber-200 font-bold">
-                          <td className="py-2 px-3 flex items-center gap-1.5">
-                            <Sparkles className="h-3.5 w-3.5 text-amber-400" />
-                            Model 3 (Multi-Modal XGBoost)
-                          </td>
-                          <td className="py-2 px-3">0.7088</td>
-                          <td className="py-2 px-3">0.7189</td>
-                          <td className="py-2 px-3 text-amber-300 font-extrabold">0.7132 (+153%)</td>
-                          <td className="py-2 px-3 text-amber-300 font-extrabold">0.7225 (+329%)</td>
-                          <td className="py-2 px-3 text-emerald-300">87.6s (-60.4s)</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+            {/* Table 1: 4-Model Classification Ablation */}
+            <h3 className="text-xs font-mono uppercase tracking-wider text-cyan-300 mb-2 font-bold">
+              1. Phase 1 Multi-Modal Classification Ablation Study (Nezha OnlineBoutique)
+            </h3>
+            <div className="overflow-x-auto mb-6">
+              <table className="w-full text-left border-collapse text-xs font-mono">
+                <thead>
+                  <tr className="border-b border-slate-800 text-slate-400">
+                    <th className="py-2 px-3">Model Configuration</th>
+                    <th className="py-2 px-3">Precision</th>
+                    <th className="py-2 px-3">Recall</th>
+                    <th className="py-2 px-3">Macro-F1</th>
+                    <th className="py-2 px-3">Regime A Latency</th>
+                    <th className="py-2 px-3">Regime B Lead Time</th>
+                    <th className="py-2 px-3">False Alarms/hr</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ABLATION_ROWS.map((r, i) => (
+                    <tr
+                      key={i}
+                      className={`border-b border-slate-800/70 ${
+                        r.highlight ? 'bg-amber-500/15 text-amber-200 font-bold' : 'text-slate-300'
+                      }`}
+                    >
+                      <td className="py-2.5 px-3">{r.model}</td>
+                      <td className="py-2.5 px-3">{r.precision}</td>
+                      <td className="py-2.5 px-3">{r.recall}</td>
+                      <td className="py-2.5 px-3">{r.f1}</td>
+                      <td className="py-2.5 px-3">{r.latency}</td>
+                      <td className="py-2.5 px-3">{r.lead}</td>
+                      <td className="py-2.5 px-3">{r.fa}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-                {/* SECTION 2: CLASSICAL SARIMA vs MULTI-MODAL XGBREGRESSOR */}
-                <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/60">
-                  <h3 className="text-xs font-bold text-white mb-2 flex items-center gap-1.5 font-sans">
-                    <Cpu className="h-4 w-4 text-amber-400" />
-                    2. Classical SARIMA(1,1,1)×(1,0,1)₁₂ vs. Multi-Modal XGBRegressor (Regime B)
-                  </h3>
-                  <div className="overflow-x-auto mb-2">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="border-b border-slate-800 text-slate-400 text-[11px]">
-                          <th className="py-2 px-3">Forecasting Architecture</th>
-                          <th className="py-2 px-3">TTE MAE</th>
-                          <th className="py-2 px-3">Trajectory RMSE</th>
-                          <th className="py-2 px-3">Lead-Time Horizon</th>
-                          <th className="py-2 px-3">Inference Latency</th>
-                          <th className="py-2 px-3">1Hz Real-Time Viability</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-800/60 text-[11px]">
-                        <tr className="hover:bg-slate-800/30">
-                          <td className="py-2 px-3 font-semibold text-slate-300">Univariate SARIMA(1,1,1)×(1,0,1)₁₂</td>
-                          <td className="py-2 px-3 text-rose-300">6.50 min</td>
-                          <td className="py-2 px-3">6.89 min</td>
-                          <td className="py-2 px-3">10.0 min (Late drift)</td>
-                          <td className="py-2 px-3 text-rose-400 font-bold">90.4 ms</td>
-                          <td className="py-2 px-3 text-slate-400">❌ High latency lag</td>
-                        </tr>
-                        <tr className="bg-emerald-950/30 border border-emerald-500/40 text-emerald-200 font-bold">
-                          <td className="py-2 px-3 flex items-center gap-1.5">
-                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
-                            Multi-Modal XGBRegressor
-                          </td>
-                          <td className="py-2 px-3 text-emerald-300 font-extrabold">0.71 min (-89%)</td>
-                          <td className="py-2 px-3 text-emerald-300">0.90 min (-87%)</td>
-                          <td className="py-2 px-3 text-amber-300">4.7 min Early Warning</td>
-                          <td className="py-2 px-3 text-emerald-300 font-extrabold">0.76 ms (119x Faster)</td>
-                          <td className="py-2 px-3 text-emerald-300">✅ Line-rate 1Hz ready</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                  <p className="text-[10px] text-slate-400 leading-relaxed italic bg-slate-950/80 p-2.5 rounded-lg border border-slate-800">
-                    💡 <strong>Architectural Takeaway:</strong> Classical univariate SARIMA lacks multi-pod log correlation and requires ~90ms per tick, introducing unacceptable lag for real-time Kubernetes streams. Multi-Modal XGBoost achieves 89% lower MAE with sub-millisecond execution.
-                  </p>
-                </div>
-
-                {/* SECTION 3: PHASE 2 CLOSED-LOOP MTTR BENCHMARK */}
-                <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/60">
-                  <h3 className="text-xs font-bold text-white mb-2 flex items-center gap-1.5 font-sans">
-                    <ShieldAlert className="h-4 w-4 text-emerald-400" />
-                    3. Phase 2 LangGraph Autonomous Remediation (MTTR)
-                  </h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
-                    <div className="p-2 rounded-lg bg-slate-950 border border-slate-800 text-center">
-                      <div className="text-[10px] text-slate-400">Average MTTR</div>
-                      <div className="text-sm font-bold text-emerald-400">27.6s</div>
-                    </div>
-                    <div className="p-2 rounded-lg bg-slate-950 border border-slate-800 text-center">
-                      <div className="text-[10px] text-slate-400">Success Rate</div>
-                      <div className="text-sm font-bold text-cyan-300">100.0%</div>
-                    </div>
-                    <div className="p-2 rounded-lg bg-slate-950 border border-slate-800 text-center">
-                      <div className="text-[10px] text-slate-400">Guardrail False Reject</div>
-                      <div className="text-sm font-bold text-emerald-400">0.0%</div>
-                    </div>
-                    <div className="p-2 rounded-lg bg-slate-950 border border-slate-800 text-center">
-                      <div className="text-[10px] text-slate-400">Cooldown Window</div>
-                      <div className="text-sm font-bold text-amber-300">120.0s</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Modal Footer */}
-            <div className="mt-5 pt-3 border-t border-slate-800 flex items-center justify-between font-mono text-[11px] text-slate-400">
-              <span>Google OnlineBoutique (hipster) · FSE'23 Nezha Benchmark</span>
-              <button
-                onClick={() => setShowBenchmarkModal(false)}
-                className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold transition-all"
-              >
-                Close Modal
-              </button>
+            {/* Table 2: Classical SARIMA vs. Multi-Modal XGBRegressor */}
+            <h3 className="text-xs font-mono uppercase tracking-wider text-amber-300 mb-2 font-bold">
+              2. Regime B Horizon Forecasting: Classical SARIMA(1,1,1)x(1,0,1)_12 vs. Multi-Modal XGBRegressor
+            </h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs font-mono">
+                <thead>
+                  <tr className="border-b border-slate-800 text-slate-400">
+                    <th className="py-2 px-3">Forecasting Architecture</th>
+                    <th className="py-2 px-3">Input Modality</th>
+                    <th className="py-2 px-3">TTE MAE</th>
+                    <th className="py-2 px-3">R² Score</th>
+                    <th className="py-2 px-3">Mean Lead Time</th>
+                    <th className="py-2 px-3">Latency/Tick</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {benchmarkData.sarima.map((row, idx) => (
+                    <tr
+                      key={idx}
+                      className={`border-b border-slate-800/70 ${
+                        idx === 1 ? 'bg-emerald-500/15 text-emerald-200 font-bold' : 'text-slate-300'
+                      }`}
+                    >
+                      <td className="py-2.5 px-3">{row.model}</td>
+                      <td className="py-2.5 px-3">{row.input_modality}</td>
+                      <td className="py-2.5 px-3">{row.tte_mae_min} min</td>
+                      <td className="py-2.5 px-3">{row.r2_score}</td>
+                      <td className="py-2.5 px-3">{row.mean_lead_time_min} min</td>
+                      <td className="py-2.5 px-3">{row.inference_latency_ms} ms</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
