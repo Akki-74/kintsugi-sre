@@ -248,6 +248,36 @@ To prevent `kube-apiserver` and `etcd` TLS handshake timeouts during simultaneou
 docker exec desktop-control-plane sysctl -w fs.inotify.max_user_instances=8192 fs.inotify.max_user_watches=524288
 ```
 
+### 5. Cluster Lifecycle & Memory Management (16GB RAM Optimization)
+*(Full operational guide: [`docs/CLUSTER_OPERATIONS.md`](docs/CLUSTER_OPERATIONS.md))*
+
+Running 3 cluster nodes, 10 microservices, and Prometheus/Grafana locally consumes ~6GB of RAM. You can cleanly pause the cluster anytime to immediately release RAM without losing any pod deployments or cluster state, and resume with all port-forwards restored:
+
+#### ⏸️ Pause Local Cluster (Free Up ~5–7 GB RAM):
+```powershell
+# Stop background kubectl port-forwards
+Get-Process kubectl -ErrorAction SilentlyContinue | Stop-Process -Force
+
+# Pause 3 node containers without deleting deployments or persistent state
+docker stop desktop-control-plane desktop-worker desktop-worker2
+```
+*(Tip: While paused, Kintsugi-AI can still run in Digital Twin mode using `$env:CLUSTER_MODE="REPLAY_HOLDOUT"` for sub-millisecond local experimentation at under 150MB RAM).*
+
+#### ▶️ Resume Local Cluster Anytime:
+```powershell
+# 1. Start the 3 nodes back up & re-apply inotify tuning
+docker start desktop-control-plane desktop-worker desktop-worker2
+docker exec desktop-control-plane sysctl -w fs.inotify.max_user_instances=8192 fs.inotify.max_user_watches=524288
+
+# 2. Re-open Prometheus (9090), Grafana (3000), and K8s Dashboard (8443)
+Start-Process kubectl -ArgumentList "port-forward -n monitoring svc/monitoring-kube-prometheus-prometheus 9090:9090" -WindowStyle Minimized
+Start-Process kubectl -ArgumentList "port-forward -n monitoring svc/monitoring-grafana 3000:80" -WindowStyle Minimized
+Start-Process kubectl -ArgumentList "port-forward -n kubernetes-dashboard svc/kubernetes-dashboard 8443:443" -WindowStyle Minimized
+
+# 3. Start Kintsugi Command Center (http://localhost:8000/app/)
+python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
+```
+
 ---
 
 ## ⚡ Local Quickstart Guide
@@ -331,6 +361,7 @@ kintsugi-sre/
 │   ├── PRD.md                      # Product Requirements Document
 │   ├── PHASE1_REPORT.md            # Formal Phase 1 ML Benchmark Report
 │   ├── REMEDIATION_BENCHMARK.md    # Formal Phase 2 MTTR Benchmark Report
+│   ├── CLUSTER_OPERATIONS.md       # Operational runbook for cluster pause & resume (16GB RAM)
 │   └── SLIDE_DECK_AND_DEMO_GUIDE.md# Complete presentation & video demo script
 ├── frontend/                       # React 19 + Tailwind CSS + @xyflow/react + Recharts
 │   ├── src/
