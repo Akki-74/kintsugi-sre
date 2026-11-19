@@ -1,150 +1,162 @@
-@import '@xyflow/react/dist/style.css';
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --color-obsidian: #050811;
-  --color-kintsugi-gold: #fbbf24;
-  --color-kintsugi-gold-glow: rgba(251, 191, 36, 0.4);
+  --bg-obsidian: #050811;
+  --bg-panel: rgba(11, 17, 30, 0.82);
+  --gold-primary: #f59e0b;
+  --gold-bright: #fde047;
+  --cyan-glow: #38bdf8;
+  --emerald-glow: #10b981;
+  --rose-glow: #f43f5e;
+}
+
+* {
+  box-sizing: border-box;
+  user-select: none;
 }
 
 body {
   margin: 0;
-  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-  background-color: #050811;
-  color: #f1f5f9;
-  min-height: 100vh;
-  /* Multi-layered Obsidian Ceramic Background with ambient cyan and gold blooms and cyber-grid */
-  background-image: 
-    radial-gradient(circle at 15% 15%, rgba(56, 189, 248, 0.07) 0%, transparent 45%),
-    radial-gradient(circle at 85% 20%, rgba(251, 191, 36, 0.08) 0%, transparent 50%),
-    radial-gradient(circle at 50% 85%, rgba(99, 102, 241, 0.06) 0%, transparent 55%),
-    linear-gradient(to right, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
-  background-size: 100% 100%, 100% 100%, 100% 100%, 32px 32px, 32px 32px;
-  background-attachment: fixed;
+  background-color: var(--bg-obsidian);
+  color: #f8fafc;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  overflow: hidden;
+  background-image:
+    radial-gradient(circle at 12% 18%, rgba(245, 158, 11, 0.09) 0%, transparent 36%),
+    radial-gradient(circle at 88% 82%, rgba(56, 189, 248, 0.08) 0%, transparent 38%),
+    radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.04) 0%, transparent 55%),
+    linear-gradient(180deg, rgba(5, 8, 17, 0.96) 0%, rgba(7, 11, 22, 0.99) 100%);
 }
 
-code, pre, .font-mono {
+/* Subtle Kintsugi SVG Background Fracture & Cyber Grid */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.28;
+  background-size: 36px 36px;
+  background-image:
+    linear-gradient(to right, rgba(148, 163, 184, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(148, 163, 184, 0.04) 1px, transparent 1px);
+}
+
+.font-display {
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.font-mono-code {
   font-family: 'JetBrains Mono', monospace;
 }
 
-/* Custom Scrollbars */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: #090d16;
-}
-::-webkit-scrollbar-thumb {
-  background: #1e293b;
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+/* Obsidian Glassmorphic Cards */
+.kintsugi-panel {
+  background: linear-gradient(155deg, rgba(15, 23, 42, 0.86) 0%, rgba(8, 13, 25, 0.92) 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  box-shadow:
+    0 18px 40px -12px rgba(0, 0, 0, 0.75),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.07);
 }
 
-/* Glassmorphism Surface Utility */
-.glass-panel {
-  background: rgba(10, 15, 29, 0.75);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+.kintsugi-panel-gold {
+  background: linear-gradient(155deg, rgba(28, 22, 12, 0.88) 0%, rgba(12, 15, 26, 0.94) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  box-shadow:
+    0 0 28px rgba(245, 158, 11, 0.18),
+    inset 0 1px 0 0 rgba(253, 224, 71, 0.22);
 }
 
-.glass-panel-gold {
-  background: rgba(18, 15, 10, 0.85);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(251, 191, 36, 0.35);
-  box-shadow: 0 0 25px rgba(251, 191, 36, 0.15);
+/* Liquid Gold Text Shimmer */
+.kintsugi-gold-text {
+  background: linear-gradient(135deg, #fef08a 0%, #f59e0b 45%, #fbbf24 75%, #fde047 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: goldTextFlow 5s ease infinite;
 }
 
-/* Kintsugi Liquid Gold Pulse & Seam Shimmer */
-@keyframes kintsugiGoldPulse {
+@keyframes goldTextFlow {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* Verified Repaired Node - Liquid Gold Seam Glow */
+.node-gold-seam {
+  background: linear-gradient(145deg, rgba(35, 25, 10, 0.95) 0%, rgba(15, 18, 28, 0.96) 100%);
+  border: 1.5px solid #fbbf24;
+  box-shadow:
+    0 0 22px rgba(245, 158, 11, 0.42),
+    0 0 45px rgba(245, 158, 11, 0.14),
+    inset 0 0 14px rgba(251, 191, 36, 0.18);
+  animation: kintsugiPulse 3.2s ease-in-out infinite;
+}
+
+@keyframes kintsugiPulse {
   0%, 100% {
-    box-shadow: 0 0 12px rgba(251, 191, 36, 0.3), inset 0 0 8px rgba(251, 191, 36, 0.2);
-    border-color: rgba(251, 191, 36, 0.6);
+    box-shadow: 0 0 18px rgba(245, 158, 11, 0.38), inset 0 0 12px rgba(251, 191, 36, 0.15);
+    border-color: #f59e0b;
   }
   50% {
-    box-shadow: 0 0 24px rgba(251, 191, 36, 0.6), inset 0 0 14px rgba(251, 191, 36, 0.35);
-    border-color: rgba(251, 191, 36, 1);
+    box-shadow: 0 0 30px rgba(253, 224, 71, 0.65), inset 0 0 20px rgba(251, 191, 36, 0.28);
+    border-color: #fde047;
   }
 }
 
-@keyframes seamShimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
+/* Incident Node - Crimson Fracture Alert */
+.node-incident-glow {
+  background: linear-gradient(145deg, rgba(45, 12, 22, 0.94) 0%, rgba(18, 12, 24, 0.96) 100%);
+  border: 1.5px solid #f43f5e;
+  box-shadow:
+    0 0 25px rgba(244, 63, 94, 0.5),
+    inset 0 0 15px rgba(244, 63, 94, 0.22);
+  animation: incidentPulse 1.4s ease-in-out infinite;
 }
 
-.animate-kintsugi-gold {
-  animation: kintsugiGoldPulse 2.5s infinite ease-in-out;
+@keyframes incidentPulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 18px rgba(244, 63, 94, 0.45); }
+  50% { transform: scale(1.02); box-shadow: 0 0 32px rgba(244, 63, 94, 0.78); }
 }
 
-.gold-shimmer-text {
-  background: linear-gradient(90deg, #d97706 0%, #fef08a 25%, #fbbf24 50%, #fef08a 75%, #d97706 100%);
-  background-size: 200% auto;
-  color: transparent;
-  -webkit-background-clip: text;
-  background-clip: text;
-  animation: seamShimmer 4s linear infinite;
-}
-
-.gold-vein-border {
-  border-image: linear-gradient(135deg, #fbbf24 0%, rgba(251, 191, 36, 0.2) 50%, #f59e0b 100%) 1;
-}
-
-
-/* === KINTSUGI CYBER-SRE THEME === */
-:root {
-  --kintsugi-gold: #fbbf24;
-  --kintsugi-gold-glow: rgba(251, 191, 36, 0.45);
-  --kintsugi-obsidian: #04070f;
-}
-
-body {
-  background-color: #04070f;
-  background-image:
-    radial-gradient(circle at 15% 15%, rgba(251, 191, 36, 0.08) 0%, transparent 40%),
-    radial-gradient(circle at 85% 20%, rgba(56, 189, 248, 0.07) 0%, transparent 42%),
-    radial-gradient(circle at 50% 85%, rgba(16, 185, 129, 0.05) 0%, transparent 45%),
-    linear-gradient(135deg, rgba(251, 191, 36, 0.03) 0%, transparent 25%, transparent 75%, rgba(251, 191, 36, 0.03) 100%),
-    linear-gradient(to right, rgba(30, 41, 59, 0.28) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(30, 41, 59, 0.28) 1px, transparent 1px);
-  background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 32px 32px, 32px 32px;
-  background-attachment: fixed;
-}
-
-.kintsugi-glass {
-  background: rgba(15, 23, 42, 0.72);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(51, 65, 85, 0.65);
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.7), inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
-}
-
-.kintsugi-gold-seam {
-  border-color: #fbbf24 !important;
-  box-shadow: 0 0 20px rgba(251, 191, 36, 0.35), inset 0 0 12px rgba(251, 191, 36, 0.15) !important;
-}
-
+/* Custom Sleek Scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.6);
+  background: rgba(15, 23, 42, 0.4);
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(71, 85, 105, 0.7);
+  background: rgba(148, 163, 184, 0.25);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(251, 191, 36, 0.7);
+  background: rgba(245, 158, 11, 0.6);
+}
+
+/* React Flow Controls Dark Theme Override */
+.react-flow__controls {
+  background: rgba(15, 23, 42, 0.9) !important;
+  border: 1px solid rgba(148, 163, 184, 0.2) !important;
+  border-radius: 0.6rem !important;
+  overflow: hidden !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6) !important;
+}
+.react-flow__controls-button {
+  background: transparent !important;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12) !important;
+  fill: #cbd5e1 !important;
+}
+.react-flow__controls-button:hover {
+  background: rgba(245, 158, 11, 0.18) !important;
+  fill: #fde047 !important;
+}
+.react-flow__attribution {
+  display: none !important;
 }

@@ -1,120 +1,222 @@
 import React from 'react';
-import { Activity, Shield, Cpu, Server, Sparkles, BarChart3, Radio, Layers } from 'lucide-react';
+import {
+  ShieldCheck,
+  Cpu,
+  Radio,
+  Sparkles,
+  BarChart3,
+  Presentation,
+  Search,
+  Volume2,
+  VolumeX,
+  Pause,
+  Play,
+  Activity,
+  Layers
+} from 'lucide-react';
 
 export default function TopBar({
-  status = {},
-  wsConnected = false,
-  autonomousMode = true,
+  status,
+  wsConnected,
   onToggleMode,
-  llmBackend = 'groq',
-  onSwitchBackend,
-  clusterSource = 'live',
-  onSwitchSource,
-  onOpenBenchmarks,
+  onToggleClusterSource,
+  onToggleBackend,
+  onOpenBenchmark,
+  onOpenCommandPalette,
+  streamPaused,
+  onToggleStreamPause,
+  soundEnabled,
+  onToggleSound,
+  kintsugiStats
 }) {
+  const agentMode = status?.agent_mode || 'AUTONOMOUS';
+  const clusterMode = status?.cluster_mode || 'LIVE_K8S';
+  const llmBackend = status?.llm_backend || 'GROQ_CLOUD';
+
   return (
-    <header className="w-full kintsugi-glass border-b border-amber-500/20 px-5 py-3 sticky top-0 z-30">
-      <div className="max-w-[1600px] mx-auto flex flex-wrap items-center justify-between gap-4">
+    <header className="kintsugi-panel z-30 border-b border-slate-800/80 px-4 py-2 flex flex-col gap-1.5">
+      {/* Primary Navigation Row */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
         {/* Brand Identity */}
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-400/20 via-amber-500/10 to-cyan-500/20 border border-amber-400/60 flex items-center justify-center shadow-[0_0_15px_rgba(251,191,36,0.3)]">
-            <Sparkles className="h-5 w-5 text-amber-400" />
+          <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500/25 via-amber-500/10 to-slate-900 border border-amber-400/50 shadow-[0_0_20px_rgba(245,158,11,0.25)]">
+            <Sparkles className="h-5 w-5 text-amber-300" />
+            <span className="absolute -bottom-0.5 -right-0.5 flex h-2.5 w-2.5">
+              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${wsConnected ? 'bg-emerald-400' : 'bg-rose-400'}`} />
+              <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${wsConnected ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+            </span>
           </div>
+
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-lg font-extrabold tracking-tight bg-gradient-to-r from-amber-200 via-amber-400 to-cyan-300 bg-clip-text text-transparent">
-                KINTSUGI-AI
+              <h1 className="font-display text-lg font-bold tracking-wider text-white">
+                KINTSUGI<span className="kintsugi-gold-text">-AI</span>
               </h1>
-              <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-400/40 text-amber-300 font-semibold">
-                v1.0 SRE Mesh
+              <span className="rounded-full bg-amber-500/15 border border-amber-400/40 px-2 py-0.5 font-mono-code text-[10px] font-semibold text-amber-300">
+                金継ぎ v2.4
               </span>
             </div>
-            <p className="text-xs text-slate-400 font-mono">
-              Catch the cracks. Verify the fix. // Multi-Modal K8s Prediction & Ambient Healing
+            <p className="text-[11px] text-slate-400 hidden sm:block">
+              Multi-Modal K8s Prediction (XGBoost + SARIMA) &amp; Closed-Loop LangGraph SRE
             </p>
           </div>
         </div>
 
-        {/* Live Telemetry & Control Deck */}
-        <div className="flex flex-wrap items-center gap-2.5">
-          {/* WebSocket Stream Status */}
-          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-950/80 border border-slate-800 text-xs font-mono">
-            <span className={`h-2 w-2 rounded-full ${wsConnected ? 'bg-emerald-400 animate-ping' : 'bg-rose-500'}`} />
-            <span className="text-slate-300">{wsConnected ? '1Hz STREAM LIVE' : 'RECONNECTING'}</span>
-          </div>
+        {/* Center Command Palette Trigger */}
+        <button
+          onClick={onOpenCommandPalette}
+          className="hidden lg:flex items-center gap-3 rounded-lg bg-slate-900/90 hover:bg-slate-800/90 border border-slate-700/70 hover:border-amber-500/50 px-3.5 py-1.5 text-xs text-slate-300 transition-all shadow-inner group"
+          title="Open SRE Command Palette (Ctrl+K)"
+        >
+          <Search className="h-3.5 w-3.5 text-slate-400 group-hover:text-amber-400 transition-colors" />
+          <span className="text-slate-400 group-hover:text-slate-200">
+            Search services, inject chaos, or run SRE commands...
+          </span>
+          <kbd className="rounded bg-slate-800 border border-slate-700 px-1.5 py-0.5 font-mono-code text-[10px] text-amber-300">
+            Ctrl K
+          </kbd>
+        </button>
 
+        {/* Right Controls & Runtime Hot-Swaps */}
+        <div className="flex flex-wrap items-center gap-2">
           {/* Telemetry Source Switcher */}
-          <div className="flex items-center bg-slate-950/90 p-1 rounded-xl border border-slate-800 text-xs font-mono">
-            <button
-              onClick={() => onSwitchSource && onSwitchSource('live')}
-              className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 ${
-                clusterSource === 'live'
-                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-semibold'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <Server className="h-3.5 w-3.5" />
-              Live K8s
-            </button>
-            <button
-              onClick={() => onSwitchSource && onSwitchSource('replay')}
-              className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 ${
-                clusterSource !== 'live'
-                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-semibold'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <Radio className="h-3.5 w-3.5" />
-              Digital Twin
-            </button>
-          </div>
-
-          {/* LLM Brain Switcher */}
-          <div className="flex items-center bg-slate-950/90 p-1 rounded-xl border border-slate-800 text-xs font-mono">
-            <button
-              onClick={() => onSwitchBackend && onSwitchBackend('groq')}
-              className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 ${
-                llmBackend !== 'lm_studio' && llmBackend !== 'lmstudio'
-                  ? 'bg-amber-500/20 text-amber-300 border border-amber-400/50 font-semibold'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <Cpu className="h-3.5 w-3.5" />
-              Groq Qwen 3.8-27B
-            </button>
-            <button
-              onClick={() => onSwitchBackend && onSwitchBackend('lm_studio')}
-              className={`px-2.5 py-1 rounded-lg transition-all ${
-                llmBackend === 'lm_studio' || llmBackend === 'lmstudio'
-                  ? 'bg-purple-500/20 text-purple-300 border border-purple-400/50 font-semibold'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              LM Studio
-            </button>
-          </div>
-
-          {/* Operating Mode Toggle (Autonomous vs HITL) */}
           <button
-            onClick={() => onToggleMode && onToggleMode(!autonomousMode)}
-            className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-bold transition-all flex items-center gap-1.5 ${
-              autonomousMode
-                ? 'bg-emerald-950/80 border-emerald-500/60 text-emerald-300 hover:bg-emerald-900/60'
-                : 'bg-amber-950/80 border-amber-400 text-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.3)]'
+            onClick={onToggleClusterSource}
+            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium border transition-all ${
+              clusterMode === 'LIVE_K8S'
+                ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-300 hover:bg-emerald-900/60'
+                : 'bg-cyan-950/60 border-cyan-500/50 text-cyan-300 hover:bg-cyan-900/60'
             }`}
+            title="Hot-swap between Live 3-Node Kubernetes Cluster and Held-Out Digital Twin Replay"
           >
-            <Shield className="h-3.5 w-3.5" />
-            {autonomousMode ? 'MODE: AUTONOMOUS' : 'MODE: HUMAN-IN-THE-LOOP'}
+            <Radio className="h-3.5 w-3.5 animate-pulse" />
+            <span className="font-mono-code text-[11px]">
+              {clusterMode === 'LIVE_K8S' ? 'LIVE K8S (3-NODE)' : 'DIGITAL TWIN'}
+            </span>
           </button>
 
-          {/* Benchmark Modal Button */}
+          {/* LLM Reasoner Switcher */}
           <button
-            onClick={onOpenBenchmarks}
-            className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/20 to-cyan-500/20 hover:from-amber-500/30 hover:to-cyan-500/30 border border-amber-400/50 text-amber-200 text-xs font-mono font-bold flex items-center gap-1.5 shadow-[0_0_12px_rgba(251,191,36,0.2)] transition-all"
+            onClick={onToggleBackend}
+            className="flex items-center gap-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-purple-500/40 px-2.5 py-1.5 text-xs font-medium text-purple-200 transition-all"
+            title="Hot-swap between Groq Cloud Qwen3.8-27B and Local LM Studio"
           >
-            <BarChart3 className="h-3.5 w-3.5 text-amber-400" />
-            ML & SARIMA Benchmarks
+            <Cpu className="h-3.5 w-3.5 text-purple-400" />
+            <span className="font-mono-code text-[11px]">
+              {llmBackend.includes('GROQ') ? 'QWEN 3.8-27B (GROQ)' : 'LOCAL QWEN-3B'}
+            </span>
           </button>
+
+          {/* Agent Autonomy Switcher */}
+          <button
+            onClick={onToggleMode}
+            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold border transition-all ${
+              agentMode === 'AUTONOMOUS'
+                ? 'bg-amber-500/20 border-amber-400/60 text-amber-200 shadow-[0_0_15px_rgba(245,158,11,0.2)]'
+                : 'bg-sky-500/20 border-sky-400/60 text-sky-200'
+            }`}
+            title="Toggle between Autonomous Closed-Loop Execution and Human-in-the-Loop Approval"
+          >
+            <ShieldCheck className="h-3.5 w-3.5 text-amber-400" />
+            <span className="font-mono-code text-[11px]">
+              {agentMode === 'AUTONOMOUS' ? 'AUTONOMOUS SRE' : 'HUMAN-IN-LOOP'}
+            </span>
+          </button>
+
+          {/* ML & SARIMA Benchmark Modal Button */}
+          <button
+            onClick={onOpenBenchmark}
+            className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-amber-500/25 to-yellow-500/15 hover:from-amber-500/35 hover:to-yellow-500/25 border border-amber-400/60 px-2.5 py-1.5 text-xs font-semibold text-amber-200 transition-all shadow-[0_0_12px_rgba(245,158,11,0.18)]"
+          >
+            <BarChart3 className="h-3.5 w-3.5 text-amber-300" />
+            <span className="hidden md:inline">ML &amp; SARIMA</span>
+          </button>
+
+          {/* Technical Slides Link */}
+          <a
+            href="/app/slides.html"
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-1 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:text-amber-300 transition-all"
+            title="Open Systems Architecture Slide Deck"
+          >
+            <Presentation className="h-3.5 w-3.5 text-amber-400" />
+            <span className="hidden xl:inline">Deck</span>
+          </a>
+
+          {/* Stream Pause/Play & Audio SFX Controls */}
+          <div className="flex items-center rounded-lg bg-slate-900/90 border border-slate-800 p-0.5">
+            <button
+              onClick={onToggleStreamPause}
+              className={`p-1.5 rounded-md text-xs transition-colors ${
+                streamPaused ? 'bg-amber-500/25 text-amber-300' : 'text-slate-400 hover:text-white'
+              }`}
+              title={streamPaused ? 'Resume 1Hz Telemetry Stream' : 'Freeze Telemetry Stream for Inspection'}
+            >
+              {streamPaused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
+            </button>
+            <button
+              onClick={onToggleSound}
+              className={`p-1.5 rounded-md text-xs transition-colors ${
+                soundEnabled ? 'text-amber-300 bg-amber-500/15' : 'text-slate-500 hover:text-slate-300'
+              }`}
+              title={soundEnabled ? 'Mute Cyber-SRE Audio Chimes' : 'Enable Cyber-SRE Audio Chimes'}
+            >
+              {soundEnabled ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Executive SRE Telemetry & SLO Ribbon */}
+      <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-800/60 text-[11px]">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-1.5">
+            <span className="text-slate-400">Mesh SLO:</span>
+            <span className={`font-mono-code font-bold ${
+              kintsugiStats.sloHealth >= 95 ? 'text-emerald-400' : kintsugiStats.sloHealth >= 85 ? 'text-amber-400' : 'text-rose-400'
+            }`}>
+              {kintsugiStats.sloHealth.toFixed(1)}%
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <span className="text-slate-400">Active Fractures:</span>
+            <span className={`font-mono-code font-bold px-1.5 py-0.2 rounded ${
+              kintsugiStats.activeIncidents > 0
+                ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 animate-pulse'
+                : 'text-slate-300'
+            }`}>
+              {kintsugiStats.activeIncidents}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <span className="text-amber-300/90 font-medium">✦ Kintsugi Gold Seams:</span>
+            <span className="font-mono-code font-bold px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-400/40">
+              {kintsugiStats.repairedCount} Verified
+            </span>
+          </div>
+
+          <div className="hidden md:flex items-center gap-1.5">
+            <Activity className="h-3 w-3 text-cyan-400" />
+            <span className="text-slate-400">Fast-Brain Latency:</span>
+            <span className="font-mono-code text-cyan-300 font-semibold">0.67 ms/tick</span>
+          </div>
+
+          <div className="hidden xl:flex items-center gap-1.5">
+            <Layers className="h-3 w-3 text-emerald-400" />
+            <span className="text-slate-400">Closed-Loop Mean MTTR:</span>
+            <span className="font-mono-code text-emerald-300 font-semibold">27.6s</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 font-mono-code text-[10px] text-slate-400">
+          <span>NAMESPACE: <strong className="text-slate-200">hipster</strong> (10 deployments)</span>
+          <span>•</span>
+          <span className={wsConnected ? 'text-emerald-400' : 'text-rose-400'}>
+            {streamPaused ? '⏸ STREAM FROZEN' : wsConnected ? '● 1Hz WS LIVE' : '○ RECONNECTING'}
+          </span>
         </div>
       </div>
     </header>

@@ -5,278 +5,436 @@ import {
   Controls,
   Handle,
   Position,
+  MarkerType
 } from '@xyflow/react';
-import { Server, Cpu, Database, CreditCard, ShoppingBag, Truck, Mail, Layers, Sparkles } from 'lucide-react';
+import '@xyflow/react/dist/style.css';
+import {
+  Server,
+  Sparkles,
+  AlertTriangle,
+  Activity,
+  CheckCircle2,
+  Cpu,
+  HardDrive,
+  Flame,
+  Terminal,
+  X
+} from 'lucide-react';
 
-const serviceIcons = {
-  frontend: Layers,
-  checkoutservice: ShoppingBag,
-  cartservice: Database,
-  productcatalogservice: Layers,
-  currencyservice: CreditCard,
-  paymentservice: CreditCard,
-  shippingservice: Truck,
-  recommendationservice: Sparkles,
-  adservice: Server,
-  emailservice: Mail,
+// Deterministic 10-Microservice OnlineBoutique Layout
+const NODE_POSITIONS = {
+  frontend: { x: 340, y: 20 },
+  checkoutservice: { x: 140, y: 150 },
+  productcatalogservice: { x: 340, y: 150 },
+  cartservice: { x: 550, y: 150 },
+  recommendationservice: { x: 740, y: 150 },
+  paymentservice: { x: 20, y: 300 },
+  shippingservice: { x: 195, y: 300 },
+  currencyservice: { x: 375, y: 300 },
+  emailservice: { x: 555, y: 300 },
+  adservice: { x: 735, y: 300 }
 };
 
-function ServiceNode({ data }) {
-  const Icon = serviceIcons[data.id] || Server;
-  const status = data.status || 'healthy';
-  const replicas = Math.min(Math.max(Number(data.replicas || 1), 1), 5);
+function ServiceCustomNode({ data }) {
+  const {
+    label,
+    status,
+    cpu,
+    memory,
+    replicas = 1,
+    nodeName = 'desktop-worker',
+    faultType,
+    isVerifiedRepaired,
+    selected
+  } = data;
 
-  const statusStyles = {
-    healthy: 'border-emerald-500/60 bg-slate-900/90 shadow-emerald-950/30 text-emerald-400',
-    predicted: 'border-amber-400 bg-amber-950/50 shadow-amber-950/50 text-amber-300 animate-pulse',
-    incident: 'border-rose-500 bg-rose-950/60 shadow-[0_0_20px_rgba(244,63,94,0.45)] text-rose-300 animate-bounce',
-    remediating: 'border-cyan-400 bg-cyan-950/50 shadow-[0_0_18px_rgba(34,211,238,0.4)] text-cyan-300 animate-pulse',
-    verified_repaired: 'border-amber-400 shadow-[0_0_22px_rgba(251,191,36,0.55)] ring-1 ring-amber-300/60 bg-gradient-to-br from-slate-900/95 via-amber-950/45 to-slate-900/95 text-amber-300',
-  };
+  const isGold = isVerifiedRepaired || status === 'verified_repaired';
+  const isIncident = status === 'incident' || status === 'critical';
+  const isPredicted = status === 'predicted' || status === 'warning';
+  const isHealing = status === 'remediating';
 
-  const badgeStyles = {
-    healthy: 'bg-emerald-950/90 border-emerald-700/80 text-emerald-400',
-    predicted: 'bg-amber-950/90 border-amber-500 text-amber-300',
-    incident: 'bg-rose-950/90 border-rose-500 text-rose-300',
-    remediating: 'bg-cyan-950/90 border-cyan-500 text-cyan-300',
-    verified_repaired: 'bg-amber-950/95 border-amber-400 text-amber-200 shadow-[0_0_10px_rgba(251,191,36,0.6)] font-bold',
-  };
+  let cardStyle =
+    'bg-slate-900/90 border-slate-700/80 hover:border-slate-500 text-slate-100';
+  let statusBadge = (
+    <span className="flex items-center gap-1 rounded-full bg-emerald-500/15 border border-emerald-500/40 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-300">
+      <CheckCircle2 className="h-2.5 w-2.5" /> HEALTHY
+    </span>
+  );
 
-  const dotColor =
-    status === 'verified_repaired'
-      ? 'bg-amber-400 shadow-[0_0_6px_#fbbf24]'
-      : status === 'incident'
-      ? 'bg-rose-500 shadow-[0_0_6px_#f43f5e]'
-      : status === 'remediating'
-      ? 'bg-cyan-400 shadow-[0_0_6px_#22d3ee]'
-      : 'bg-emerald-400 shadow-[0_0_5px_#34d399]';
+  if (isGold) {
+    cardStyle = 'node-gold-seam text-amber-50';
+    statusBadge = (
+      <span className="flex items-center gap-1 rounded-full bg-amber-400/25 border border-amber-300 px-1.5 py-0.5 text-[9px] font-bold text-amber-200 shadow-[0_0_10px_rgba(251,191,36,0.5)]">
+        <Sparkles className="h-2.5 w-2.5 text-amber-300" /> ✦ KINTSUGI
+      </span>
+    );
+  } else if (isIncident) {
+    cardStyle = 'node-incident-glow text-rose-50';
+    statusBadge = (
+      <span className="flex items-center gap-1 rounded-full bg-rose-500/30 border border-rose-400 px-1.5 py-0.5 text-[9px] font-bold text-rose-200">
+        <AlertTriangle className="h-2.5 w-2.5 text-rose-300" /> FRACTURE
+      </span>
+    );
+  } else if (isHealing) {
+    cardStyle =
+      'bg-cyan-950/90 border-2 border-cyan-400 shadow-[0_0_20px_rgba(56,189,248,0.4)] text-cyan-50';
+    statusBadge = (
+      <span className="flex items-center gap-1 rounded-full bg-cyan-500/25 border border-cyan-300 px-1.5 py-0.5 text-[9px] font-bold text-cyan-200 animate-pulse">
+        <Activity className="h-2.5 w-2.5" /> HEALING
+      </span>
+    );
+  } else if (isPredicted) {
+    cardStyle =
+      'bg-amber-950/85 border-2 border-amber-500/80 shadow-[0_0_18px_rgba(245,158,11,0.3)] text-amber-50';
+    statusBadge = (
+      <span className="flex items-center gap-1 rounded-full bg-amber-500/25 border border-amber-400 px-1.5 py-0.5 text-[9px] font-bold text-amber-200">
+        <AlertTriangle className="h-2.5 w-2.5" /> HORIZON
+      </span>
+    );
+  }
+
+  const replicaCount = Math.max(1, Math.min(5, Number(replicas) || 1));
 
   return (
     <div
-      onClick={() => data.onSelect && data.onSelect(data.id)}
-      className={`px-3.5 py-2.5 rounded-xl border-2 backdrop-blur-md cursor-pointer transition-all duration-300 hover:scale-105 min-w-[182px] ${
-        statusStyles[status] || statusStyles.healthy
-      } ${data.isSelected ? 'ring-2 ring-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.35)]' : ''}`}
+      className={`relative w-[166px] rounded-xl border p-2.5 transition-all duration-300 cursor-pointer ${cardStyle} ${
+        selected ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-slate-950 scale-[1.03]' : ''
+      }`}
     >
-      <Handle type="target" position={Position.Top} className="w-2 h-2 !bg-slate-500" />
-      <div className="flex items-center justify-between gap-2 mb-1.5">
-        <div className="flex items-center gap-1.5">
-          <Icon className="h-4 w-4 shrink-0" />
-          <span className="text-xs font-bold text-white tracking-wide truncate max-w-[96px]">
-            {data.name}
-          </span>
-        </div>
-        {status === 'verified_repaired' ? (
-          <span className="text-[10px] font-mono px-2 py-0.5 rounded-md border font-bold bg-amber-950/95 border-amber-400 text-amber-300 shadow-[0_0_10px_rgba(251,191,36,0.55)] flex items-center gap-1">
-            ✦ Kintsugi
-          </span>
-        ) : (
-          <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border font-semibold ${badgeStyles[status]}`}>
-            {status.toUpperCase()}
-          </span>
-        )}
+      <Handle type="target" position={Position.Top} className="!bg-amber-400 !w-2 !h-2 !border-0" />
+
+      {/* Decorative Kintsugi Gold Fracture SVG Overlay when Repaired */}
+      {isGold && (
+        <svg
+          className="pointer-events-none absolute inset-0 h-full w-full opacity-55"
+          viewBox="0 0 160 90"
+          fill="none"
+        >
+          <path
+            d="M12 85 L48 52 L42 34 L88 18 L118 28 L152 6"
+            stroke="url(#goldSeamGrad)"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+          />
+          <defs>
+            <linearGradient id="goldSeamGrad" x1="0" y1="0" x2="160" y2="90">
+              <stop offset="0%" stopColor="#fde047" />
+              <stop offset="50%" stopColor="#f59e0b" />
+              <stop offset="100%" stopColor="#fef08a" />
+            </linearGradient>
+          </defs>
+        </svg>
+      )}
+
+      {/* Header: Service Name & Status Pill */}
+      <div className="relative z-10 flex items-center justify-between gap-1 mb-1.5">
+        <span className="font-display text-[11px] font-bold tracking-tight truncate">
+          {label.replace('service', '')}
+        </span>
+        {statusBadge}
       </div>
 
-      {/* Pod Replica Visual Dots + Memory Limit */}
-      <div className="flex items-center justify-between text-[10px] font-mono text-slate-300 py-1 border-t border-slate-800/80">
-        <div className="flex items-center gap-1" title={`${replicas} Running Pod Replicas`}>
-          <span className="text-slate-400">Pods:</span>
-          <div className="flex items-center gap-1 ml-0.5">
-            {Array.from({ length: replicas }).map((_, idx) => (
-              <span key={idx} className={`h-2 w-2 rounded-full ${dotColor}`} />
+      {/* CPU & Memory Mini Bars */}
+      <div className="relative z-10 space-y-1 font-mono-code text-[10px]">
+        <div>
+          <div className="flex justify-between text-slate-300">
+            <span>CPU</span>
+            <span className={cpu > 75 ? 'text-rose-300 font-bold' : 'text-slate-200'}>
+              {Number(cpu || 0).toFixed(1)}%
+            </span>
+          </div>
+          <div className="h-1 w-full rounded-full bg-slate-800 overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${
+                isGold
+                  ? 'bg-gradient-to-r from-amber-400 to-yellow-300'
+                  : cpu > 75
+                  ? 'bg-rose-500'
+                  : 'bg-cyan-400'
+              }`}
+              style={{ width: `${Math.min(100, Math.max(4, Number(cpu || 0)))}%` }}
+            />
+          </div>
+        </div>
+
+        <div>
+          <div className="flex justify-between text-slate-300">
+            <span>MEM</span>
+            <span className={memory > 80 ? 'text-amber-300 font-bold' : 'text-slate-200'}>
+              {Number(memory || 0).toFixed(1)}%
+            </span>
+          </div>
+          <div className="h-1 w-full rounded-full bg-slate-800 overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${
+                isGold
+                  ? 'bg-gradient-to-r from-amber-400 to-yellow-300'
+                  : memory > 80
+                  ? 'bg-amber-500'
+                  : 'bg-emerald-400'
+              }`}
+              style={{ width: `${Math.min(100, Math.max(4, Number(memory || 0)))}%` }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Footer: Pod Replica Dots & Physical K8s Worker Node */}
+      <div className="relative z-10 mt-2 pt-1.5 border-t border-slate-700/50 flex items-center justify-between text-[9px] font-mono-code text-slate-300">
+        <div className="flex items-center gap-1" title={`${replicaCount} Ready Pod Replicas`}>
+          <span className="text-slate-400">PODS</span>
+          <div className="flex items-center gap-0.5">
+            {Array.from({ length: replicaCount }).map((_, i) => (
+              <span
+                key={i}
+                className={`h-2 w-2 rounded-full ${
+                  isGold
+                    ? 'bg-amber-300 shadow-[0_0_6px_#fbbf24]'
+                    : isIncident
+                    ? 'bg-rose-400'
+                    : 'bg-emerald-400'
+                }`}
+              />
             ))}
           </div>
-          <strong className="text-white ml-0.5">({replicas})</strong>
+          <span className="text-amber-300 font-bold">{replicaCount}/1</span>
         </div>
-        <span className="text-slate-400">
-          CPU: <strong className="text-white">{data.cpu || '24%'}</strong>
+        <span className="truncate max-w-[74px] text-slate-400" title={nodeName}>
+          {nodeName.replace('desktop-', '')}
         </span>
       </div>
 
-      <div className="flex items-center justify-between text-[9px] font-mono text-slate-400 pt-0.5">
-        <span>Mem Limit: <strong className="text-slate-200">{data.memLimit || '128Mi'}</strong></span>
-        {status === 'verified_repaired' && (
-          <span className="text-amber-300 font-semibold">SEAM VERIFIED</span>
-        )}
-      </div>
-      <Handle type="source" position={Position.Bottom} className="w-2 h-2 !bg-slate-500" />
+      {/* Active Fault Tag */}
+      {faultType && faultType !== 'NORMAL' && !isGold && (
+        <div className="relative z-10 mt-1 rounded bg-rose-950/90 border border-rose-500/50 px-1.5 py-0.5 text-center font-mono-code text-[8px] font-bold text-rose-200 truncate">
+          {faultType}
+        </div>
+      )}
+
+      <Handle type="source" position={Position.Bottom} className="!bg-amber-400 !w-2 !h-2 !border-0" />
     </div>
   );
 }
 
-const nodeTypes = {
-  serviceNode: ServiceNode,
-};
+const nodeTypes = { serviceNode: ServiceCustomNode };
 
 export default function ClusterTopology({
-  serviceStates = {},
-  nodeStates = {},
+  topology,
   selectedService,
   onSelectService,
+  clusterNodes = [],
+  onQuickChaos
 }) {
-  const initialNodes = useMemo(() => [
-    { id: 'frontend', type: 'serviceNode', position: { x: 380, y: 18 }, data: { id: 'frontend', name: 'frontend', replicas: 1, cpu: '28%', status: 'healthy' } },
-    { id: 'checkoutservice', type: 'serviceNode', position: { x: 190, y: 130 }, data: { id: 'checkoutservice', name: 'checkoutservice', replicas: 1, cpu: '34%', status: 'healthy' } },
-    { id: 'recommendationservice', type: 'serviceNode', position: { x: 570, y: 130 }, data: { id: 'recommendationservice', name: 'recommendation', replicas: 1, cpu: '22%', status: 'healthy' } },
-    { id: 'cartservice', type: 'serviceNode', position: { x: 25, y: 245 }, data: { id: 'cartservice', name: 'cartservice', replicas: 1, cpu: '31%', status: 'healthy' } },
-    { id: 'paymentservice', type: 'serviceNode', position: { x: 225, y: 245 }, data: { id: 'paymentservice', name: 'paymentservice', replicas: 1, cpu: '18%', status: 'healthy' } },
-    { id: 'productcatalogservice', type: 'serviceNode', position: { x: 425, y: 245 }, data: { id: 'productcatalogservice', name: 'productcatalog', replicas: 1, cpu: '20%', status: 'healthy' } },
-    { id: 'currencyservice', type: 'serviceNode', position: { x: 625, y: 245 }, data: { id: 'currencyservice', name: 'currencyservice', replicas: 1, cpu: '19%', status: 'healthy' } },
-    { id: 'shippingservice', type: 'serviceNode', position: { x: 115, y: 360 }, data: { id: 'shippingservice', name: 'shippingservice', replicas: 1, cpu: '15%', status: 'healthy' } },
-    { id: 'emailservice', type: 'serviceNode', position: { x: 320, y: 360 }, data: { id: 'emailservice', name: 'emailservice', replicas: 1, cpu: '12%', status: 'healthy' } },
-    { id: 'adservice', type: 'serviceNode', position: { x: 525, y: 360 }, data: { id: 'adservice', name: 'adservice', replicas: 1, cpu: '16%', status: 'healthy' } },
-  ], []);
+  const [showInspector, setShowInspector] = React.useState(true);
 
-  const nodes = useMemo(() => {
-    return initialNodes.map((n) => {
-      const live = serviceStates[n.id] || {};
-      let nodeStatus = 'healthy';
-      if (
-        live.is_verified_repaired ||
-        live.is_repaired ||
-        live.repaired === true ||
-        live.status === 'VERIFIED' ||
-        live.status === 'VerifiedRepaired'
-      ) {
-        nodeStatus = 'verified_repaired';
-      } else if (live.is_remediating || live.status === 'Remediating') {
-        nodeStatus = 'remediating';
-      } else if (live.is_incident || live.status === 'Incident') {
-        nodeStatus = 'incident';
-      } else if (live.is_predicted_failure) {
-        nodeStatus = 'predicted';
-      }
+  const rfNodes = useMemo(() => {
+    const rawNodes = topology?.nodes || [];
+    return rawNodes.map((n) => {
+      const id = n.id || n.service;
+      const pos = NODE_POSITIONS[id] || { x: 200, y: 200 };
       return {
-        ...n,
+        id,
+        type: 'serviceNode',
+        position: pos,
         data: {
-          ...n.data,
-          replicas: live.replicas || 1,
-          memLimit: live.mem_limit || '128Mi',
-          cpu: live.cpu_usage ? `${Math.round(live.cpu_usage)}%` : n.data.cpu,
-          status: nodeStatus,
-          isSelected: selectedService === n.id,
-          onSelect: onSelectService,
-        },
+          label: id,
+          status: n.status || 'healthy',
+          cpu: n.cpu ?? n.metrics?.cpu ?? 12.4,
+          memory: n.memory ?? n.metrics?.memory ?? 28.1,
+          latency: n.latency ?? n.metrics?.latency ?? 18.5,
+          replicas: n.replicas || 1,
+          nodeName: n.node || 'desktop-worker',
+          faultType: n.fault_type || n.predicted_fault || 'NORMAL',
+          isVerifiedRepaired: Boolean(n.is_verified_repaired || n.status === 'verified_repaired'),
+          selected: id === selectedService
+        }
       };
     });
-  }, [initialNodes, serviceStates, selectedService, onSelectService]);
+  }, [topology, selectedService]);
 
-  const statusById = useMemo(() => {
-    const map = {};
-    nodes.forEach((n) => { map[n.id] = n.data.status; });
-    return map;
-  }, [nodes]);
+  const rfEdges = useMemo(() => {
+    const rawEdges = topology?.edges || [];
+    return rawEdges.map((e, idx) => ({
+      id: e.id || `e-${e.source}-${e.target}-${idx}`,
+      source: e.source,
+      target: e.target,
+      animated: true,
+      style: {
+        stroke: '#f59e0b',
+        strokeWidth: 1.5,
+        opacity: 0.55
+      },
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+        color: '#f59e0b',
+        width: 14,
+        height: 14
+      }
+    }));
+  }, [topology]);
 
-  const edges = useMemo(() => {
-    const rawEdges = [
-      { id: 'e-f-c', source: 'frontend', target: 'checkoutservice' },
-      { id: 'e-f-r', source: 'frontend', target: 'recommendationservice' },
-      { id: 'e-f-p', source: 'frontend', target: 'productcatalogservice' },
-      { id: 'e-f-cart', source: 'frontend', target: 'cartservice' },
-      { id: 'e-c-pay', source: 'checkoutservice', target: 'paymentservice' },
-      { id: 'e-c-ship', source: 'checkoutservice', target: 'shippingservice' },
-      { id: 'e-c-email', source: 'checkoutservice', target: 'emailservice' },
-      { id: 'e-c-curr', source: 'checkoutservice', target: 'currencyservice' },
-      { id: 'e-r-prod', source: 'recommendationservice', target: 'productcatalogservice' },
-      { id: 'e-f-ad', source: 'frontend', target: 'adservice' },
-    ];
-    return rawEdges.map((edge) => {
-      const sStatus = statusById[edge.source];
-      const tStatus = statusById[edge.target];
-      const isGold = sStatus === 'verified_repaired' || tStatus === 'verified_repaired';
-      const isIncident = sStatus === 'incident' || tStatus === 'incident';
-      return {
-        ...edge,
-        animated: isGold || isIncident || edge.id === 'e-f-c',
-        style: isGold
-          ? { stroke: '#fbbf24', strokeWidth: 2.4 }
-          : isIncident
-          ? { stroke: '#f43f5e', strokeWidth: 2.2 }
-          : { stroke: '#38bdf8', strokeWidth: 1.3, opacity: 0.65 },
-      };
-    });
-  }, [statusById]);
+  const inspectedNode = useMemo(() => {
+    return rfNodes.find((n) => n.id === selectedService)?.data || rfNodes[0]?.data;
+  }, [rfNodes, selectedService]);
 
-  const k8sNodes = useMemo(() => {
-    const defaults = {
-      'desktop-control-plane': { ready: true, cordoned: false },
-      'desktop-worker': { ready: true, cordoned: false },
-      'desktop-worker2': { ready: true, cordoned: false },
-    };
-    return Object.keys(nodeStates).length > 0 ? nodeStates : defaults;
-  }, [nodeStates]);
+  const hardwareNodes =
+    clusterNodes.length > 0
+      ? clusterNodes
+      : [
+          { name: 'desktop-control-plane', role: 'control-plane', status: 'Ready', pods: 8 },
+          { name: 'desktop-worker', role: 'worker-1', status: 'Ready', pods: 6 },
+          { name: 'desktop-worker2', role: 'worker-2', status: 'Ready', pods: 6 }
+        ];
 
   return (
-    <div className="relative h-[510px] w-full rounded-2xl kintsugi-glass overflow-hidden">
-      {/* Top Header & Legend */}
-      <div className="absolute top-3 left-4 z-10 flex flex-wrap items-center justify-between w-[calc(100%-32px)] gap-2 pointer-events-none">
-        <div className="flex items-center gap-2 pointer-events-auto bg-slate-950/85 border border-slate-800 px-3 py-1.5 rounded-xl">
-          <span className="h-2 w-2 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]" />
-          <span className="text-xs font-bold text-slate-100 tracking-wider font-mono">
-            ONLINEBOUTIQUE MESH TOPOLOGY (namespace: hipster)
-          </span>
-          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-amber-300 border border-amber-500/30">
-            10 Microservices
+    <div className="kintsugi-panel relative flex flex-col h-full rounded-2xl overflow-hidden">
+      {/* Top Overlay Header + 3-Node Physical Cluster HUD */}
+      <div className="z-10 flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 bg-slate-950/75 px-3.5 py-2">
+        <div className="flex items-center gap-2">
+          <Server className="h-4 w-4 text-amber-400" />
+          <h2 className="font-display text-xs font-bold uppercase tracking-wider text-slate-200">
+            OnlineBoutique 10-Service Mesh
+          </h2>
+          <span className="rounded bg-slate-800/90 border border-slate-700 px-1.5 py-0.5 font-mono-code text-[10px] text-amber-300">
+            Click node to inspect
           </span>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 text-[11px] font-mono pointer-events-auto bg-slate-950/85 border border-slate-800 px-3 py-1.5 rounded-xl">
-          <span className="flex items-center gap-1.5 text-emerald-400">
+        {/* 3-Node Kubernetes Hardware Capacity Pills */}
+        <div className="flex items-center gap-1.5">
+          {hardwareNodes.map((hn) => {
+            const unschedulable = hn.unschedulable || hn.status === 'Cordoned';
+            return (
+              <div
+                key={hn.name}
+                className={`flex items-center gap-1.5 rounded-lg border px-2 py-0.5 font-mono-code text-[10px] ${
+                  unschedulable
+                    ? 'bg-rose-950/60 border-rose-500/50 text-rose-200'
+                    : 'bg-slate-900/90 border-slate-700/70 text-slate-300'
+                }`}
+                title={`K8s Node: ${hn.name} (${hn.status})`}
+              >
+                <span
+                  className={`h-1.5 w-1.5 rounded-full ${
+                    unschedulable ? 'bg-rose-400 animate-ping' : 'bg-emerald-400'
+                  }`}
+                />
+                <span>{hn.name.replace('desktop-', '')}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Main XYFlow Canvas */}
+      <div className="relative flex-1 w-full">
+        <ReactFlow
+          nodes={rfNodes}
+          edges={rfEdges}
+          nodeTypes={nodeTypes}
+          onNodeClick={(_, node) => {
+            onSelectService(node.id);
+            setShowInspector(true);
+          }}
+          fitView
+          fitViewOptions={{ padding: 0.14 }}
+          minZoom={0.45}
+          maxZoom={1.6}
+        >
+          <Background color="#334155" gap={24} size={1} />
+          <Controls position="bottom-left" showInteractive={false} />
+        </ReactFlow>
+
+        {/* Floating Deep-Inspector HUD Drawer for Selected Microservice */}
+        {inspectedNode && showInspector && (
+          <div className="absolute top-3 right-3 z-20 w-64 rounded-xl bg-slate-950/92 border border-amber-500/40 p-3 shadow-2xl backdrop-blur-xl">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-2">
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <Terminal className="h-3.5 w-3.5 text-amber-400" />
+                  <span className="font-display text-xs font-bold text-white">
+                    {inspectedNode.label}
+                  </span>
+                </div>
+                <span className="font-mono-code text-[10px] text-slate-400">
+                  ns/hipster • node/{inspectedNode.nodeName.replace('desktop-', '')}
+                </span>
+              </div>
+              <button
+                onClick={() => setShowInspector(false)}
+                className="rounded p-0.5 text-slate-400 hover:bg-slate-800 hover:text-white"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            {/* Live Spec & Z-Score Mini Gauges */}
+            <div className="space-y-1.5 font-mono-code text-[10px]">
+              <div className="flex justify-between">
+                <span className="text-slate-400">Container Image:</span>
+                <span className="text-cyan-300">python:3.11-alpine</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Cgroup Limits:</span>
+                <span className="text-slate-200">200m CPU / 128Mi</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Active Replicas:</span>
+                <span className="text-amber-300 font-bold">{inspectedNode.replicas} / 5 max</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">CPU / Memory:</span>
+                <span className="text-emerald-300">
+                  {Number(inspectedNode.cpu || 0).toFixed(1)}% / {Number(inspectedNode.memory || 0).toFixed(1)}%
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Kintsugi Status:</span>
+                <span className={inspectedNode.isVerifiedRepaired ? 'text-amber-300 font-bold' : 'text-slate-200'}>
+                  {inspectedNode.isVerifiedRepaired ? '✦ GOLD SEAM SEALED' : inspectedNode.status.toUpperCase()}
+                </span>
+              </div>
+            </div>
+
+            {/* Quick Targeted Chaos Trigger Button */}
+            {onQuickChaos && (
+              <div className="mt-2.5 pt-2 border-t border-slate-800/80 flex gap-1.5">
+                <button
+                  onClick={() => onQuickChaos('cpu_contention', inspectedNode.label)}
+                  className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/50 py-1 text-[10px] font-semibold text-rose-200 transition-all"
+                >
+                  <Flame className="h-3 w-3 text-rose-400" /> Stress CPU
+                </button>
+                <button
+                  onClick={() => onQuickChaos('memory_leak', inspectedNode.label)}
+                  className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 py-1 text-[10px] font-semibold text-amber-200 transition-all"
+                >
+                  <HardDrive className="h-3 w-3 text-amber-400" /> Leak Mem
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Legend Footer Overlay */}
+        <div className="pointer-events-none absolute bottom-2.5 right-3 z-10 hidden sm:flex items-center gap-3 rounded-lg bg-slate-950/85 border border-slate-800 px-3 py-1 text-[10px] font-mono-code text-slate-300">
+          <span className="flex items-center gap-1">
             <span className="h-2 w-2 rounded-full bg-emerald-400" /> Healthy
           </span>
-          <span className="flex items-center gap-1.5 text-amber-300">
-            <span className="h-2 w-2 rounded-full bg-amber-400" /> Predicted
+          <span className="flex items-center gap-1">
+            <span className="h-2 w-2 rounded-full bg-amber-400" /> Horizon
           </span>
-          <span className="flex items-center gap-1.5 text-rose-400">
-            <span className="h-2 w-2 rounded-full bg-rose-500" /> Incident
+          <span className="flex items-center gap-1">
+            <span className="h-2 w-2 rounded-full bg-rose-500" /> Fracture
           </span>
-          <span className="flex items-center gap-1.5 text-cyan-400">
+          <span className="flex items-center gap-1">
             <span className="h-2 w-2 rounded-full bg-cyan-400" /> Healing
           </span>
-          <span className="flex items-center gap-1.5 text-amber-300 font-bold">
-            <span className="h-2.5 w-2.5 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]" /> ✦ Kintsugi Gold Seam
+          <span className="flex items-center gap-1 text-amber-300 font-bold">
+            ✦ Kintsugi Gold Seam
           </span>
         </div>
       </div>
-
-      {/* Bottom 3-Node Kubernetes Cluster Hardware HUD */}
-      <div className="absolute bottom-3 left-14 z-10 flex flex-wrap items-center gap-2 pointer-events-auto bg-slate-950/90 border border-slate-800/90 px-3 py-1.5 rounded-xl shadow-lg">
-        <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 mr-1">
-          K8s Cluster Nodes:
-        </span>
-        {Object.entries(k8sNodes).map(([nodeName, info]) => (
-          <div
-            key={nodeName}
-            className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[10px] font-mono ${
-              info.cordoned
-                ? 'bg-amber-950/70 border-amber-500/60 text-amber-300'
-                : 'bg-slate-900/90 border-slate-700/80 text-slate-200'
-            }`}
-          >
-            <span
-              className={`h-1.5 w-1.5 rounded-full ${
-                info.cordoned ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'
-              }`}
-            />
-            <span>{nodeName}</span>
-            <span className="text-[9px] text-slate-400">
-              [{info.cordoned ? 'CORDONED' : 'READY'}]
-            </span>
-          </div>
-        ))}
-      </div>
-
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        nodeTypes={nodeTypes}
-        fitView
-        attributionPosition="bottom-right"
-        className="bg-transparent"
-      >
-        <Background color="#1e293b" gap={22} size={1} />
-        <Controls className="!bg-slate-900/90 !border-slate-700 !text-slate-200" />
-      </ReactFlow>
     </div>
   );
 }

@@ -1,5 +1,17 @@
-import React from 'react';
-import { Shield, Terminal, CheckCircle2, AlertTriangle, Sparkles, Lock, Play, X } from 'lucide-react';
+import React, { useState } from 'react';
+import {
+  Bot,
+  ShieldCheck,
+  CheckCircle2,
+  XCircle,
+  Terminal,
+  Copy,
+  Check,
+  Download,
+  Sparkles,
+  AlertOctagon,
+  Lock
+} from 'lucide-react';
 
 const LANGGRAPH_STAGES = [
   'MONITOR',
@@ -7,186 +19,272 @@ const LANGGRAPH_STAGES = [
   'PLAN',
   'GUARDRAILS',
   'EXECUTE',
-  'VERIFY',
+  'VERIFY'
 ];
 
-const GUARDRAIL_CHECKS = [
-  'Namespace Lock (hipster)',
-  'Action Allowlist (6 Primitives)',
-  'Bounds Clamp (1-5 Pods / ≤1024Mi)',
-  '120s Cooldown Anti-Thrash',
-  'K8s API dry_run="All"',
+const GUARDRAIL_GATES = [
+  { id: 'ns', label: 'Namespace Lock (hipster)' },
+  { id: 'allow', label: '6-Action Allowlist' },
+  { id: 'clamp', label: 'Bounds [1..5] / 1024Mi' },
+  { id: 'cooldown', label: '120s Anti-Thrash Lock' },
+  { id: 'dryrun', label: 'K8s API dry_run="All"' }
 ];
+
+function buildKubectlPreview(plan) {
+  if (!plan) {
+    return 'kubectl get pods -n hipster -l kintsugi.sre/mesh=active --watch';
+  }
+  const svc = plan.target_service || 'checkoutservice';
+  const ns = plan.target_namespace || 'hipster';
+  const act = plan.action_type || 'SCALE_DEPLOYMENT';
+  const params = plan.parameters || {};
+
+  if (act === 'SCALE_DEPLOYMENT') {
+    const reps = params.replicas || 3;
+    return `kubectl scale deployment ${svc} -n ${ns} --replicas=${reps} --dry-run=server`;
+  }
+  if (act === 'PATCH_RESOURCES') {
+    const mem = params.memory_limit_mi || 512;
+    return `kubectl set resources deployment ${svc} -n ${ns} --limits=memory=${mem}Mi --dry-run=server`;
+  }
+  if (act === 'RESTART_POD') {
+    return `kubectl rollout restart deployment/${svc} -n ${ns} --dry-run=server`;
+  }
+  if (act === 'CORDON_AND_RELOCATE') {
+    const node = params.target_node || 'desktop-worker';
+    return `kubectl cordon ${node} && kubectl rollout restart deployment/${svc} -n ${ns}`;
+  }
+  if (act === 'APPLY_TRAFFIC_SHAPING') {
+    return `kubectl annotate svc ${svc} -n ${ns} envoy.kintsugi.sre/timeout_ms="${params.timeout_ms || 1000}" --overwrite`;
+  }
+  return `kubectl get deployment ${svc} -n ${ns} -o yaml`;
+}
 
 export default function AgentConsole({
-  latestTick,
-  incidentFeed = [],
-  pendingHitl = false,
-  pendingPlan = null,
+  agentState,
+  logs = [],
   onApprove,
-  onReject,
+  onReject
 }) {
-  const pred = latestTick?.prediction || {};
-  const activeState = latestTick?.agent_event?.state || (pendingHitl ? 'AWAITING_APPROVAL' : 'MONITOR');
+  const [copied, setCopied] = useState(false);
 
-  const getStageActive = (stage, idx) => {
-    if (activeState === 'VERIFIED') return true;
-    if (activeState === 'AWAITING_APPROVAL' && idx <= 3) return true;
-    if (activeState === 'MONITOR' && idx === 0) return true;
-    return false;
+  const currentStage = (agentState?.current_node || agentState?.stage || 'MONITOR').toUpperCase();
+  const activePlan = agentState?.remediation_plan || agentState?.pending_plan || agentState?.last_plan;
+  const awaitingApproval =
+    agentState?.status === 'AWAITING_APPROVAL' ||
+    Boolean(agentState?.awaiting_approval);
+
+  const kubectlCmd = buildKubectlPreview(activePlan);
+
+  const handleCopyCmd = () => {
+    navigator.clipboard.writeText(kubectlCmd);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1800);
   };
 
+  const handleExportReport = () => {
+    const payload = {
+      project: 'Kintsugi-AI Autonomous SRE Incident Report',
+      exported_at: new Date().toISOString(),
+      agent_state: agentState,
+      remediation_plan: activePlan,
+      kubectl_dry_run_command: kubectlCmd,
+      audit_trail: logs
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `kintsugi-incident-report-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const activeStageIdx = Math.max(
+    0,
+    LANGGRAPH_STAGES.findIndex((s) => currentStage.includes(s))
+  );
+
   return (
-    <div className="h-full flex flex-col gap-3">
-      {/* Phase 1 Fast Brain + 6-Stage LangGraph Pipeline Card */}
-      <div className="rounded-2xl kintsugi-glass p-4">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-amber-400" />
-            <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-slate-200">
-              LANGGRAPH AMBIENT SRE BRAIN
-            </h3>
+    <aside className="kintsugi-panel flex flex-col h-full rounded-2xl overflow-hidden">
+      {/* Console Header */}
+      <div className="flex items-center justify-between border-b border-slate-800/80 bg-slate-950/80 px-4 py-2.5">
+        <div className="flex items-center gap-2">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/20 border border-amber-400/50">
+            <Bot className="h-4 w-4 text-amber-300" />
           </div>
-          <span
-            className={`text-[10px] font-mono px-2 py-0.5 rounded border font-bold ${
-              pred.is_anomaly
-                ? 'bg-rose-950 border-rose-500 text-rose-300 animate-pulse'
-                : 'bg-emerald-950 border-emerald-600 text-emerald-300'
-            }`}
-          >
-            {pred.fault_class || 'NORMAL'} ({pred.confidence ? `${(pred.confidence * 100).toFixed(0)}%` : '98%'})
-          </span>
+          <div>
+            <h2 className="font-display text-xs font-bold uppercase tracking-wider text-white">
+              Phase 2 Slow-Brain: LangGraph SRE
+            </h2>
+            <p className="font-mono-code text-[10px] text-slate-400">
+              StateGraph Orchestrator • 5 Safety Gates Active
+            </p>
+          </div>
         </div>
 
-        {/* 6-Stage LangGraph State Bar */}
-        <div className="grid grid-cols-6 gap-1 my-2.5">
+        <button
+          onClick={handleExportReport}
+          className="flex items-center gap-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 px-2.5 py-1 font-mono-code text-[10px] text-amber-300 transition-all"
+          title="Download JSON Incident & Remediation Post-Mortem"
+        >
+          <Download className="h-3 w-3" />
+          <span>Post-Mortem</span>
+        </button>
+      </div>
+
+      {/* 6-Node LangGraph Pipeline Stepper */}
+      <div className="border-b border-slate-800/80 bg-slate-900/50 px-3 py-2">
+        <div className="grid grid-cols-6 gap-1">
           {LANGGRAPH_STAGES.map((stage, idx) => {
-            const lit = getStageActive(stage, idx);
+            const isDone = idx < activeStageIdx || currentStage === 'VERIFY';
+            const isCurrent = idx === activeStageIdx;
             return (
               <div
                 key={stage}
-                className={`text-center py-1 px-1 rounded-lg border text-[9px] font-mono font-bold transition-all ${
-                  lit
-                    ? stage === 'VERIFY'
-                      ? 'bg-amber-500/25 border-amber-400 text-amber-200 shadow-[0_0_10px_rgba(251,191,36,0.4)]'
-                      : 'bg-cyan-500/20 border-cyan-400 text-cyan-200'
-                    : 'bg-slate-950/70 border-slate-800 text-slate-500'
+                className={`flex flex-col items-center rounded-lg border px-1 py-1 text-center font-mono-code text-[9px] font-bold transition-all ${
+                  isCurrent
+                    ? 'bg-amber-500/25 border-amber-400 text-amber-200 shadow-[0_0_12px_rgba(245,158,11,0.3)]'
+                    : isDone
+                    ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300'
+                    : 'bg-slate-950/60 border-slate-800 text-slate-500'
                 }`}
               >
-                {stage}
+                <span>{idx + 1}.{stage}</span>
               </div>
             );
           })}
         </div>
+      </div>
 
-        {/* 5 Deterministic SRE Safety Guardrail Badges */}
-        <div className="pt-2 border-t border-slate-800/80">
-          <div className="flex items-center gap-1.5 text-[10px] font-mono text-slate-400 mb-1.5">
-            <Lock className="h-3 w-3 text-emerald-400" />
-            <span>5 Deterministic SRE Safety Guardrails:</span>
+      {/* Human-in-the-Loop Approval Banner (When Paused at AWAITING_APPROVAL) */}
+      {awaitingApproval && (
+        <div className="m-3 rounded-xl bg-gradient-to-r from-amber-500/20 via-amber-500/15 to-rose-500/15 border-2 border-amber-400 p-3 shadow-[0_0_25px_rgba(245,158,11,0.25)]">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="flex items-center gap-1.5 font-display text-xs font-bold text-amber-200">
+              <AlertOctagon className="h-4 w-4 text-amber-300 animate-bounce" />
+              OPERATOR APPROVAL REQUIRED (HITL)
+            </span>
+            <span className="font-mono-code text-[10px] text-amber-300">GATE PAUSED</span>
           </div>
-          <div className="flex flex-wrap gap-1.5">
-            {GUARDRAIL_CHECKS.map((chk) => (
-              <span
-                key={chk}
-                className="text-[9px] font-mono px-2 py-0.5 rounded-md bg-emerald-950/70 border border-emerald-600/50 text-emerald-300 flex items-center gap-1"
+          <p className="text-xs text-slate-200 mb-2.5">
+            Authorize <strong className="text-amber-300">{activePlan?.action_type}</strong> on{' '}
+            <code className="font-mono-code text-cyan-300">{activePlan?.target_service}</code>?
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onApprove}
+              className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs py-1.5 transition-all shadow-lg"
+            >
+              <CheckCircle2 className="h-4 w-4" /> Approve &amp; Seal in Gold
+            </button>
+            <button
+              onClick={onReject}
+              className="flex items-center justify-center gap-1 rounded-lg bg-rose-950/90 hover:bg-rose-900 border border-rose-500/60 text-rose-200 font-semibold text-xs px-3 py-1.5 transition-all"
+            >
+              <XCircle className="h-4 w-4" /> Reject
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Active Qwen3.8-27B Reasoning & Pydantic Remediation Card */}
+      <div className="p-3 space-y-2.5 border-b border-slate-800/80">
+        <div className="rounded-xl bg-slate-950/85 border border-slate-800 p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="flex items-center gap-1.5 font-display text-xs font-bold text-amber-300">
+              <Sparkles className="h-3.5 w-3.5" />
+              {activePlan ? `${activePlan.action_type} → ${activePlan.target_service}` : 'Ambient Cluster Watch Active'}
+            </span>
+            <span className="rounded bg-emerald-500/15 border border-emerald-500/40 px-1.5 py-0.5 font-mono-code text-[9px] font-semibold text-emerald-300">
+              {activePlan ? `CONF ${(Number(activePlan.confidence || 0.95) * 100).toFixed(0)}%` : 'READY'}
+            </span>
+          </div>
+
+          <p className="text-xs text-slate-300 leading-relaxed">
+            {activePlan?.root_cause_summary ||
+              agentState?.diagnosis ||
+              'Monitoring 89-feature Z-score streams and Drain3 log templates across all 10 microservices in hipster namespace.'}
+          </p>
+
+          {/* Syntax-Highlighted kubectl Dry-Run Command Preview */}
+          <div className="rounded-lg bg-black/70 border border-slate-800 p-2 font-mono-code text-[10px]">
+            <div className="flex items-center justify-between text-slate-400 mb-1">
+              <span className="flex items-center gap-1 text-[9px] uppercase tracking-wider text-cyan-400">
+                <Terminal className="h-3 w-3" /> Verified K8s API Mutation (dry_run="All")
+              </span>
+              <button
+                onClick={handleCopyCmd}
+                className="flex items-center gap-1 text-slate-400 hover:text-amber-300 transition-colors"
+                title="Copy kubectl command"
               >
-                <CheckCircle2 className="h-2.5 w-2.5 text-emerald-400" />
-                {chk}
+                {copied ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                <span>{copied ? 'Copied' : 'Copy'}</span>
+              </button>
+            </div>
+            <div className="text-amber-200 break-all select-all">$ {kubectlCmd}</div>
+          </div>
+        </div>
+
+        {/* 5 Deterministic SRE Safety Guardrails Checklist */}
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="flex items-center gap-1 font-mono-code text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+              <Lock className="h-3 w-3 text-emerald-400" /> 5 Deterministic SRE Safety Guardrails
+            </span>
+            <span className="font-mono-code text-[10px] text-emerald-400 font-bold">5/5 ENFORCED</span>
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {GUARDRAIL_GATES.map((g) => (
+              <span
+                key={g.id}
+                className="flex items-center gap-1 rounded-md bg-emerald-950/50 border border-emerald-500/35 px-2 py-0.5 font-mono-code text-[9px] text-emerald-300"
+              >
+                <ShieldCheck className="h-2.5 w-2.5 text-emerald-400" />
+                {g.label}
               </span>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Human-in-the-Loop (HITL) Approval Terminal (Visible when paused) */}
-      {pendingHitl && pendingPlan && (
-        <div className="rounded-2xl border-2 border-amber-400 bg-amber-950/40 backdrop-blur-xl p-4 shadow-[0_0_25px_rgba(251,191,36,0.3)]">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-mono font-bold text-amber-300 flex items-center gap-1.5">
-              <AlertTriangle className="h-4 w-4 text-amber-400 animate-bounce" />
-              AWAITING OPERATOR APPROVAL (HITL GATE)
-            </span>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-200 border border-amber-400/50">
-              {pendingPlan.selected_action}
-            </span>
-          </div>
-          <p className="text-xs text-slate-200 mb-2 leading-relaxed">
-            <strong>Target:</strong> <code className="text-amber-300">{pendingPlan.target_service}</code> — {pendingPlan.reasoning_summary}
-          </p>
-          <div className="flex items-center gap-2 pt-1">
-            <button
-              onClick={onApprove}
-              className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-bold flex items-center justify-center gap-1.5 shadow-lg cursor-pointer"
-            >
-              <Play className="h-3.5 w-3.5" />
-              Approve & Seal Gold Seam
-            </button>
-            <button
-              onClick={onReject}
-              className="py-2 px-3 rounded-xl bg-rose-950 hover:bg-rose-900 border border-rose-500 text-rose-200 text-xs font-mono font-bold flex items-center justify-center gap-1 cursor-pointer"
-            >
-              <X className="h-3.5 w-3.5" />
-              Reject
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Live Remediation & Gold Seam Audit Feed */}
-      <div className="flex-1 rounded-2xl kintsugi-glass p-4 flex flex-col min-h-[360px] max-h-[580px]">
-        <div className="flex items-center justify-between mb-2.5">
-          <div className="flex items-center gap-2">
-            <Terminal className="h-4 w-4 text-amber-400" />
-            <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-slate-200">
-              QWEN 3.8-27B DIAGNOSIS & KINTSUGI AUDIT LOG
-            </h3>
-          </div>
-          <span className="text-[10px] font-mono text-slate-400">
-            {incidentFeed.length} Verified Events
+      {/* Live Streaming LangGraph Audit Log Terminal */}
+      <div className="flex-1 flex flex-col min-h-0 bg-slate-950/60 p-3">
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="font-mono-code text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+            LangGraph Real-Time Execution Trace
           </span>
+          <span className="font-mono-code text-[10px] text-slate-500">{logs.length} events</span>
         </div>
 
-        <div className="flex-1 overflow-y-auto space-y-2.5 pr-1">
-          {incidentFeed.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-center p-6 border border-dashed border-slate-800 rounded-xl text-slate-400">
-              <Sparkles className="h-6 w-6 text-amber-400/70 mb-2" />
-              <p className="text-xs font-mono">
-                Ambient Agent monitoring 10 microservices at 1Hz.
-              </p>
-              <p className="text-[11px] text-slate-500 mt-1">
-                Use the Chaos Fault Injection Deck to trigger a live Kubernetes incident and watch Qwen 3.8-27B heal & seal the pod in gold.
-              </p>
+        <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 font-mono-code text-[11px]">
+          {logs.length === 0 ? (
+            <div className="text-slate-500 text-xs py-6 text-center">
+              Ambient SRE Agent standing by. Inject a fault from the Chaos Deck or press <kbd className="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 text-amber-300">Ctrl+K</kbd> to trigger closed-loop remediation.
             </div>
           ) : (
-            incidentFeed.map((item, idx) => (
-              <div
-                key={idx}
-                className="p-3 rounded-xl bg-slate-950/85 border border-amber-500/35 hover:border-amber-400/70 transition-all"
-              >
-                <div className="flex items-center justify-between text-[11px] font-mono mb-1">
-                  <span className="font-bold text-amber-300 flex items-center gap-1">
-                    ✦ {item.service} // {item.fault}
-                  </span>
-                  <span className="px-2 py-0.5 rounded bg-amber-500/15 border border-amber-400/40 text-amber-200 text-[10px]">
-                    {item.action}
-                  </span>
+            logs.map((entry, i) => {
+              const text = typeof entry === 'string' ? entry : entry.message || JSON.stringify(entry);
+              const isGold = text.includes('Kintsugi') || text.includes('VERIFY') || text.includes('repaired');
+              const isErr = text.includes('ALERT') || text.includes('FRACTURE') || text.includes('Inject');
+              return (
+                <div
+                  key={i}
+                  className={`rounded-lg border px-2.5 py-1.5 leading-snug ${
+                    isGold
+                      ? 'bg-amber-500/15 border-amber-400/50 text-amber-200'
+                      : isErr
+                      ? 'bg-rose-950/50 border-rose-500/40 text-rose-200'
+                      : 'bg-slate-900/80 border-slate-800/80 text-slate-300'
+                  }`}
+                >
+                  {text}
                 </div>
-                {item.rootCause && (
-                  <p className="text-[11px] text-slate-300 leading-relaxed mb-1.5">
-                    <strong className="text-cyan-300">Diagnosis:</strong> {item.rootCause}
-                  </p>
-                )}
-                {item.message && (
-                  <div className="text-[10px] font-mono text-emerald-300 bg-emerald-950/50 border border-emerald-700/50 px-2 py-1 rounded">
-                    ✓ {item.message}
-                  </div>
-                )}
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>
-    </div>
+    </aside>
   );
 }
