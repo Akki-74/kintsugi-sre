@@ -37,7 +37,7 @@ $$\vec{x}_s(t) = \big[ \mathbf{M}_{\text{raw}} \,(19), \; \mathbf{Z}_{\text{base
 ### Dataset Split Verification:
 - **Train Split (Day 1: 2022-08-22):** 24,180 rows (10 microservices in `hipster` namespace, all 6 failure classes represented).
 - **Test Split (Day 2: First 64%):** 4,340 rows (24 empirical Nezha fault episodes + synthetic exhaustion trajectories).
-- **Replay Holdout Split (Day 2: Final 36%):** 2,480 rows (isolated demo holdout stream for the cloud Digital Twin and live UI).
+- **Held-Out Telemetry Split (Day 2: Final 36%):** 2,480 rows (chronological replay stream powering live inference and verification suites).
 
 ---
 

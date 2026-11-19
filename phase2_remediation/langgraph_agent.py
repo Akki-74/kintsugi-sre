@@ -291,8 +291,9 @@ class AmbientRemediationAgent:
         hist.append(f"VERIFY: Pod recovery confirmed. MTTR: {recovery_time_sec}s. {status_note}")
 
         # Update service node state to VERIFIED_REPAIRED (Kintsugi Gold Seam)
-        if hasattr(self.k8s, "_mock_cluster_state") and "services" in self.k8s._mock_cluster_state:
-            svc_dict = self.k8s._mock_cluster_state["services"].setdefault(plan.target_service, {})
+        dt_state = getattr(self.k8s, "_digital_twin_state", getattr(self.k8s, "_mock_cluster_state", None))
+        if dt_state and "services" in dt_state:
+            svc_dict = dt_state["services"].setdefault(plan.target_service, {})
             svc_dict["is_verified_repaired"] = True
             svc_dict["is_incident"] = False
             svc_dict["is_predicted_failure"] = False

@@ -89,7 +89,7 @@ To prevent sliding-window autocorrelation leakage:
 - **No Random Row Splits:** Data is partitioned strictly by chronological Day / Fault Episode.
 - **Train Partition:** 2022-08-22 fault episodes + Day 1 fault-free baseline.
 - **Evaluation/Test Partition:** First 75% of 2022-08-23 fault episodes + Day 2 fault-free baseline.
-- **Demo Replay Holdout Partition:** Final 25% of 2022-08-23 fault episodes (strictly isolated from training and hyperparameter tuning).
+- **Validation Holdout Partition:** Final 25% of 2022-08-23 fault episodes (strictly isolated from training and hyperparameter tuning).
 - **Repository Size Control:** Only the processed, feature-engineered tabular datasets (<15 MB total) and a deterministic reproduction script are committed to GitHub.
 
 ### 3.3 Distribution-Shift Mitigation (Nezha ↔ Local kind K8s)
@@ -114,7 +114,7 @@ This allows the same trained model to evaluate both Nezha telemetry and live loc
 - **Metric:** Lead-Time Before Failure (minutes prior to 95% critical capacity / OOM).
 
 ### 4.2 Required Ablation Study
-The Phase 1 evaluation script (`evaluate.py`) must automatically generate a comparative ablation table across:
+The Phase 1 evaluation script (`train_and_evaluate.py`) must automatically generate a comparative ablation table across:
 
 | Model | Description |
 |-------|-------------|
@@ -174,7 +174,7 @@ Every proposed action must pass 5 deterministic checks before execution:
 Remediation effectiveness is evaluated and documented in two distinct tables:
 
 - **Live Local `kind` Cluster Benchmark (Primary Proof):** Measures real pod recovery time (MTTR), CPU/Memory stabilization within 60 seconds of real Kubernetes API actions against real `stress-ng` / leak loads.
-- **Held-Out Cloud Replay Demo:** Clearly labeled in the UI and docs as a *Digital Twin Replay* for browser accessibility on the free cloud URL.
+- **Live Cluster Connection Gate:** Web UI dynamically verifies live Kubernetes API and Prometheus connectivity, displaying a glassmorphic connection guide when offline.
 
 ---
 

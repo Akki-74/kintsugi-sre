@@ -51,8 +51,8 @@ class KubernetesClusterAdapter:
                 self.is_connected = False
                 self.mode = "DIGITAL_TWIN_SANDBOX"
 
-        # Initialize In-Memory State for Digital Twin
-        self._mock_cluster_state = {
+        # Initialize In-Memory State for High-Fidelity Digital Twin
+        self._digital_twin_state = {
             "services": {
                 "frontend": {"replicas": 1, "cpu_limit": "200m", "mem_limit": "128Mi", "status": "Running"},
                 "checkoutservice": {"replicas": 1, "cpu_limit": "200m", "mem_limit": "128Mi", "status": "Running"},
@@ -68,15 +68,25 @@ class KubernetesClusterAdapter:
             "nodes": {
                 "desktop-control-plane": {"cordoned": False, "ready": True},
                 "desktop-worker": {"cordoned": False, "ready": True},
+                "desktop-worker2": {"cordoned": False, "ready": True},
             },
             "recent_actions": []
         }
+
+    @property
+    def _mock_cluster_state(self):
+        """Backward-compatibility alias for Digital Twin state."""
+        return self._digital_twin_state
+
+    @_mock_cluster_state.setter
+    def _mock_cluster_state(self, val):
+        self._digital_twin_state = val
 
     def verify_dry_run(self, plan: RemediationPlan) -> bool:
         """Runs dry_run='All' check against live cluster or sandbox."""
         if not self.is_connected:
             # Digital Twin verification
-            return plan.target_service in self._mock_cluster_state["services"]
+            return plan.target_service in self._digital_twin_state["services"]
 
         try:
             ns = plan.target_namespace
@@ -238,10 +248,10 @@ class KubernetesClusterAdapter:
         ns = plan.target_namespace
         p = plan.parameters
 
-        if svc not in self._mock_cluster_state["services"]:
-            self._mock_cluster_state["services"][svc] = {"replicas": 1, "cpu_limit": "200m", "mem_limit": "128Mi", "status": "Running"}
+        if svc not in self._digital_twin_state["services"]:
+            self._digital_twin_state["services"][svc] = {"replicas": 1, "cpu_limit": "200m", "mem_limit": "128Mi", "status": "Running"}
 
-        svc_state = self._mock_cluster_state["services"][svc]
+        svc_state = self._digital_twin_state["services"][svc]
 
         if plan.selected_action == ActionType.SCALE_DEPLOYMENT:
             old_rep = svc_state["replicas"]
@@ -264,8 +274,8 @@ class KubernetesClusterAdapter:
 
         elif plan.selected_action == ActionType.CORDON_AND_RELOCATE:
             node = p.target_node or "desktop-worker"
-            if node in self._mock_cluster_state["nodes"]:
-                self._mock_cluster_state["nodes"][node]["cordoned"] = True
+            if node in self._digital_twin_state["nodes"]:
+                self._digital_twin_state["nodes"][node]["cordoned"] = True
             msg = f"[Digital Twin] Cordoned worker node '{node}' and rescheduled {svc}."
             details = {"cordoned_node": node, "rescheduled_service": svc, "mode": "DIGITAL_TWIN"}
 
@@ -284,7 +294,7 @@ class KubernetesClusterAdapter:
             "service": svc,
             "message": msg
         }
-        self._mock_cluster_state["recent_actions"].append(record)
+        self._digital_twin_state["recent_actions"].append(record)
 
         return RemediationExecutionResult(
             action_type=plan.selected_action,
@@ -325,7 +335,7 @@ class KubernetesClusterAdapter:
     def get_live_service_state(self, namespace: str = "hipster") -> Dict[str, Dict[str, Any]]:
         """Reads real deployment replica counts and pod statuses from K8s API."""
         if not self.is_connected:
-            return self._mock_cluster_state.get("services", {})
+            return self._digital_twin_state.get("services", {})
         try:
             services_state = {}
             deployments = self.apps_v1.list_namespaced_deployment(namespace=namespace)
@@ -349,21 +359,21 @@ class KubernetesClusterAdapter:
                     "mem_limit": mem_limit,
                     "status": status,
                 }
-            # Also update mock state so the UI stays in sync
+            # Also update Digital Twin state so the UI stays in sync
             for svc, data in services_state.items():
-                self._mock_cluster_state["services"][svc] = {
-                    **self._mock_cluster_state.get("services", {}).get(svc, {}),
+                self._digital_twin_state["services"][svc] = {
+                    **self._digital_twin_state.get("services", {}).get(svc, {}),
                     **data
                 }
             return services_state
         except Exception as e:
             logger.warning(f"Failed to read live service state: {e}")
-            return self._mock_cluster_state.get("services", {})
+            return self._digital_twin_state.get("services", {})
 
     def get_live_node_state(self) -> Dict[str, Dict[str, Any]]:
         """Reads real node status from K8s API."""
         if not self.is_connected:
-            return self._mock_cluster_state.get("nodes", {})
+            return self._digital_twin_state.get("nodes", {})
         try:
             nodes_state = {}
             nodes = self.core_v1.list_node()
@@ -376,11 +386,11 @@ class KubernetesClusterAdapter:
                         ready = cond.status == "True"
                         break
                 nodes_state[name] = {"cordoned": cordoned, "ready": ready}
-            self._mock_cluster_state["nodes"] = nodes_state
+            self._digital_twin_state["nodes"] = nodes_state
             return nodes_state
         except Exception as e:
             logger.warning(f"Failed to read live node state: {e}")
-            return self._mock_cluster_state.get("nodes", {})
+            return self._digital_twin_state.get("nodes", {})
 
     def get_cluster_snapshot(self) -> Dict[str, Any]:
         """Returns combined cluster state from live K8s or digital twin."""
@@ -390,5 +400,5 @@ class KubernetesClusterAdapter:
         return {
             "mode": self.mode,
             "is_connected": self.is_connected,
-            "state": self._mock_cluster_state
+            "state": self._digital_twin_state
         }

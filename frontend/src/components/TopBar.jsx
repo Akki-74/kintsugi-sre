@@ -20,6 +20,7 @@ export default function TopBar({
   wsConnected,
   onToggleMode,
   onToggleClusterSource,
+  onOpenClusterGate,
   onToggleBackend,
   onOpenBenchmark,
   onOpenCommandPalette,
@@ -79,19 +80,37 @@ export default function TopBar({
 
         {/* Right Controls & Runtime Hot-Swaps */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Telemetry Source Switcher */}
+          {/* Telemetry Source Switcher & Cluster Gate */}
           <button
             onClick={onToggleClusterSource}
             className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium border transition-all ${
               clusterMode === 'LIVE_K8S'
-                ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-300 hover:bg-emerald-900/60'
+                ? status?.is_k8s_connected
+                  ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-300 hover:bg-emerald-900/60 shadow-[0_0_12px_rgba(16,185,129,0.2)]'
+                  : 'bg-rose-950/60 border-rose-500/50 text-rose-300 hover:bg-rose-900/60 shadow-[0_0_12px_rgba(244,63,94,0.2)]'
                 : 'bg-cyan-950/60 border-cyan-500/50 text-cyan-300 hover:bg-cyan-900/60'
             }`}
-            title="Hot-swap between Live 3-Node Kubernetes Cluster and Held-Out Digital Twin Replay"
+            title={
+              clusterMode === 'LIVE_K8S'
+                ? status?.is_k8s_connected
+                  ? 'Live Kubernetes Cluster Connected (3-Node Control Plane). Click to switch to Replay Stream.'
+                  : 'Live Cluster Offline. Click to switch to Replay Stream.'
+                : 'Streaming Chronological Telemetry. Click to switch to Live K8s Cluster.'
+            }
           >
-            <Radio className="h-3.5 w-3.5 animate-pulse" />
+            <Radio
+              className={`h-3.5 w-3.5 ${
+                clusterMode === 'LIVE_K8S' && !status?.is_k8s_connected
+                  ? 'text-rose-400'
+                  : 'animate-pulse'
+              }`}
+            />
             <span className="font-mono-code text-[11px]">
-              {clusterMode === 'LIVE_K8S' ? 'LIVE K8S (3-NODE)' : 'DIGITAL TWIN'}
+              {clusterMode === 'LIVE_K8S'
+                ? status?.is_k8s_connected
+                  ? 'LIVE K8S (3-NODE)'
+                  : 'K8S OFFLINE'
+                : 'REPLAY STREAM'}
             </span>
           </button>
 

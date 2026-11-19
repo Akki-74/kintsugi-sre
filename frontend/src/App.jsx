@@ -13,7 +13,11 @@ import {
   ShieldCheck,
   Radio,
   ArrowRight,
-  CheckCircle2
+  CheckCircle2,
+  AlertTriangle,
+  Server,
+  Terminal,
+  RefreshCw
 } from 'lucide-react';
 
 // Subtle Web Audio API Synthesizer for Cyber-SRE Alert & Gold Repair Chimes
@@ -62,6 +66,7 @@ export default function App() {
   const [showBenchmarkModal, setShowBenchmarkModal] = useState(false);
   const [benchmarkData, setBenchmarkData] = useState(null);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [showClusterGate, setShowClusterGate] = useState(false);
   const [cmdQuery, setCmdQuery] = useState('');
   const [streamPaused, setStreamPaused] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(false);
@@ -86,6 +91,9 @@ export default function App() {
           ...st,
           agent_mode: st.autonomous_mode === false ? 'HUMAN_IN_THE_LOOP' : 'AUTONOMOUS'
         }));
+        if (!st.is_k8s_connected) {
+          setShowClusterGate(true);
+        }
       }
       if (topRes.ok) setTopology(await topRes.json());
       if (snapRes.ok) {
@@ -350,7 +358,13 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ source: nextSource })
       });
-      if (res.ok) setStatus((prev) => ({ ...prev, cluster_mode: nextSource }));
+      if (res.ok) {
+        setStatus((prev) => ({ ...prev, cluster_mode: nextSource }));
+        setAgentLogs((prev) => [
+          `[TELEMETRY SOURCE] Switched telemetry pipeline to ${nextSource === 'LIVE_K8S' ? 'Live Kubernetes Cluster' : 'Chronological Telemetry Replay Stream'}.`,
+          ...prev
+        ]);
+      }
     } catch (e) {
       console.error(e);
     }
@@ -450,9 +464,15 @@ export default function App() {
       },
       {
         category: 'Control Plane',
-        label: 'Hot-Swap Telemetry Source (LIVE K8S ↔ DIGITAL TWIN)',
+        label: 'Hot-Swap Telemetry Source (LIVE K8S CLUSTER ↔ REPLAY TELEMETRY STREAM)',
         icon: Radio,
         action: handleToggleClusterSource
+      },
+      {
+        category: 'Control Plane',
+        label: 'Inspect Live Kubernetes Cluster & SRE Connection Gate',
+        icon: Server,
+        action: () => setShowClusterGate(true)
       },
       {
         category: 'Control Plane',
@@ -493,6 +513,7 @@ export default function App() {
         wsConnected={wsConnected}
         onToggleMode={handleToggleMode}
         onToggleClusterSource={handleToggleClusterSource}
+        onOpenClusterGate={() => setShowClusterGate(true)}
         onToggleBackend={handleToggleBackend}
         onOpenBenchmark={handleOpenBenchmark}
         onOpenCommandPalette={() => setShowCommandPalette(true)}
@@ -734,6 +755,130 @@ export default function App() {
                 className="rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/50 px-4 py-1.5 font-mono-code text-xs font-bold text-amber-200"
               >
                 Close Verification View
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* GLASSMORPHIC LIVE CLUSTER CONNECTION GATE MODAL */}
+      {showClusterGate && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md animate-fade-in"
+          onClick={() => setShowClusterGate(false)}
+        >
+          <div
+            className="kintsugi-panel border border-amber-500/40 w-full max-w-2xl rounded-2xl shadow-[0_0_50px_rgba(251,191,36,0.2)] overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-amber-500/20 px-6 py-4 bg-gradient-to-r from-amber-500/10 via-slate-900 to-slate-900">
+              <div className="flex items-center gap-3">
+                <div className="rounded-xl bg-amber-500/20 border border-amber-400/50 p-2 text-amber-300 shadow-[0_0_15px_rgba(251,191,36,0.3)]">
+                  <Server className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-space font-bold text-base text-amber-200 flex items-center gap-2">
+                    ⚡ Live Cluster Connection Gate
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Kintsugi-AI Autonomous SRE Control Plane Status
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowClusterGate(false)}
+                className="rounded-lg p-1 text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Content Body */}
+            <div className="p-6 space-y-4 text-xs">
+              {/* Status Alert Banner */}
+              <div
+                className={`p-4 rounded-xl border flex items-start gap-3 ${
+                  status?.is_k8s_connected
+                    ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200'
+                    : 'bg-rose-950/40 border-rose-500/40 text-rose-200'
+                }`}
+              >
+                {status?.is_k8s_connected ? (
+                  <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
+                ) : (
+                  <AlertTriangle className="h-5 w-5 text-rose-400 shrink-0 mt-0.5" />
+                )}
+                <div className="space-y-1">
+                  <div className="font-bold text-sm">
+                    {status?.is_k8s_connected
+                      ? '● Live Kubernetes Cluster Active & Connected'
+                      : '⚡ Live Cluster Offline: Connect your Kubernetes Cluster (kubectl / kind / kubeconfig) & Prometheus to activate real-time SRE automation.'}
+                  </div>
+                  <div className="text-slate-300 text-[11px] leading-relaxed">
+                    {status?.is_k8s_connected
+                      ? 'The SRE engine is actively polling live Prometheus metrics (port 9090) and has full read/write mutation authority across the 10 microservices in the hipster namespace.'
+                      : 'Kintsugi-AI is designed to directly protect live production clusters. To execute autonomous healing, scale replica sets, and patch container limits in real-time, connect your local or cloud Kubernetes cluster.'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Cluster Diagnostics Grid */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-xl bg-slate-900/90 border border-slate-800 p-3.5 space-y-1.5">
+                  <div className="text-[10px] font-mono-code uppercase tracking-wider text-slate-400">
+                    Kubernetes Control Plane API
+                  </div>
+                  <div className="flex items-center gap-2 font-mono-code font-bold">
+                    <span
+                      className={`h-2 w-2 rounded-full ${
+                        status?.is_k8s_connected ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'
+                      }`}
+                    />
+                    <span className={status?.is_k8s_connected ? 'text-emerald-300' : 'text-rose-400'}>
+                      {status?.is_k8s_connected ? 'ONLINE (3-Node kind-kintsugi)' : 'DISCONNECTED'}
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-slate-500 font-mono-code">
+                    Mode: {status?.cluster_mode || 'LIVE_K8S'}
+                  </div>
+                </div>
+
+                <div className="rounded-xl bg-slate-900/90 border border-slate-800 p-3.5 space-y-1.5">
+                  <div className="text-[10px] font-mono-code uppercase tracking-wider text-slate-400">
+                    Prometheus Telemetry Scraper
+                  </div>
+                  <div className="flex items-center gap-2 font-mono-code font-bold">
+                    <span
+                      className={`h-2 w-2 rounded-full ${
+                        status?.prometheus_reachable ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'
+                      }`}
+                    />
+                    <span className={status?.prometheus_reachable ? 'text-emerald-300' : 'text-rose-400'}>
+                      {status?.prometheus_reachable ? 'ONLINE (:9090 PromQL)' : 'UNREACHABLE'}
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-slate-500 font-mono-code">
+                    Port: 9090 PromQL API
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Actions Footer */}
+            <div className="flex items-center justify-between border-t border-slate-800 px-6 py-3.5 bg-slate-950/60">
+              <button
+                onClick={fetchInitialData}
+                className="flex items-center gap-2 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/50 px-3.5 py-1.5 font-mono-code text-xs font-bold text-emerald-300 transition-colors"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                Re-scan Cluster Connection
+              </button>
+              <button
+                onClick={() => setShowClusterGate(false)}
+                className="rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 px-4 py-1.5 font-mono-code text-xs font-semibold text-slate-300 transition-colors"
+              >
+                Continue to Dashboard
               </button>
             </div>
           </div>

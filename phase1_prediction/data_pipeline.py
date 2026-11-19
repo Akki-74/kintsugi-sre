@@ -510,11 +510,6 @@ def build_pipeline():
     test_df.to_csv(test_path, index=False, float_format="%.3f")
     replay_df.to_csv(replay_path, index=False, float_format="%.3f")
 
-    # Also save standard short names
-    train_df.to_csv(DATASET_DIR / "train.csv", index=False, float_format="%.3f")
-    test_df.to_csv(DATASET_DIR / "test.csv", index=False, float_format="%.3f")
-    replay_df.to_csv(DATASET_DIR / "replay_holdout.csv", index=False, float_format="%.3f")
-
     print("\n================ DATASET BUILD SUMMARY ================")
     for name, d, p in [
         ("TRAIN (Day 1: 2022-08-22)", train_df, train_path),

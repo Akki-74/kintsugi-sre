@@ -98,7 +98,7 @@ During data inspection (`scripts/inspect_nezha.py`), we identified and resolved 
 2. **Episode-Aware Zero-Leakage Chronological Partitioning:** A naive percentile cut on Day 2 timestamps lands inside a multi-hour quiet gap between recording folders (`construct_data` and `rca_data`), skewing class distribution. We implemented per-folder chronological episode partitioning so every split contains all 6 operational classes with zero temporal leakage:
    - **Train Split (`k8s_multimodal_train.csv`):** Day 1 (`2022-08-22`) — **`24,180` rows**
    - **Test Split (`k8s_multimodal_test.csv`):** Day 2 First 64% (`2022-08-23`) — **`4,340` rows (`3.21 MB`)**
-   - **Live Replay Holdout (`k8s_multimodal_replay_holdout.csv`):** Day 2 Final 36% (`2022-08-23`) — **`2,480` rows (`1.84 MB`)**
+   - **Validation Holdout (`k8s_multimodal_replay_holdout.csv`):** Day 2 Final 36% (`2022-08-23`) — **`2,480` rows (`1.84 MB`)**
 
 ### 2. 89-Feature Multi-Modal Engineering Pipeline
 For each microservice $s$ at 1-minute tick $t$, `phase1_prediction/data_pipeline.py` constructs a synchronized **89-feature multi-modal vector** over a 3-step sliding window ($W = 3$, equivalent to 180 seconds). The vector fuses **76 baseline-relative continuous telemetry features** with **13 discrete Drain3 structured log features**, serialized in `phase1_prediction/saved_models/feature_columns.json`:
@@ -164,7 +164,7 @@ For gradual resource depletion (`MEMORY_EXHAUSTION`, `DISK_EXHAUSTION`), Kintsug
 ```text
 +-----------------------------------------------------------------------------------+
 |                   DATA SOURCES & KUBERNETES ENVIRONMENTS                          |
-|  Mode A: Nezha OnlineBoutique Multi-Modal Dataset (Train / Test / Replay Holdout) |
+|  Mode A: Nezha OnlineBoutique Multi-Modal Dataset (Train / Test / Holdout)        |
 |  Mode B: Live 3-Node `kind` Kubernetes Cluster (Prometheus + K8s API + Chaos Pods)|
 +---------------------+-----------------------------------------+-------------------+
                       | (Metrics Stream)                        | (Logs & K8s Events)
@@ -201,7 +201,7 @@ For gradual resource depletion (`MEMORY_EXHAUSTION`, `DISK_EXHAUSTION`), Kintsug
 |  [4. GUARDRAILS] -> 5 Deterministic Safety Gates                                  |
 |            |        (Namespace Lock, Bounds, 120s Cooldown, K8s `dry_run="All"`)  |
 |            v                                                                      |
-|  [5. EXECUTE]    -> Official Python K8s SDK (or Digital Twin Replay)              |
+|  [5. EXECUTE]    -> Official Python K8s SDK (AppsV1Api & CoreV1Api)               |
 |            |                                                                      |
 |            v                                                                      |
 |  [6. VERIFY]     -> Polls Metric Z-Scores & Pod Readiness; Seals Pod in Gold!     |
@@ -214,7 +214,7 @@ For gradual resource depletion (`MEMORY_EXHAUSTION`, `DISK_EXHAUSTION`), Kintsug
 
 1. **Dual-Engine Hot-Swapping at Runtime (`backend/main.py` & `frontend/src/components/TopBar.jsx`):**
    - Operational API endpoints (`/api/cluster/source` and `/api/agent/backend`) allow operators to hot-swap on the fly with zero server restarts between:
-     - **Telemetry Stream:** `LIVE_K8S` (real Prometheus PromQL queries + live Kubernetes API) $\leftrightarrow$ `REPLAY_HOLDOUT` (isolated 2,480-row held-out Digital Twin stream).
+     - **Telemetry Stream:** `LIVE_K8S` (live Prometheus PromQL queries + live Kubernetes API) $\leftrightarrow$ `REPLAY_HOLDOUT` (chronological telemetry stream from held-out multi-modal dataset).
      - **LLM Brain:** Groq Cloud (`qwen/qwen3.8-27b`) $\leftrightarrow$ Local LM Studio (`qwen2.5-3b-instruct`).
 2. **Dedicated Regime B Horizon Regressor (`phase1_prediction/saved_models/tte_regressor.json`):**
    - In parallel with the 6-class `XGBClassifier`, a specialized `XGBRegressor` computes continuous Time-to-Exhaustion (TTE) for gradual failure modes (`MEMORY_EXHAUSTION`, `DISK_EXHAUSTION`), achieving **$0.71$ min MAE** and providing a **$4.7$ minute mean early-warning lead time** prior to container `OOMKilled` evictions.
@@ -230,7 +230,7 @@ For gradual resource depletion (`MEMORY_EXHAUSTION`, `DISK_EXHAUSTION`), Kintsug
 
 ## 🛡️ Phase 2 Deep Dive: LangGraph Ambient SRE Agent ("Slow Brain")
 
-### 1. 6-Node StateGraph Lifecycle (`phase2_remediation/agent_graph.py`)
+### 1. 6-Node StateGraph Lifecycle (`phase2_remediation/langgraph_agent.py`)
 When Phase 1 predicts a fault with confidence $\ge 0.50$, it wakes the LangGraph state machine:
 $$\text{MONITOR} \longrightarrow \text{DIAGNOSE} \longrightarrow \text{PLAN} \longrightarrow \text{GUARDRAILS} \longrightarrow \text{EXECUTE} \longrightarrow \text{VERIFY}$$
 
@@ -326,7 +326,7 @@ In the interactive **Service Topology Map** (`frontend/src/components/ClusterTop
 
 ## ☸️ Live 3-Node Kubernetes & Observability Infrastructure
 
-In addition to the held-out Digital Twin replay engine, Kintsugi-AI is verified end-to-end against a live, 3-node Kubernetes cluster with full Prometheus/Grafana observability running on Docker Desktop / WSL2:
+Kintsugi-AI is verified end-to-end against a live, 3-node Kubernetes cluster with full Prometheus/Grafana observability running on Docker Desktop / WSL2:
 
 ### 1. Cluster Topology (Kubernetes v1.36.1)
 - **`desktop-control-plane`:** Kubernetes API Server, etcd, controller-manager, scheduler.
@@ -368,7 +368,7 @@ Get-Process kubectl -ErrorAction SilentlyContinue | Stop-Process -Force
 # Pause 3 node containers without deleting deployments or persistent state
 docker stop desktop-control-plane desktop-worker desktop-worker2
 ```
-*(Tip: While paused, Kintsugi-AI can still run in Digital Twin mode using `$env:CLUSTER_MODE="REPLAY_HOLDOUT"` for sub-millisecond local experimentation at under 150MB RAM).*
+*(Tip: When the cluster is paused, the dashboard's Live Connection Gate alerts the operator with the 1-line resume command).*
 
 #### ▶️ Resume Local Cluster Anytime:
 ```powershell
@@ -539,7 +539,7 @@ Open **`http://localhost:8000/app/`** (or `http://localhost:5173`) in your brows
 
 ### Part 1: Phase 1 — Prediction Engine & ML Architecture
 - **The Problem:** Static Prometheus threshold rules create alert fatigue (`14.80 FA/hr`) and detect failures too late ($\Delta t = 148.0\text{s}$).
-- **The Nezha Timestamp Fix:** Show how we identified and resolved the $+200\text{M}$-second offset bug in the raw benchmark CSVs and partitioned Day 2 into leak-free test and replay holdout splits.
+- **The Nezha Timestamp Fix:** Show how we identified and resolved the $+200\text{M}$-second offset bug in the raw benchmark CSVs and partitioned Day 2 into leak-free test and validation holdout splits.
 - **The 4-Model Ablation Jump:** Walk through the progression from Prometheus Rules (`0.2816` Macro-F1) $\to$ IsolationForest (`0.2782`) $\to$ Metrics-Only XGBoost (`0.5706`) $\to$ Multi-Modal XGBoost (**`0.7132` Macro-F1**).
 - **SARIMA vs. Multi-Modal XGBRegressor:** Open the in-app ML & SARIMA Benchmark Modal to show how XGBRegressor achieves **$0.71\text{ min}$ MAE** ($4.7\text{ min}$ lead time) at $1.15\text{ ms/tick}$ vs. $42.50\text{ ms/tick}$ for seasonal SARIMA.
 
@@ -562,7 +562,7 @@ kintsugi-sre/
 ├── requirements.txt                # Production Python dependencies
 ├── backend/
 │   ├── main.py                     # FastAPI REST API, Static SPA server & 1Hz WebSocket broadcaster
-│   └── replay_engine.py            # Digital Twin Holdout Replay Engine & chaos synthesizer
+│   └── replay_engine.py            # Real-time telemetry streaming engine & chaos synthesizer
 ├── docs/
 │   ├── PRD.md                      # Product Requirements & System Architecture Document
 │   ├── PHASE1_REPORT.md            # Formal Phase 1 ML & SARIMA Benchmark Report
@@ -595,21 +595,17 @@ kintsugi-sre/
 │   ├── data_pipeline.py            # Leak-free 89-feature Z-score & Drain3 feature pipeline
 │   ├── train_and_evaluate.py       # 4-Model Ablation study, TTE Regressor & diagnostic plots
 │   ├── sarima_benchmark.py         # Classical SARIMA(1,1,1)x(1,0,1)_12 vs. XGBRegressor study
-│   ├── evaluate.py                 # Regime A latency & Regime B lead-time evaluation routines
-│   ├── dataset/                    # Chronologically partitioned CSVs (<15MB each)
+│   ├── dataset/                    # Chronologically partitioned leak-free CSV datasets
 │   ├── plots/                      # 4 Diagnostic plots (ablation, confusion matrix, SHAP, lead time)
-│   └── saved_models/               # Serialized models (XGBClassifier, TTE XGBRegressor, SARIMA stats)
+│   └── saved_models/               # Serialized native C++ JSON models & feature metadata
 ├── phase2_remediation/
 │   ├── actions.py                  # Pydantic schemas & Deterministic Rule Fallback Matrix
 │   ├── guardrails.py               # 5 mandatory SRE Safety Guardrails + K8s dry_run="All"
 │   ├── llm_client.py               # Groq Cloud (qwen/qwen3.8-27b) + LM Studio + <think> parser
-│   ├── k8s_adapter.py              # Official K8s Python SDK + Multi-node relocation & Digital Twin
-│   ├── k8s_tools.py                # Kubernetes client helper wrappers
-│   ├── agent_graph.py              # 6-Node LangGraph StateGraph Architecture
-│   ├── langgraph_agent.py          # StateGraph runner utilities
+│   ├── k8s_adapter.py              # Official K8s Python SDK + 3-Node live cluster adapter
+│   ├── langgraph_agent.py          # 6-Node LangGraph StateGraph Architecture & Ambient Agent
 │   └── remediation_benchmark.py    # Pre/Post recovery & MTTR evaluation across 5 chaos scenarios
 ├── scripts/
-│   ├── inspect_nezha.py            # Raw Nezha telemetry & timestamp offset inspector
 │   └── test_remediation_agent.py   # Standalone CLI agent & guardrail test runner
 └── tests/
     ├── test_01_unit.py             # Tier 1: Feature schema, SARIMA, Qwen parser & guardrail unit tests
@@ -621,7 +617,7 @@ kintsugi-sre/
 
 ## 🏆 Technical Milestone Checklist
 
-- [x] **Milestone 1 — Multi-Modal Data Engineering:** Empirical Nezha dataset inspection, $+200\text{M}$-second timestamp offset resolution, per-service Z-score baseline normalization, Drain3 log template extraction, strict chronological episode split (Train: Day 1 `24,180` rows, Test: Day 2 First 64% `4,340` rows, Replay Holdout: Day 2 Final 36% `2,480` rows).
+- [x] **Milestone 1 — Multi-Modal Data Engineering:** Empirical Nezha dataset inspection, $+200\text{M}$-second timestamp offset resolution, per-service Z-score baseline normalization, Drain3 log template extraction, strict chronological episode split (Train: Day 1 `24,180` rows, Test: Day 2 First 64% `4,340` rows, Validation Holdout: Day 2 Final 36% `2,480` rows).
 - [x] **Milestone 2 — 4-Model Classification Ablation & SARIMA Benchmark:** Evaluated B0 Prometheus Static Rules vs. M1 IsolationForest vs. M2 Temporal XGBoost vs. M3 Multi-Modal XGBoost (`0.7132` Macro-F1, `87.6s` Regime A latency, `1.71` FA/hr), plus Regime B Time-to-Exhaustion horizon benchmarking comparing classical $\text{SARIMA}(1,1,1)\times(1,0,1)_{12}$ against Multi-Modal XGBRegressor (`0.71 min` MAE, `4.7 min` lead time, $37\times$ faster inference).
 - [x] **Milestone 3 — Diagnostic Visualizations & Reporting:** Automated generation of `ablation_comparison.png`, `confusion_matrix.png`, `feature_importance.png`, `lead_time_distribution.png`, and `docs/PHASE1_REPORT.md`.
 - [x] **Milestone 4 — Guardrailed LangGraph Ambient Agent:** 6-node StateGraph (`MONITOR` -> `DIAGNOSE` -> `PLAN` -> `GUARDRAILS` -> `EXECUTE` -> `VERIFY`), Groq Cloud `qwen/qwen3.8-27b` integration with `<think>` tag stripping, Local LM Studio hot-swap, Pydantic action catalog, deterministic fallback matrix, and 5 SRE safety guardrails including Kubernetes API `dry_run="All"`.

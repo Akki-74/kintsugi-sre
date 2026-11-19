@@ -121,8 +121,8 @@ class TestHumanInTheLoopFlow:
         assert approval_result["status"] == "APPROVED_AND_EXECUTED"
         assert approval_result["service"] == service
 
-        # 4. Confirm Kintsugi Gold Seam state is activated
-        mock_svc = engine.agent.k8s._mock_cluster_state["services"][service]
-        assert mock_svc["is_verified_repaired"] is True
-        assert mock_svc["status"] == "VerifiedRepaired"
-        assert mock_svc["is_incident"] is False
+        # 4. Confirm Kintsugi Gold Seam state is activated in Digital Twin
+        dt_svc = getattr(engine.agent.k8s, "_digital_twin_state", engine.agent.k8s._mock_cluster_state)["services"][service]
+        assert dt_svc["is_verified_repaired"] is True
+        assert dt_svc["status"] == "VerifiedRepaired"
+        assert dt_svc["is_incident"] is False

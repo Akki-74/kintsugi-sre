@@ -99,8 +99,9 @@ class DigitalTwinReplayEngine:
         self.agent.guardrails.record_remediation(plan.target_service, timestamp=exec_res.executed_at)
         
         # Mark node as verified repaired (Kintsugi Gold Seam)
-        if hasattr(self.agent.k8s, "_mock_cluster_state") and "services" in self.agent.k8s._mock_cluster_state:
-            svc_dict = self.agent.k8s._mock_cluster_state["services"].setdefault(plan.target_service, {})
+        dt_state = getattr(self.agent.k8s, "_digital_twin_state", getattr(self.agent.k8s, "_mock_cluster_state", None))
+        if dt_state and "services" in dt_state:
+            svc_dict = dt_state["services"].setdefault(plan.target_service, {})
             svc_dict["is_verified_repaired"] = True
             svc_dict["is_incident"] = False
             svc_dict["is_predicted_failure"] = False
@@ -171,8 +172,9 @@ class DigitalTwinReplayEngine:
             cls_name = fault_map.get(normalized, "CPU_EXHAUSTION")
         
         # Mark node as active incident
-        if hasattr(self.agent.k8s, "_mock_cluster_state") and "services" in self.agent.k8s._mock_cluster_state:
-            svc_dict = self.agent.k8s._mock_cluster_state["services"].setdefault(service, {})
+        dt_state = getattr(self.agent.k8s, "_digital_twin_state", getattr(self.agent.k8s, "_mock_cluster_state", None))
+        if dt_state and "services" in dt_state:
+            svc_dict = dt_state["services"].setdefault(service, {})
             svc_dict["is_verified_repaired"] = False
             svc_dict["is_incident"] = True
             svc_dict["is_remediating"] = False
@@ -222,7 +224,8 @@ class DigitalTwinReplayEngine:
         is_live = (self.cluster_source == "live")
 
         if is_live and getattr(self.agent, "prometheus", None) and self.agent.prometheus.is_reachable:
-            services = list(self.agent.k8s._mock_cluster_state.get("services", {}).keys()) or [
+            dt_state = getattr(self.agent.k8s, "_digital_twin_state", getattr(self.agent.k8s, "_mock_cluster_state", {}))
+            services = list(dt_state.get("services", {}).keys()) or [
                 "frontend", "checkoutservice", "cartservice", "paymentservice",
                 "productcatalogservice", "currencyservice", "shippingservice",
                 "recommendationservice", "adservice", "emailservice"

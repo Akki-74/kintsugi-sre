@@ -14,7 +14,7 @@ Running a full production-like microservices topology locally consumes significa
 - **Kubernetes Web Dashboard (`kubernetes-dashboard`):** ~250 MB RAM
 - **Kintsugi-AI FastAPI + ML Fast Brain:** ~150 – 250 MB RAM
 
-By pausing the cluster containers when not actively conducting live cluster mutations, you can instantly recover **~5–7 GB of RAM** for other workloads, while still retaining the ability to run Kintsugi-AI in **Digital Twin Replay Mode (`CLUSTER_MODE=REPLAY_HOLDOUT`)**.
+By pausing the cluster containers when not actively conducting live cluster mutations, you can instantly recover **~5–7 GB of RAM** for other workloads, while the dashboard displays the Live Connection Gate.
 
 ---
 
@@ -32,12 +32,7 @@ docker stop desktop-control-plane desktop-worker desktop-worker2
 Write-Host "✅ Kubernetes cluster paused. ~5-7 GB RAM freed!" -ForegroundColor Green
 ```
 
-> **Note:** While the cluster is paused, you can still run Kintsugi-AI entirely via held-out telemetry:
-> ```powershell
-> # Runs Digital Twin replay with sub-millisecond XGBoost inference and Groq Qwen-27B
-> $env:CLUSTER_MODE="REPLAY_HOLDOUT"
-> python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
-> ```
+> **Note:** When the cluster is paused, the web dashboard displays the Live Cluster Connection Gate with quick 1-line resume instructions.
 
 ---
 

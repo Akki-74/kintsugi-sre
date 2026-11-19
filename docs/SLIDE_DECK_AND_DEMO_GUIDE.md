@@ -78,7 +78,7 @@ This document provides the **10-Slide Presentation Deck** and the **Step-by-Step
   * `Diagnose`: Gathers live Kubernetes container state, resource specs, and recent log traces.
   * `Plan`: Prompts LLM (Groq Qwen 3.8-27B or local LM Studio Qwen2.5-3B) with strict Pydantic JSON schema + Deterministic Rule Fallback Matrix.
   * `Guardrails`: Enforces 5 deterministic safety checks before touching the cluster.
-  * `Execute`: Calls official Python Kubernetes API or Digital Twin adapter.
+  * `Execute`: Calls official Python Kubernetes API (CoreV1Api & AppsV1Api).
   * `Verify`: Confirms metric stabilization and computes Mean Time To Remediate (MTTR).
 * **Speaker Note:** *"The Slow Brain is built with LangGraph. Every transition is deterministic and traceable. If the LLM produces invalid JSON, our rule-based fallback matrix immediately steps in, ensuring 100% uptime."*
 

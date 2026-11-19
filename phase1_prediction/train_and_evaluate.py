@@ -82,16 +82,9 @@ NON_FEATURE_COLS = {
 
 def load_datasets() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Loads leak-free train, test, and holdout datasets."""
-    train_file = DATASET_DIR / "train.csv"
-    test_file = DATASET_DIR / "test.csv"
-    holdout_file = DATASET_DIR / "replay_holdout.csv"
-
-    if not train_file.exists():
-        train_file = DATASET_DIR / "k8s_multimodal_train.csv"
-    if not test_file.exists():
-        test_file = DATASET_DIR / "k8s_multimodal_test.csv"
-    if not holdout_file.exists():
-        holdout_file = DATASET_DIR / "k8s_multimodal_replay_holdout.csv"
+    train_file = DATASET_DIR / "k8s_multimodal_train.csv"
+    test_file = DATASET_DIR / "k8s_multimodal_test.csv"
+    holdout_file = DATASET_DIR / "k8s_multimodal_replay_holdout.csv"
 
     print(f"📦 Loading datasets from {DATASET_DIR}...")
     train_df = pd.read_csv(train_file)
