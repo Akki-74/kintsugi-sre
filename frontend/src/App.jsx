@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import TopBar from './components/TopBar';
 import ClusterTopology from './components/ClusterTopology';
-import TelemetryCharts from './components/TelemetryCharts';
+import TelemetryCharts, { EXPANDED_CHAOS_OPTIONS, ALL_SERVICES } from './components/TelemetryCharts';
 import AgentConsole from './components/AgentConsole';
 import {
   X,
@@ -45,7 +45,8 @@ export default function App() {
   const [status, setStatus] = useState({
     cluster_mode: 'LIVE_K8S',
     llm_backend: 'GROQ_CLOUD',
-    agent_mode: 'AUTONOMOUS'
+    agent_mode: 'AUTONOMOUS',
+    autonomous_mode: true
   });
   const [topology, setTopology] = useState({ nodes: [], edges: [] });
   const [clusterNodes, setClusterNodes] = useState([]);
@@ -70,7 +71,7 @@ export default function App() {
   const soundEnabledRef = useRef(false);
   soundEnabledRef.current = soundEnabled;
 
-  // Fetch initial status, topology, and benchmark data
+  // Fetch initial status, topology, and cluster snapshot
   const fetchInitialData = useCallback(async () => {
     try {
       const [stRes, topRes, snapRes] = await Promise.all([
@@ -78,7 +79,14 @@ export default function App() {
         fetch('/api/topology'),
         fetch('/api/cluster/snapshot')
       ]);
-      if (stRes.ok) setStatus(await stRes.json());
+      if (stRes.ok) {
+        const st = await stRes.json();
+        setStatus((prev) => ({
+          ...prev,
+          ...st,
+          agent_mode: st.autonomous_mode === false ? 'HUMAN_IN_THE_LOOP' : 'AUTONOMOUS'
+        }));
+      }
       if (topRes.ok) setTopology(await topRes.json());
       if (snapRes.ok) {
         const snap = await snapRes.json();
@@ -126,24 +134,86 @@ export default function App() {
         if (streamPausedRef.current) return;
         try {
           const payload = JSON.parse(evt.data);
-          if (payload.topology) setTopology(payload.topology);
+
+          // Update cluster nodes if provided
           if (payload.cluster_nodes) setClusterNodes(payload.cluster_nodes);
-          if (payload.status) setStatus((prev) => ({ ...prev, ...payload.status }));
-          if (payload.prediction) setLatestPrediction(payload.prediction);
-          if (payload.agent) {
-            setAgentState(payload.agent);
-            if (Array.isArray(payload.agent.logs) && payload.agent.logs.length > 0) {
-              setAgentLogs(payload.agent.logs);
-            }
+
+          // Update autonomy mode from live tick
+          if (payload.autonomous_mode !== undefined) {
+            setStatus((prev) => ({
+              ...prev,
+              autonomous_mode: payload.autonomous_mode,
+              agent_mode: payload.autonomous_mode ? 'AUTONOMOUS' : 'HUMAN_IN_THE_LOOP'
+            }));
           }
 
-          // Extract selected service metrics for time-series chart
-          const svcMap = payload.services || {};
-          const nodesArr = payload.topology?.nodes || [];
+          // Update predictions
+          if (payload.prediction) setLatestPrediction(payload.prediction);
+
+          // Update agent state & execution events
+          if (payload.agent_event || payload.agent) {
+            const ag = payload.agent_event || payload.agent;
+            setAgentState((prev) => ({
+              ...prev,
+              ...ag,
+              stage: ag.state || ag.current_node || prev.stage || 'MONITOR',
+              current_node: ag.state || ag.current_node || prev.current_node,
+              status: payload.pending_hitl ? 'AWAITING_APPROVAL' : (ag.state || prev.status),
+              awaiting_approval: Boolean(payload.pending_hitl),
+              remediation_plan: payload.pending_plan || ag.remediation_plan || prev.remediation_plan,
+              pending_plan: payload.pending_plan || prev.pending_plan
+            }));
+            if (ag.planned_action) {
+              setAgentLogs((prev) => [
+                `[LangGraph Stage: ${ag.state}] Action: ${ag.planned_action} (Status: ${ag.execution_status || 'IN_PROGRESS'})`,
+                ...prev.slice(0, 49)
+              ]);
+            }
+          } else if (payload.pending_hitl) {
+            setAgentState((prev) => ({
+              ...prev,
+              status: 'AWAITING_APPROVAL',
+              awaiting_approval: true,
+              stage: 'GUARDRAILS',
+              current_node: 'GUARDRAILS',
+              remediation_plan: payload.pending_plan,
+              pending_plan: payload.pending_plan
+            }));
+          }
+
+          // Sync topology node statuses from cluster_state map
+          if (payload.cluster_state) {
+            setTopology((prev) => {
+              const prevNodes = prev?.nodes || [];
+              if (prevNodes.length === 0) return prev;
+              const updatedNodes = prevNodes.map((n) => {
+                const id = n.id || n.service;
+                const live = payload.cluster_state[id];
+                if (!live) return n;
+                return {
+                  ...n,
+                  status: live.is_verified_repaired ? 'verified_repaired' : live.is_incident ? 'incident' : (live.status || n.status),
+                  is_verified_repaired: Boolean(live.is_verified_repaired),
+                  replicas: live.replicas ?? n.replicas,
+                  node: live.node ?? n.node,
+                  cpu: live.cpu ?? n.cpu,
+                  memory: live.memory ?? n.memory,
+                  fault_type: live.fault_type ?? n.fault_type
+                };
+              });
+              return { ...prev, nodes: updatedNodes };
+            });
+          } else if (payload.topology) {
+            setTopology(payload.topology);
+          }
+
+          // Extract selected service metrics for time-series charts
+          const svcMap = payload.services || payload.cluster_state || {};
+          const nodesArr = payload.topology?.nodes || topology?.nodes || [];
           const activeNode =
             svcMap[selectedService] ||
             nodesArr.find((n) => (n.id || n.service) === selectedService) ||
-            nodesArr[0];
+            payload.metrics;
 
           if (activeNode) {
             const nowLabel = new Date().toLocaleTimeString([], {
@@ -154,9 +224,12 @@ export default function App() {
               ...prev.slice(-29),
               {
                 time: nowLabel,
-                cpu: Number(activeNode.cpu ?? activeNode.metrics?.cpu ?? 14.0),
-                memory: Number(activeNode.memory ?? activeNode.metrics?.memory ?? 30.0),
-                latency: Number(activeNode.latency ?? activeNode.metrics?.latency ?? 20.0)
+                cpu: Number(activeNode.cpu ?? activeNode['CpuUsageRate(%)'] ?? 14.0),
+                memory: Number(activeNode.memory ?? activeNode['MemoryUsageRate(%)'] ?? 30.0),
+                latency: Number(
+                  activeNode.latency ??
+                  (activeNode['PodServerLatencyP95(s)'] ? activeNode['PodServerLatencyP95(s)'] * 1000 : 20.0)
+                )
               }
             ]);
           }
@@ -171,7 +244,7 @@ export default function App() {
       clearTimeout(reconnectTimer);
       if (ws) ws.close();
     };
-  }, [selectedService]);
+  }, [selectedService, topology]);
 
   // Compute Live Executive Ribbon KPIs
   const kintsugiStats = useMemo(() => {
@@ -195,24 +268,44 @@ export default function App() {
     setSelectedService(targetService);
     playCyberChime('alert', soundEnabledRef.current);
     setAgentLogs((prev) => [
-      `[CHAOS INJECT] Triggering ${scenarioId} on ${targetService} (ns/hipster)...`,
+      `[CHAOS INJECT] Triggered ${scenarioId} on ${targetService} in ns/hipster...`,
       ...prev
     ]);
+
     try {
       const res = await fetch('/api/chaos/inject', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scenario: scenarioId, service: targetService })
+        body: JSON.stringify({
+          service: targetService,
+          fault_type: scenarioId,
+          scenario: scenarioId
+        })
       });
+
       if (res.ok) {
         const data = await res.json();
-        if (data.agent) setAgentState(data.agent);
-        if (data.topology) setTopology(data.topology);
-        playCyberChime('gold', soundEnabledRef.current);
-        setAgentLogs((prev) => [
-          `[✦ KINTSUGI VERIFIED] Closed-loop remediation completed for ${targetService}. Gold Seam sealed!`,
-          ...prev
-        ]);
+        if (data.agent_state === 'AWAITING_APPROVAL') {
+          setAgentLogs((prev) => [
+            `[HITL PAUSE] LangGraph proposed ${data.proposed_plan?.selected_action || 'mutation'} on ${targetService}. Operator approval required!`,
+            ...prev
+          ]);
+          setAgentState((prev) => ({
+            ...prev,
+            status: 'AWAITING_APPROVAL',
+            awaiting_approval: true,
+            stage: 'GUARDRAILS',
+            current_node: 'GUARDRAILS',
+            remediation_plan: data.proposed_plan,
+            pending_plan: data.proposed_plan
+          }));
+        } else {
+          playCyberChime('gold', soundEnabledRef.current);
+          setAgentLogs((prev) => [
+            `[✦ KINTSUGI REPAIRED] Closed-loop healing finished for ${targetService}. Gold Seam sealed!`,
+            ...prev
+          ]);
+        }
         fetchInitialData();
       }
     } catch (e) {
@@ -223,14 +316,27 @@ export default function App() {
   };
 
   const handleToggleMode = async () => {
-    const nextMode = status.agent_mode === 'AUTONOMOUS' ? 'HUMAN_IN_THE_LOOP' : 'AUTONOMOUS';
+    const isCurrentlyAuto = status.agent_mode === 'AUTONOMOUS';
+    const nextMode = isCurrentlyAuto ? 'HUMAN_IN_THE_LOOP' : 'AUTONOMOUS';
+    const nextAuto = !isCurrentlyAuto;
+
     try {
       const res = await fetch('/api/agent/mode', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: nextMode })
+        body: JSON.stringify({ autonomous: nextAuto, mode: nextMode })
       });
-      if (res.ok) setStatus((prev) => ({ ...prev, agent_mode: nextMode }));
+      if (res.ok) {
+        setStatus((prev) => ({
+          ...prev,
+          agent_mode: nextMode,
+          autonomous_mode: nextAuto
+        }));
+        setAgentLogs((prev) => [
+          `[MODE SWITCH] SRE Mode changed to ${nextMode} (${nextAuto ? 'Closed-Loop Auto-Remedy' : 'Manual Operator Approval Required'}).`,
+          ...prev
+        ]);
+      }
     } catch (e) {
       console.error(e);
     }
@@ -264,19 +370,56 @@ export default function App() {
     }
   };
 
-  const handleApproveReject = async (approved) => {
+  const handleApprove = async () => {
     try {
       const res = await fetch('/api/agent/approve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ approved })
+        body: JSON.stringify({ approved: true })
       });
       if (res.ok) {
         playCyberChime('gold', soundEnabledRef.current);
+        setAgentLogs((prev) => [
+          `[OPERATOR APPROVED] Authorized cluster mutation. ✦ Gold Seam sealed on target pod!`,
+          ...prev
+        ]);
+        setAgentState((prev) => ({
+          ...prev,
+          status: 'VERIFIED',
+          stage: 'VERIFY',
+          current_node: 'VERIFY',
+          awaiting_approval: false
+        }));
         fetchInitialData();
       }
     } catch (e) {
-      console.error(e);
+      console.error('Approval failed:', e);
+    }
+  };
+
+  const handleReject = async () => {
+    try {
+      const res = await fetch('/api/agent/reject', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ approved: false })
+      });
+      if (res.ok) {
+        setAgentLogs((prev) => [
+          `[OPERATOR REJECTED] Mutation aborted by operator. Pod remains in observed state.`,
+          ...prev
+        ]);
+        setAgentState((prev) => ({
+          ...prev,
+          status: 'REJECTED',
+          stage: 'MONITOR',
+          current_node: 'MONITOR',
+          awaiting_approval: false
+        }));
+        fetchInitialData();
+      }
+    } catch (e) {
+      console.error('Rejection failed:', e);
     }
   };
 
@@ -290,42 +433,18 @@ export default function App() {
     }
   };
 
-  // Command Palette Items
+  // Command Palette Items (Expanded with all 8 scenarios)
   const commandItems = useMemo(
     () => [
-      {
+      ...EXPANDED_CHAOS_OPTIONS.map((opt) => ({
         category: 'Chaos Engineering',
-        label: 'Inject CPU Contention on checkoutservice (SCALE 1→3)',
-        icon: Flame,
-        action: () => handleInjectChaos('cpu_contention', 'checkoutservice')
-      },
-      {
-        category: 'Chaos Engineering',
-        label: 'Inject Gradual Memory Leak on cartservice (PATCH 512Mi)',
-        icon: Flame,
-        action: () => handleInjectChaos('memory_leak', 'cartservice')
-      },
-      {
-        category: 'Chaos Engineering',
-        label: 'Inject HTTP 5xx Exception Burst on paymentservice (RESTART)',
-        icon: Flame,
-        action: () => handleInjectChaos('exception_burst', 'paymentservice')
-      },
-      {
-        category: 'Chaos Engineering',
-        label: 'Inject Worker Disk Pressure on productcatalogservice (CORDON)',
-        icon: Flame,
-        action: () => handleInjectChaos('disk_pressure', 'productcatalogservice')
-      },
-      {
-        category: 'Chaos Engineering',
-        label: 'Inject Envoy Network Latency on frontend (TRAFFIC SHAPING)',
-        icon: Flame,
-        action: () => handleInjectChaos('network_latency', 'frontend')
-      },
+        label: `Inject ${opt.label} on ${opt.defaultService} (${opt.action})`,
+        icon: opt.icon,
+        action: () => handleInjectChaos(opt.id, opt.defaultService)
+      })),
       {
         category: 'Control Plane',
-        label: 'Toggle Agent Autonomy (AUTONOMOUS ↔ HUMAN-IN-THE-LOOP)',
+        label: 'Toggle Auto-Remedy vs. Manual Operator Approval (HITL)',
         icon: ShieldCheck,
         action: handleToggleMode
       },
@@ -367,8 +486,8 @@ export default function App() {
   }, [cmdQuery, commandItems]);
 
   return (
-    <div className="relative z-10 flex h-screen w-screen flex-col overflow-hidden select-none">
-      {/* Top Command & KPI Ribbon */}
+    <div className="relative z-10 flex min-h-screen w-full flex-col select-none bg-obsidian text-slate-100">
+      {/* Top Command & Executive KPI Ribbon */}
       <TopBar
         status={status}
         wsConnected={wsConnected}
@@ -384,11 +503,11 @@ export default function App() {
         kintsugiStats={kintsugiStats}
       />
 
-      {/* Main 12-Column Responsive SRE Grid */}
-      <main className="flex-1 grid grid-cols-12 gap-3 p-3 min-h-0 overflow-hidden">
-        {/* Left 8 Columns: Interactive Service Topology + Multi-Modal Telemetry Workstation */}
-        <section className="col-span-12 lg:col-span-8 flex flex-col gap-3 min-h-0">
-          <div className="flex-[56] min-h-0">
+      {/* Main 12-Column Responsive SRE Grid with Adaptive Zoom Scaling */}
+      <main className="flex-1 grid grid-cols-12 gap-3 p-3 min-h-0 w-full max-w-full">
+        {/* Left 8 Columns: Interactive Topology Mesh + Multi-Modal Telemetry & Chaos Workstation */}
+        <section className="col-span-12 lg:col-span-8 flex flex-col gap-3 min-h-0 min-w-0">
+          <div className="min-h-[380px] lg:h-[48%] flex flex-col min-w-0">
             <ClusterTopology
               topology={topology}
               selectedService={selectedService}
@@ -397,7 +516,7 @@ export default function App() {
               onQuickChaos={handleInjectChaos}
             />
           </div>
-          <div className="flex-[44] min-h-0">
+          <div className="min-h-[360px] lg:h-[50%] flex flex-col min-w-0">
             <TelemetryCharts
               telemetryHistory={telemetryHistory}
               selectedService={selectedService}
@@ -410,12 +529,14 @@ export default function App() {
         </section>
 
         {/* Right 4 Columns: LangGraph Slow-Brain & 5-Guardrail Console */}
-        <section className="col-span-12 lg:col-span-4 h-full min-h-0">
+        <section className="col-span-12 lg:col-span-4 min-h-[520px] lg:h-full flex flex-col min-w-0">
           <AgentConsole
             agentState={agentState}
             logs={agentLogs}
-            onApprove={() => handleApproveReject(true)}
-            onReject={() => handleApproveReject(false)}
+            onApprove={handleApprove}
+            onReject={handleReject}
+            agentMode={status.agent_mode}
+            onToggleMode={handleToggleMode}
           />
         </section>
       </main>
@@ -457,16 +578,16 @@ export default function App() {
                     }}
                     className="w-full flex items-center justify-between rounded-xl px-3 py-2 text-left text-xs text-slate-200 hover:bg-amber-500/20 hover:text-amber-200 transition-all group"
                   >
-                    <div className="flex items-center gap-2.5">
-                      <Icon className="h-4 w-4 text-amber-400" />
-                      <div>
-                        <div className="font-medium">{item.label}</div>
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <Icon className="h-4 w-4 text-amber-400 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <div className="font-medium truncate">{item.label}</div>
                         <div className="font-mono-code text-[10px] text-slate-400">
                           {item.category}
                         </div>
                       </div>
                     </div>
-                    <ArrowRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 text-amber-300 transition-opacity" />
+                    <ArrowRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 text-amber-300 transition-opacity flex-shrink-0" />
                   </button>
                 );
               })}
@@ -482,12 +603,12 @@ export default function App() {
           onClick={() => setShowBenchmarkModal(false)}
         >
           <div
-            className="kintsugi-panel-gold max-h-[88vh] w-full max-w-4xl overflow-y-auto rounded-2xl p-6 shadow-2xl"
+            className="kintsugi-panel-gold max-h-[88vh] w-full max-w-4xl overflow-y-auto rounded-2xl p-6 shadow-2xl min-w-0"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
               <div className="flex items-center gap-2.5">
-                <BarChart3 className="h-5 w-5 text-amber-400" />
+                <BarChart3 className="h-5 w-5 text-amber-400 flex-shrink-0" />
                 <div>
                   <h2 className="font-display text-lg font-bold text-white">
                     Phase 1 &amp; Phase 2 Empirical Benchmark Verification

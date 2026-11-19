@@ -19,12 +19,19 @@
   user-select: none;
 }
 
+html {
+  height: 100%;
+  scroll-behavior: smooth;
+}
+
 body {
+  min-height: 100vh;
   margin: 0;
   background-color: var(--bg-obsidian);
   color: #f8fafc;
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   background-image:
     radial-gradient(circle at 12% 18%, rgba(245, 158, 11, 0.09) 0%, transparent 36%),
     radial-gradient(circle at 88% 82%, rgba(56, 189, 248, 0.08) 0%, transparent 38%),
@@ -159,4 +166,25 @@ body::before {
 }
 .react-flow__attribution {
   display: none !important;
+}
+
+/* Standard Auto-Fitting Message & Alert Containment */
+.kintsugi-panel,
+.kintsugi-panel-gold {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.kintsugi-message-fit {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Ensure smooth adaptive layouts at all zoom levels (67% to 175%) */
+@media (max-height: 850px) {
+  body {
+    overflow-y: auto !important;
+  }
 }

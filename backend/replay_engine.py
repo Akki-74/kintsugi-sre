@@ -125,15 +125,50 @@ class DigitalTwinReplayEngine:
         return {"status": "REJECTED_BY_OPERATOR", "service": service}
 
     def inject_chaos(self, service: str, fault_type: str) -> Dict[str, Any]:
-        """Manual Chaos Injection Deck trigger."""
+        """Manual Chaos Injection Deck trigger with expanded scenario taxonomy."""
+        normalized = str(fault_type).lower().strip()
         fault_map = {
+            # CPU Contention & Thrashing
             "cpu_contention": "CPU_EXHAUSTION",
+            "cpu_burn": "CPU_EXHAUSTION",
+            "cpu_stress": "CPU_EXHAUSTION",
+            "cpu": "CPU_EXHAUSTION",
+            "cascading_failure": "CPU_EXHAUSTION",
+            # Memory Exhaustion & OOM
             "memory_leak": "MEMORY_EXHAUSTION",
+            "oom_kill": "MEMORY_EXHAUSTION",
+            "heap_leak": "MEMORY_EXHAUSTION",
+            "memory": "MEMORY_EXHAUSTION",
+            "oom": "MEMORY_EXHAUSTION",
+            # Service Disruption, Exceptions & Deadlocks
             "exception": "SERVICE_DISRUPTION_LOG",
+            "exception_burst": "SERVICE_DISRUPTION_LOG",
+            "http_500": "SERVICE_DISRUPTION_LOG",
+            "5xx": "SERVICE_DISRUPTION_LOG",
+            "service_disruption": "SERVICE_DISRUPTION_LOG",
+            "crash_loop": "SERVICE_DISRUPTION_LOG",
+            "thread_deadlock": "SERVICE_DISRUPTION_LOG",
+            "deadlock": "SERVICE_DISRUPTION_LOG",
+            "socket_leak": "SERVICE_DISRUPTION_LOG",
+            # Disk Volume Pressure
             "disk_pressure": "DISK_EXHAUSTION",
-            "network_delay": "NETWORK_DEGRADATION"
+            "disk_fill": "DISK_EXHAUSTION",
+            "io_saturation": "DISK_EXHAUSTION",
+            "disk": "DISK_EXHAUSTION",
+            # Envoy Service Mesh & Network
+            "network_delay": "NETWORK_DEGRADATION",
+            "network_latency": "NETWORK_DEGRADATION",
+            "packet_loss": "NETWORK_DEGRADATION",
+            "network_degradation": "NETWORK_DEGRADATION",
+            "latency": "NETWORK_DEGRADATION",
+            "network": "NETWORK_DEGRADATION",
         }
-        cls_name = fault_map.get(fault_type, "CPU_EXHAUSTION")
+        
+        # Direct uppercase match if provided as standard class name
+        if str(fault_type).upper() in ["CPU_EXHAUSTION", "MEMORY_EXHAUSTION", "SERVICE_DISRUPTION_LOG", "DISK_EXHAUSTION", "NETWORK_DEGRADATION"]:
+            cls_name = str(fault_type).upper()
+        else:
+            cls_name = fault_map.get(normalized, "CPU_EXHAUSTION")
         
         # Mark node as active incident
         if hasattr(self.agent.k8s, "_mock_cluster_state") and "services" in self.agent.k8s._mock_cluster_state:
@@ -142,13 +177,17 @@ class DigitalTwinReplayEngine:
             svc_dict["is_incident"] = True
             svc_dict["is_remediating"] = False
             svc_dict["status"] = "Incident"
+            svc_dict["fault_type"] = cls_name
 
-        # Synthesize anomaly state
+        # Synthesize realistic multi-modal anomaly telemetry state
         telemetry = {
-            "CpuUsageRate(%)": 92.0 if "CPU" in cls_name else 25.0,
-            "MemoryUsageRate(%)": 94.0 if "MEMORY" in cls_name else 30.0,
-            "PodServerLatencyP95(s)": 2.2 if "NETWORK" in cls_name else 0.2,
-            "PodSuccessRate(%)": 45.0 if "SERVICE" in cls_name else 100.0,
+            "CpuUsageRate(%)": 94.6 if "CPU" in cls_name else 24.2,
+            "MemoryUsageRate(%)": 94.8 if "MEMORY" in cls_name else 31.0,
+            "PodServerLatencyP95(s)": 2.25 if "NETWORK" in cls_name else 0.12,
+            "PodClientLatencyP90(s)": 2.40 if "NETWORK" in cls_name else 0.15,
+            "PodSuccessRate(%)": 42.0 if "SERVICE" in cls_name else 99.8,
+            "SyscallWrite": 9200.0 if "DISK" in cls_name else 145.0,
+            "time_to_exhaustion_min": 4.1 if ("MEMORY" in cls_name or "DISK" in cls_name) else None
         }
         logs = [f"Chaos injection: {fault_type} triggered on container for {service}"]
 

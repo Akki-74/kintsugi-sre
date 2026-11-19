@@ -61,12 +61,15 @@ if frontend_dist.exists():
 
 
 class ChaosRequest(BaseModel):
-    service: str
-    fault_type: str  # cpu_contention, memory_leak, exception, disk_pressure, network_delay
+    service: str = "checkoutservice"
+    fault_type: Optional[str] = None
+    scenario: Optional[str] = None
+    fault: Optional[str] = None
 
 
 class ModeRequest(BaseModel):
-    autonomous: bool
+    autonomous: Optional[bool] = None
+    mode: Optional[str] = None
 
 
 class BackendRequest(BaseModel):
@@ -187,20 +190,32 @@ def get_benchmark_results():
 @app.post("/api/chaos/inject")
 def inject_chaos(req: ChaosRequest):
     """Trigger manual chaos injection on a specific microservice."""
-    result = engine.inject_chaos(req.service, req.fault_type)
+    fault = req.fault_type or req.scenario or req.fault or "cpu_contention"
+    result = engine.inject_chaos(req.service, fault)
     return result
 
 
 @app.post("/api/agent/mode")
 def set_agent_mode(req: ModeRequest):
     """Toggle between Autonomous mode and Human-in-the-Loop mode."""
-    engine.set_autonomous_mode(req.autonomous)
-    return {"autonomous_mode": engine.autonomous_mode}
+    if req.autonomous is not None:
+        val = bool(req.autonomous)
+    elif req.mode is not None:
+        val = (str(req.mode).upper() == "AUTONOMOUS")
+    else:
+        val = not engine.autonomous_mode
+    engine.set_autonomous_mode(val)
+    return {
+        "autonomous_mode": engine.autonomous_mode,
+        "agent_mode": "AUTONOMOUS" if engine.autonomous_mode else "HUMAN_IN_THE_LOOP"
+    }
 
 
 @app.post("/api/agent/approve")
-def approve_action():
+def approve_action(body: Optional[Dict[str, Any]] = None):
     """Operator approval in Human-in-the-Loop mode."""
+    if body and body.get("approved") is False:
+        return engine.reject_pending_plan()
     return engine.approve_pending_plan()
 
 

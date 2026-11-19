@@ -107,21 +107,31 @@ export default function TopBar({
             </span>
           </button>
 
-          {/* Agent Autonomy Switcher */}
-          <button
-            onClick={onToggleMode}
-            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold border transition-all ${
-              agentMode === 'AUTONOMOUS'
-                ? 'bg-amber-500/20 border-amber-400/60 text-amber-200 shadow-[0_0_15px_rgba(245,158,11,0.2)]'
-                : 'bg-sky-500/20 border-sky-400/60 text-sky-200'
-            }`}
-            title="Toggle between Autonomous Closed-Loop Execution and Human-in-the-Loop Approval"
-          >
-            <ShieldCheck className="h-3.5 w-3.5 text-amber-400" />
-            <span className="font-mono-code text-[11px]">
-              {agentMode === 'AUTONOMOUS' ? 'AUTONOMOUS SRE' : 'HUMAN-IN-LOOP'}
-            </span>
-          </button>
+          {/* Auto Remedy vs Manual Approve Segmented Switch */}
+          <div className="flex items-center rounded-lg bg-slate-950/90 border border-slate-700/80 p-0.5 shadow-inner" title="Toggle Auto-Remedy (Autonomous) vs Manual Approval (Human-in-the-Loop)">
+            <button
+              onClick={() => agentMode !== 'AUTONOMOUS' && onToggleMode()}
+              className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold transition-all ${
+                agentMode === 'AUTONOMOUS'
+                  ? 'bg-amber-500/25 border border-amber-400 text-amber-200 shadow-[0_0_12px_rgba(245,158,11,0.35)]'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Sparkles className="h-3 w-3 text-amber-400" />
+              <span className="font-mono-code text-[11px]">Auto Remedy</span>
+            </button>
+            <button
+              onClick={() => agentMode === 'AUTONOMOUS' && onToggleMode()}
+              className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold transition-all ${
+                agentMode !== 'AUTONOMOUS'
+                  ? 'bg-sky-500/25 border border-sky-400 text-sky-200 shadow-[0_0_12px_rgba(56,189,248,0.35)]'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <ShieldCheck className="h-3 w-3 text-sky-400" />
+              <span className="font-mono-code text-[11px]">Manual Approve</span>
+            </button>
+          </div>
 
           {/* ML & SARIMA Benchmark Modal Button */}
           <button
