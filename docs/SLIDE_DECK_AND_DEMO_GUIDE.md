@@ -76,7 +76,7 @@ This document provides the **10-Slide Presentation Deck** and the **Step-by-Step
 * **Event-Driven State Graph:**
   * `Monitor`: Polls prediction confidence ($p \ge 0.50$) and checks per-service cooldown.
   * `Diagnose`: Gathers live Kubernetes container state, resource specs, and recent log traces.
-  * `Plan`: Prompts LLM (LM Studio Qwen2.5-3B or Groq Llama-3.3-70B) with strict Pydantic JSON schema + Deterministic Rule Fallback Matrix.
+  * `Plan`: Prompts LLM (Groq Qwen 3.8-27B or local LM Studio Qwen2.5-3B) with strict Pydantic JSON schema + Deterministic Rule Fallback Matrix.
   * `Guardrails`: Enforces 5 deterministic safety checks before touching the cluster.
   * `Execute`: Calls official Python Kubernetes API or Digital Twin adapter.
   * `Verify`: Confirms metric stabilization and computes Mean Time To Remediate (MTTR).
@@ -115,7 +115,7 @@ This document provides the **10-Slide Presentation Deck** and the **Step-by-Step
 * **Zero Cost Deployment ($0.00):**
   * Packaged via multi-stage Docker (`node:20` + `python:3.11`).
   * Deployed on Hugging Face Spaces (Docker port 7860).
-  * Free inference via Groq API (Llama-3.3-70B) or local RTX 500 Ada (Qwen2.5-3B).
+  * Free inference via Groq API (Qwen 3.8-27B) or local RTX 500 Ada (Qwen2.5-3B).
 * **Speaker Note:** *"In conclusion, Kintsugi-AI achieves sub-minute MTTR, cuts false alarms by 88%, and runs entirely for $0.00 on free cloud infrastructure or local laptops."*
 
 ---
@@ -175,7 +175,7 @@ This document provides the **10-Slide Presentation Deck** and the **Step-by-Step
   > *Watch the state machine execute:*
   > 1. *`MONITOR` validates the prediction.*
   > 2. *`DIAGNOSE` correlates the CPU spike with container error logs.*
-  > 3. *`PLAN` prompts our LLM—using Groq Llama-3.3-70B or local Qwen2.5-3B on our laptop's RTX 500 Ada—and extracts a constrained Pydantic schema: `SCALE_DEPLOYMENT` from 1 to 3 replicas.*
+  > 3. *`PLAN` prompts our LLM—using Groq Qwen 3.8-27B or local Qwen2.5-3B on our laptop's RTX 500 Ada—and extracts a constrained Pydantic schema: `SCALE_DEPLOYMENT` from 1 to 3 replicas.*
   > 4. *`GUARDRAILS` runs 5 deterministic checks: verifying namespace lock, checking the 120s anti-thrashing cooldown, clamping replicas to our bounds, and validating against the Kubernetes API with dry_run='All'.*
   > 
   > *Because we're in Human-in-the-Loop mode, the agent safely pauses at `AWAITING_APPROVAL` with the operator modal."*

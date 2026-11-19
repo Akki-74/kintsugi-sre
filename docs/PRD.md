@@ -53,7 +53,7 @@ Kubernetes clusters experience multi-layered operational failures ranging from a
 |  [1. Context Collector] -> Pulls K8s Pod Status, Resource Specs & Last 30 Logs    |
 |            |                                                                      |
 |            v                                                                      |
-|  [2. Structured Reasoner] -> LM Studio (Qwen2.5-3B) / Groq (Llama-3.3-70B)      |
+|  [2. Structured Reasoner] -> Groq (Qwen 3.8-27B) / LM Studio (Qwen2.5-3B)      |
 |            |                 Enforces Pydantic JSON Schema + Rule Fallback        |
 |            v                                                                      |
 |  [3. SRE Safety Guardrails] -> Namespace Lock, Allowlist, Replica Caps (<=5),     |
@@ -133,7 +133,7 @@ The Phase 1 evaluation script (`evaluate.py`) must automatically generate a comp
 ## 5. Phase 2 Requirements: Guardrailed Ambient Remediation
 
 ### 5.1 Structured LLM Output & Fallback Reliability
-To ensure 100% reliability on small local models (Qwen2.5-3B-Instruct via LM Studio on 4GB VRAM) as well as cloud models (Llama-3.3-70B via Groq):
+To ensure 100% reliability on small local models (Qwen2.5-3B-Instruct via LM Studio on 4GB VRAM) as well as cloud models (Qwen 3.8-27B via Groq):
 
 - The LLM does **not** write arbitrary shell scripts or raw Python code.
 - The LLM must output a strict Pydantic-validated JSON object:

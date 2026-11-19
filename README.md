@@ -184,6 +184,37 @@ To satisfy the optional hackathon bonus **"Consume K8s: Package all dependencies
 
 ---
 
+## ☸️ Live Multi-Node Kubernetes & Observability Infrastructure
+
+In addition to the held-out Digital Twin replay engine, Kintsugi-AI is verified end-to-end against a live, multi-node Kubernetes cluster with full Prometheus/Grafana observability running on Docker Desktop / WSL2:
+
+### 1. Cluster Topology (v1.36.1)
+- **`desktop-control-plane`:** Kubernetes API Server, etcd, controller-manager, scheduler.
+- **`desktop-worker`:** Worker Node 1 (supports node-level `CORDON_AND_RELOCATE` remediation).
+- **`desktop-worker2`:** Worker Node 2 (active workload target for relocated pods).
+- **Node Mesh Tag:** Labeled with `kintsugi.sre/mesh=active`.
+
+### 2. Microservices Stack (`hipster` Namespace)
+- 10 Google *OnlineBoutique* deployments (`frontend`, `checkoutservice`, `cartservice`, `paymentservice`, `productcatalogservice`, `currencyservice`, `shippingservice`, `recommendationservice`, `adservice`, `emailservice`).
+- Engineered with lightweight `python:3.11-alpine` containers that emit continuous structured JSON logs (`TraceID`, `SpanID`, `severity`, `http.resp.status`, `http.resp.took_ms`) to stdout every 5 seconds.
+- Explicit resource boundaries configured (`requests: 20m/32Mi`, `limits: 200m/128Mi`), enabling real-time cgroup metric computation (`CpuUsageRate(%)`, `MemoryUsageRate(%)`).
+
+### 3. Observability & Management Dashboards
+| Service | Endpoint | Namespace | Access Details |
+| :--- | :--- | :--- | :--- |
+| **Prometheus API & UI** | `http://localhost:9090` | `monitoring` | Direct PromQL query access |
+| **Grafana Dashboard** | `http://localhost:3000` | `monitoring` | `admin` / `admin` (Memory limit tuned to 512Mi) |
+| **Kubernetes Dashboard** | `https://localhost:8443` | `kubernetes-dashboard` | Bearer Token via `admin-user` ServiceAccount |
+| **Kintsugi Command Center** | `http://localhost:8000/app/` | `backend` / `app` | Live WebSocket & React UI |
+
+### 4. Linux Kernel inotify Optimization
+To prevent `kube-apiserver` and `etcd` TLS handshake timeouts during simultaneous 3-node multi-container launches under Windows WSL2:
+```bash
+docker exec desktop-control-plane sysctl -w fs.inotify.max_user_instances=8192 fs.inotify.max_user_watches=524288
+```
+
+---
+
 ## ⚡ Local Quickstart Guide
 
 ### 1. Installation
