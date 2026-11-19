@@ -5,11 +5,16 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Python: 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Render.com-46E3B7.svg?logo=render&logoColor=white)](https://kintsugi-ai.onrender.com/app/)
+[![CI/CD](https://github.com/Akki-74/kintsugi-sre/actions/workflows/ci.yml/badge.svg)](https://github.com/Akki-74/kintsugi-sre/actions)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com)
 [![LangGraph](https://img.shields.io/badge/LangGraph-StateGraph-orange.svg)](https://github.com/langchain-ai/langgraph)
 [![XGBoost](https://img.shields.io/badge/XGBoost-2.0+-red.svg)](https://xgboost.readthedocs.io)
 [![Docker](https://img.shields.io/badge/Docker-Multi--Stage-2496ED.svg)](https://www.docker.com)
 [![Cost](https://img.shields.io/badge/Total%20Cost-%240.00%20(Free%20Tier)-brightgreen.svg)]()
+
+> 🚀 **Live Interactive Command Center (Free Cloud Deployment):**  
+> 👉 **[https://kintsugi-ai.onrender.com/app/](https://kintsugi-ai.onrender.com/app/)** *(Zero setup required — interact directly with live digital twin chaos injection and LangGraph agent healing)*
 
 > **Kintsugi-AI** takes its name from the centuries-old Japanese art of *Kintsugi* (金継ぎ)—mending broken ceramics with gold lacquer so the repaired object emerges stronger, more resilient, and more beautiful than before.
 > 
