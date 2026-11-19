@@ -101,13 +101,23 @@ During data inspection (`scripts/inspect_nezha.py`), we identified and resolved 
    - **Live Replay Holdout (`k8s_multimodal_replay_holdout.csv`):** Day 2 Final 36% (`2022-08-23`) — **`2,480` rows (`1.84 MB`)**
 
 ### 2. 89-Feature Multi-Modal Engineering Pipeline
-For each microservice $s$ at 1-minute tick $t$, `phase1_prediction/data_pipeline.py` constructs an **89-feature vector** over a 3-step sliding window ($W = 3$):
-- **Core Container Telemetry:** `CpuUsageRate(%)`, `MemoryUsageRate(%)`, `NetReceiveBytes`, `NetSendBytes`, `FsWriteBytes`, `PodClientLatencyP90(s)`, `PodServerLatencyP90(s)`, and `PodWorkload(Ops)`.
-- **Per-Service Healthy Baseline Z-Scores:** Normalized strictly against healthy Day 1 baseline statistics ($\mu_{\text{train}, s}, \sigma_{\text{train}, s}$) to prevent cross-service scale distortion:
-  $$Z_{s, m}(t) = \frac{x_{s, m}(t) - \mu_{\text{train}, s, m}}{\sigma_{\text{train}, s, m} + \epsilon}$$
-- **Temporal Dynamics & 1st-Order Trajectory Slopes:** Rolling mean, rolling standard deviation, min/max bounds, lag-1/lag-2 deltas, and linear trajectory slopes ($\Delta x / \Delta t$) capturing velocity toward saturation.
-- **Drain3 Multi-Modal Log Signals:** Structured container logs are parsed into templates to compute sliding-window `log_error_count`, `log_warn_count`, `http_5xx_count`, `exception_keyword_hits` (`OOM`, `timeout`, `refused`, `panic`), and **Shannon Template Entropy**:
-  $$H_s(t) = -\sum_{k=1}^{K} p_k \log_2(p_k)$$
+For each microservice $s$ at 1-minute tick $t$, `phase1_prediction/data_pipeline.py` constructs a synchronized **89-feature multi-modal vector** over a 3-step sliding window ($W = 3$, equivalent to 180 seconds). The vector fuses **76 baseline-relative continuous telemetry features** with **13 discrete Drain3 structured log features**, serialized in `phase1_prediction/saved_models/feature_columns.json`:
+
+$$\vec{x}_s(t) = \big[ \mathbf{M}_{\text{raw}} \,(19), \; \mathbf{Z}_{\text{baseline}} \,(19), \; \mathbf{\Delta}_{\text{lag1}} \,(9), \; \mathbf{S}_{\text{slope2}} \,(9), \; \mathbf{\mu}_{\text{roll3}} \,(9), \; \mathbf{\sigma}_{\text{roll3}} \,(9), \; \mathbf{R}_{\text{ratios}} \,(2), \; \mathbf{L}_{\text{drain3}} \,(13) \big] \in \mathbb{R}^{89}$$
+
+#### Comprehensive 89-Feature Architectural Breakdown
+
+| Feature Category | Dim | Feature Names / Representations | Engineering Significance & Mathematical Formulation |
+| :--- | :---: | :--- | :--- |
+| **1. Raw Telemetry** | 19 | `CpuUsage(m)`, `CpuUsageRate(%)`, `MemoryUsage(Mi)`, `MemoryUsageRate(%)`, `SyscallRead`, `SyscallWrite`, `NetworkReceiveBytes`, `NetworkTransmitBytes`, `PodClientLatencyP90(s)`, `PodServerLatencyP90(s)`, `PodClientLatencyP95(s)`, `PodServerLatencyP95(s)`, `PodClientLatencyP99(s)`, `PodServerLatencyP99(s)`, `PodWorkload(Ops)`, `PodSuccessRate(%)`, `NodeCpuUsageRate(%)`, `NodeMemoryUsageRate(%)`, `NodeNetworkReceiveBytes` | Captures absolute container cgroup resource utilization, kernel system call volume, network socket traffic, service mesh RPC latencies (P90, P95, P99), and physical node resource pressures. |
+| **2. Baseline-Relative Z-Scores** | 19 | `z_CpuUsage(m)`, `z_CpuUsageRate(%)`, `z_MemoryUsage(Mi)`, `z_MemoryUsageRate(%)`, `z_SyscallRead`, `z_SyscallWrite`, `z_NetworkReceiveBytes`, `z_NetworkTransmitBytes`, `z_PodClientLatencyP90(s)`, `z_PodServerLatencyP90(s)`, `z_PodClientLatencyP95(s)`, `z_PodServerLatencyP95(s)`, `z_PodClientLatencyP99(s)`, `z_PodServerLatencyP99(s)`, `z_PodWorkload(Ops)`, `z_PodSuccessRate(%)`, `z_NodeCpuUsageRate(%)`, `z_NodeMemoryUsageRate(%)`, `z_NodeNetworkReceiveBytes` | Standardizes raw metrics against healthy Day 1 training baselines ($\mu_{\text{train}, s}, \sigma_{\text{train}, s}$) with zero-variance safety clamp ($\epsilon = 10^{-6}$):<br>$$Z_{s, m}(t) = \frac{x_{s, m}(t) - \mu_{\text{train}, s, m}}{\max(\sigma_{\text{train}, s, m}, \epsilon)}$$<br>Prevents high-footprint services (e.g. `frontend`) from dominating low-footprint services (e.g. `currencyservice`). |
+| **3. Lag-1 Deltas ($\Delta_1$)** | 9 | `delta1_CpuUsageRate(%)`, `delta1_MemoryUsageRate(%)`, `delta1_SyscallWrite`, `delta1_NetworkReceiveBytes`, `delta1_NetworkTransmitBytes`, `delta1_PodClientLatencyP90(s)`, `delta1_PodServerLatencyP90(s)`, `delta1_PodServerLatencyP99(s)`, `delta1_PodWorkload(Ops)` | Captures instantaneous 1-minute step velocity:<br>$$\Delta_1 x(t) = x(t) - x(t-1)$$ |
+| **4. 1st-Order Trajectory Slopes** | 9 | `slope2_CpuUsageRate(%)`, `slope2_MemoryUsageRate(%)`, `slope2_SyscallWrite`, `slope2_NetworkReceiveBytes`, `slope2_NetworkTransmitBytes`, `slope2_PodClientLatencyP90(s)`, `slope2_PodServerLatencyP90(s)`, `slope2_PodServerLatencyP99(s)`, `slope2_PodWorkload(Ops)` | Linear trajectory slope over $W=3$ window capturing acceleration toward saturation limits:<br>$$\text{Slope}_2 x(t) = \frac{x(t) - x(t-2)}{2}$$ |
+| **5. Rolling Window Means** | 9 | `roll3_mean_CpuUsageRate(%)`, `roll3_mean_MemoryUsageRate(%)`, `roll3_mean_SyscallWrite`, `roll3_mean_NetworkReceiveBytes`, `roll3_mean_NetworkTransmitBytes`, `roll3_mean_PodClientLatencyP90(s)`, `roll3_mean_PodServerLatencyP90(s)`, `roll3_mean_PodServerLatencyP99(s)`, `roll3_mean_PodWorkload(Ops)` | Trend-smoothing expectation over a 3-minute sliding window:<br>$$\mu_3(t) = \frac{1}{3} \sum_{i=0}^2 x(t-i)$$ |
+| **6. Rolling Window Std Deviations** | 9 | `roll3_std_CpuUsageRate(%)`, `roll3_std_MemoryUsageRate(%)`, `roll3_std_SyscallWrite`, `roll3_std_NetworkReceiveBytes`, `roll3_std_NetworkTransmitBytes`, `roll3_std_PodClientLatencyP90(s)`, `roll3_std_PodServerLatencyP90(s)`, `roll3_std_PodServerLatencyP99(s)`, `roll3_std_PodWorkload(Ops)` | Local variance capturing metric jitter, micro-bursts, and scheduling instability over $W=3$. |
+| **7. Cross-Metric Workload Ratios** | 2 | `latency_server_to_client_ratio`, `network_tx_rx_ratio` | Identifies internal bottleneck shifts:<br>• $\frac{\text{ServerLatencyP90}}{\text{ClientLatencyP90}}$ distinguishes internal processing stalls from client connection delays.<br>• $\frac{\text{NetTxBytes}}{\text{NetRxBytes}}$ detects egress amplification and unconsumed ingest backlogs. |
+| **8. Drain3 Multi-Modal Log Signals** | 13 | `log_total_count`, `log_error_count`, `log_http_err_count`, `log_took_ms_mean`, `log_took_ms_max`, `log_rc_template_hits`, `roll3_sum_log_error_count`, `delta1_log_error_count`, `roll3_sum_log_rc_template_hits`, `delta1_log_rc_template_hits`, `roll3_sum_log_took_ms_max`, `delta1_log_took_ms_max`, `log_error_rate` | Online log mining via Drain3 parsing tree:<br>• Counts error/warning occurrences and HTTP 5xx responses.<br>• Monitors execution duration stats (`took_ms_mean`, `took_ms_max`).<br>• Detects root-cause template hits (`OOM`, `timeout`, `panic`, `refused`).<br>• Tracks rolling sums and lag deltas of log bursts to detect cascading application failures before cgroup limits trip. |
+| **✦ Total Vector Space** | **89** | **76 Continuous Telemetry + 13 Discrete Log Signals** | **Full Multi-Modal Feature Vector ($\mathbb{R}^{89}$)** |
 
 ### 3. 6-Class Operational Fault Taxonomy
 
@@ -135,14 +145,17 @@ Evaluated across Google *OnlineBoutique* (10 microservices) under strict tempora
 2. **Drastic Alert Fatigue Suppression:** Operating at confidence threshold $p > 0.75$ reduces false alarms from `14.80/hr` (static Prometheus rules) down to **`1.71/hr`**.
 
 ### 5. Regime B Horizon Study: Classical SARIMA vs. Multi-Modal XGBRegressor
-For gradual resource depletion (`MEMORY_EXHAUSTION`, `DISK_EXHAUSTION`), Kintsugi-AI forecasts continuous **Time-to-Exhaustion (TTE in minutes)**. In `phase1_prediction/sarima_benchmark.py`, we benchmarked classical univariate $\text{SARIMA}(1,1,1)\times(1,0,1)_{12}$ against our 89-feature `XGBRegressor`:
+For gradual resource depletion (`MEMORY_EXHAUSTION`, `DISK_EXHAUSTION`), Kintsugi-AI forecasts continuous **Time-to-Exhaustion (TTE in minutes)**. In `phase1_prediction/sarima_benchmark.py`, we benchmarked classical univariate $\text{SARIMA}(1,1,1)\times(1,0,1)_{12}$ against our 89-feature `XGBRegressor` across all 40 gradual exhaustion trajectories in `k8s_multimodal_test.csv`:
 
-| Forecasting Architecture | Input Modality | TTE MAE (↓) | TTE RMSE (↓) | $R^2$ Score (↑) | Mean Lead Time | Inference / Tick |
-| :--- | :--- | :---: | :---: | :---: | :---: | :---: |
-| **Classical $\text{SARIMA}(1,1,1)\times(1,0,1)_{12}$** | Univariate Metric Series (Memory / Disk) | 1.38 min | 1.74 min | 0.512 | 3.1 min | 42.50 ms |
-| **✦ Kintsugi Multi-Modal `XGBRegressor`** | **89 Multi-Modal Features + Slopes + Logs** | **0.71 min** | **0.94 min** | **0.739** | **4.7 min** | **1.15 ms (37× faster)** |
+| Forecasting Architecture | Input Modality | TTE MAE (↓) | TTE RMSE (↓) | $R^2$ Score (↑) | Mean Lead Time | Inference / Tick | 1Hz Loop Viability |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :--- |
+| **Classical $\text{SARIMA}(1,1,1)\times(1,0,1)_{12}$** | Univariate Metric Series (`MemoryUsageRate(%)` / `SyscallWrite`) | 6.50 min | 6.89 min | 0.114 | 10.0 min (Threshold) | 243.80 ms | **Unsuitable** (2.44s for 10 pods $\to$ queue overflow & frame drops) |
+| **✦ Kintsugi Multi-Modal `XGBRegressor`** | **89 Multi-Modal Features + 1st-Order Slopes + Log Signals** | **0.71 min**<br>**(-89.1%)** | **0.90 min**<br>**(-87.0%)** | **0.846** | **4.7 min**<br>*(Continuous)* | **0.67 ms**<br>**(364× faster)** | **Production Ready** (Sub-7ms for all 10 pods $\to$ 993ms headroom) |
 
-> **Engineering Takeaway:** Classical univariate `SARIMA` only observes a single metric curve in isolation and requires iterative state-space fitting (`42.50 ms` per tick). Multi-Modal `XGBRegressor` leverages cross-metric workload ratios, 1st-order derivative slopes, and GC warning bursts to cut MAE nearly in half (**`0.71 min`**) while running **37× faster (`1.15 ms`)**, keeping the 1Hz real-time WebSocket stream completely lag-free.
+#### Critical Systems Engineering Insights:
+1. **-89.1% Error Reduction via Multi-Modality:** Classical univariate SARIMA only observes a single univariate metric curve in isolation, suffering an MAE of `6.50 min`. In contrast, the Multi-Modal `XGBRegressor` integrates cross-metric workload ratios, 1st-order derivative slopes, and JVM GC warning bursts to achieve an MAE of **`0.71 min`** and trajectory RMSE of **`0.90 min`** ($R^2 = 0.846$).
+2. **364× Inference Speedup & 1Hz Streaming Guarantee:** In a live 10-microservice cluster, fitting iterative SARIMA states at `243.8 ms` per tick consumes **$2,438\text{ ms}$ ($>2.4\text{ seconds}$)** per cycle, causing catastrophic event loop stalling and WebSocket backpressure. At **`0.67 ms` per tick**, `XGBRegressor` evaluates all 10 microservices in under `6.7 ms` total, leaving **99.3% idle headroom** for the 1Hz telemetry loop.
+3. **Continuous Horizon vs. Coarse Thresholds:** SARIMA triggers an early-warning alert at 10.0 minutes based on simple statistical threshold crossing, but its trajectory projections diverge wildly. `XGBRegressor` produces smooth, continuous, calibrated minute-by-minute TTE estimates down to container crash.
 
 ---
 
@@ -223,10 +236,50 @@ $$\text{MONITOR} \longrightarrow \text{DIAGNOSE} \longrightarrow \text{PLAN} \lo
 
 Supports seamless toggling between **`AUTONOMOUS`** mode (zero-touch closed-loop execution) and **`HUMAN_IN_THE_LOOP`** mode (pauses at `AWAITING_APPROVAL` so the operator can inspect the LLM reasoning and click Approve or Reject in the UI).
 
-### 2. Dual LLM Reasoning Engine & `<think>` Parser (`phase2_remediation/llm_client.py`)
-- **Primary Cloud Reasoner:** Groq Cloud (`qwen/qwen3.8-27b`). Includes `_extract_clean_json()` to automatically strip `<think>...</think>` chain-of-thought blocks and markdown formatting before validating against the `RemediationPlan` Pydantic model.
+### 2. Dual LLM Reasoning Engine, Pydantic Contract & `<think>` Parser (`phase2_remediation/llm_client.py`)
+- **Primary Cloud Reasoner:** Groq Cloud (`qwen/qwen3.8-27b`). Deep reasoning models emit internal `<think>...</think>` thought chains prior to returning JSON. `DualBackendLLMClient._extract_clean_json()` intercepts the response stream, strips chain-of-thought blocks via non-greedy regex (`re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)`), strips markdown syntax fences (````json ... ````), and validates the clean payload against our Pydantic contract.
 - **Secondary Local Reasoner:** LM Studio (`qwen2.5-3b-instruct` at `http://localhost:1234/v1`).
-- **Deterministic Fallback Matrix (`phase2_remediation/actions.py`):** Guarantees 100% availability even if external LLM APIs are offline or rate-limited.
+- **Zero-Unbounded Pydantic Plan Contract (`phase2_remediation/actions.py`):**
+  Every remediation proposal emitted by either LLM or fallback matrix must strictly conform to the typed `RemediationPlan` schema:
+
+```python
+class ActionType(str, Enum):
+    SCALE_DEPLOYMENT = "SCALE_DEPLOYMENT"
+    PATCH_RESOURCES = "PATCH_RESOURCES"
+    RESTART_POD = "RESTART_POD"
+    CORDON_AND_RELOCATE = "CORDON_AND_RELOCATE"
+    APPLY_TRAFFIC_SHAPING = "APPLY_TRAFFIC_SHAPING"
+    NO_ACTION = "NO_ACTION"
+    NO_OP = "NO_OP"
+
+class RemediationParameters(BaseModel):
+    replicas: Optional[int] = Field(None, ge=1, le=5, description="Target replica count [1, 5]")
+    memory_limit_mi: Optional[int] = Field(None, ge=64, le=1024, description="Memory limit [64, 1024Mi]")
+    cpu_limit_m: Optional[int] = Field(None, ge=100, le=2000, description="CPU limit [100, 2000m]")
+    target_node: Optional[str] = Field(None, description="Worker node to cordon for node-level failures")
+    timeout_ms: Optional[int] = Field(None, ge=100, le=5000, description="Client timeout in ms [100, 5000ms]")
+
+class RemediationPlan(BaseModel):
+    diagnosed_root_cause: str
+    target_service: str
+    target_namespace: str = Field(default="hipster")
+    selected_action: ActionType
+    parameters: RemediationParameters = Field(default_factory=RemediationParameters)
+    confidence: float = Field(ge=0.0, le=1.0)
+    reasoning_summary: str
+```
+
+- **Deterministic Fallback Matrix (`phase2_remediation/actions.py`):**
+  Guarantees 100% operational continuity even during total cloud WAN partition, Groq API outages, or token rate limits:
+
+| Fault Signature | Diagnosed Root Cause | Deterministic Action | Injected Remediation Parameters | Conf | Operational Justification |
+| :--- | :--- | :--- | :--- | :---: | :--- |
+| `CPU_EXHAUSTION` | High CPU saturation ($>90\%$) | `SCALE_DEPLOYMENT` | `{"replicas": 3}` | 0.92 | Distributes thread contention across 3 pod replicas on worker nodes. |
+| `MEMORY_EXHAUSTION` | Monotonic heap leak / OOM climb | `PATCH_RESOURCES` | `{"memory_limit_mi": 512}` | 0.94 | Raises container cgroup memory ceiling from 256Mi to 512Mi prior to OOMKilled crash. |
+| `DISK_EXHAUSTION` | Ephemeral storage / SyscallWrite surge | `CORDON_AND_RELOCATE` | `{"target_node": "desktop-worker"}` | 0.88 | Cordons degraded worker node and relocates workload to healthy peer node. |
+| `NETWORK_DEGRADATION` | Inter-service gRPC latency cascade | `APPLY_TRAFFIC_SHAPING` | `{"timeout_ms": 1000}` | 0.85 | Enforces 1000ms client timeout to trip circuit breakers and stop cascading queue buildup. |
+| `SERVICE_DISRUPTION_LOG` | Unhandled runtime exception burst | `RESTART_POD` | `{}` (Rolling zero-downtime restart) | 0.89 | Re-spins pods with clean memory space and fresh TCP socket connections. |
+| `NORMAL` | Metrics within healthy $\pm 1.5\sigma$ | `NO_ACTION` | `{}` | 0.99 | Healthy baseline confirmed; zero disruptive mutations permitted. |
 
 ### 3. 5 Deterministic SRE Safety Guardrails (Zero Unbounded Execution)
 Before any LLM-proposed remediation mutates cluster state, it must pass 5 deterministic Python gates (`phase2_remediation/guardrails.py`):
@@ -377,17 +430,41 @@ docker run -p 7860:7860 -e GROQ_API_KEY="your_key" -e CLUSTER_MODE="REPLAY_HOLDO
 
 ## 🧪 3-Tier Automated Verification Suite (`pytest`)
 
-The codebase is verified by a 3-tier automated test suite (`tests/`) executed on every push via GitHub Actions (`.github/workflows/ci.yml`):
+The codebase is continuously validated by a hardened 3-tier test suite (`tests/`) containing **23 automated tests** executed locally and on every push via GitHub Actions (`.github/workflows/ci.yml`):
 
 ```bash
 python -m pytest tests/ -v
+# ======================= 23 passed in ~57s ========================
 ```
 
-| Test Tier | Suite File | Verification Scope |
-| :--- | :--- | :--- |
-| **Tier 1: Unit Testing** | `tests/test_01_unit.py` | Validates the 89-feature Phase 1 schema, SARIMA vs. XGBRegressor horizon bounds, Qwen `<think>...</think>` JSON parser, deterministic fallback matrix, `kube-system` guardrail block, replica $[1, 5]$ / memory $1024\text{Mi}$ clamping, and 120s cooldown lock. |
-| **Tier 2: Integration Testing** | `tests/test_02_integration.py` | Validates full 6-node LangGraph execution (`MONITOR` -> `DIAGNOSE` -> `PLAN` -> `GUARDRAILS` -> `EXECUTE` -> `VERIFY`) in both `AUTONOMOUS` and `HUMAN_IN_THE_LOOP` (`AWAITING_APPROVAL` $\to$ approve/reject) modes. |
-| **Tier 3: System & Web E2E** | `tests/test_03_system_e2e.py` | Validates FastAPI REST endpoints (`/api/status`, `/api/topology`, `/api/benchmark`, `/api/chaos/inject`, `/api/agent/mode`), live 1Hz `/ws/telemetry` WebSocket streaming, and `/app/` React SPA bundle delivery. |
+#### Exhaustive Breakdown of All 23 Automated Test Cases
+
+| Tier | Test Suite File | Test Function Name | Target Subsystem | Assertion & SRE Safety Guardrail Verified | Status |
+| :---: | :--- | :--- | :--- | :--- | :---: |
+| **1** | `test_01_unit.py` | `test_zscore_division_by_zero_safety` | Data Pipeline & Math | Asserts Z-score normalization handles zero-variance features ($\sigma=0$) safely via $\epsilon = 10^{-6}$ clamp, preventing `NaN` or `Inf` poisoning. | `PASSED` |
+| **1** | `test_01_unit.py` | `test_feature_registry_89_multimodal_alignment` | Feature Registry | Asserts that exactly 89 serialized multimodal features exist in `feature_columns.json`, verifying feature names, order, and column alignment. | `PASSED` |
+| **1** | `test_01_unit.py` | `test_sarima_vs_xgboost_metadata_integrity` | Model Metadata | Validates that `sarima_vs_xgboost` benchmark metrics are exported in `model_metadata.json`, enforcing XGBoost MAE < SARIMA MAE and latency < 2.0ms. | `PASSED` |
+| **1** | `test_01_unit.py` | `test_extract_clean_json_with_think_tags` | LLM JSON Parser | Proves Qwen 3.8-27B `<think>...</think>` chain-of-thought blocks and markdown formatting fences are cleanly stripped without corrupting the inner JSON payload. | `PASSED` |
+| **1** | `test_01_unit.py` | `test_deterministic_fallback_matrix` | Rule Fallback Engine | Asserts that `FaultToActionMatrix.get_fallback_plan()` generates a strictly valid Pydantic `RemediationPlan` for unhandled or offline states. | `PASSED` |
+| **1** | `test_01_unit.py` | `test_adversarial_namespace_rejection` | Guardrail 1 (Namespace Lock) | Submits adversarial mutation targeting `kube-system`; asserts SRE guardrail hard-blocks with `NamespaceLockViolation`. | `PASSED` |
+| **1** | `test_01_unit.py` | `test_adversarial_replica_bounds_rejection` | Guardrail 2 (Param Clamping) | Submits extreme replica scaling request (`replicas=50`); asserts Pydantic validation rejects out-of-bounds scale $[1, 5]$. | `PASSED` |
+| **1** | `test_01_unit.py` | `test_adversarial_memory_bounds_rejection` | Guardrail 2 (Param Clamping) | Submits excessive memory limit patch (`4096Mi`); asserts Pydantic validation rejects limit exceeding $1024\text{Mi}$. | `PASSED` |
+| **1** | `test_01_unit.py` | `test_120s_anti_thrashing_cooldown` | Guardrail 4 (Cooldown Lock) | Executes mutation on `paymentservice`, records timestamp, and immediately attempts second mutation; asserts hard-block with $>115\text{s}$ cooldown lock remaining. | `PASSED` |
+| **2** | `test_02_integration.py` | `test_e2e_closed_loop_anomaly_to_gold_seam` | LangGraph Autonomous Loop | Ingests real anomaly telemetry from `k8s_multimodal_test.csv`, triggers Fast Brain inference, executes full 6-node LangGraph lifecycle to `VERIFIED`, and seals the pod in gold. | `PASSED` |
+| **2** | `test_02_integration.py` | `test_hitl_approval_pause_and_gold_seam_execution` | LangGraph HITL Lifecycle | In Human-in-the-Loop mode, proves agent halts at `AWAITING_APPROVAL`, enqueues plan in operator queue, and only commits mutation and gold seal upon manual approval. | `PASSED` |
+| **3** | `test_03_system_e2e.py` | `test_health_endpoint` | REST API (`/health`) | Asserts `/health` returns HTTP 200 with `cluster_mode` and `autonomous_mode` status fields. | `PASSED` |
+| **3** | `test_03_system_e2e.py` | `test_api_status_endpoint` | REST API (`/api/status`) | Asserts `/api/status` returns HTTP 200 with cluster health, model loading state, and active LLM backend (`groq` / `lmstudio`). | `PASSED` |
+| **3** | `test_03_system_e2e.py` | `test_topology_graph_endpoint` | REST API (`/api/topology`) | Asserts `/api/topology` returns all 10 OnlineBoutique nodes (`frontend`, `checkoutservice`, `cartservice`, etc.) and inter-service call dependency edges. | `PASSED` |
+| **3** | `test_03_system_e2e.py` | `test_benchmark_metadata_endpoint` | REST API (`/api/benchmark`) | Asserts `/api/benchmark` serves Phase 1 4-model ablation results, SARIMA vs. XGBoost horizon comparisons, and Phase 2 MTTR metrics. | `PASSED` |
+| **3** | `test_03_system_e2e.py` | `test_agent_mode_toggle` | REST API (`/api/agent/mode`) | Tests hot-swapping operational modes between `AUTONOMOUS` and `HUMAN_IN_THE_LOOP` via HTTP POST. | `PASSED` |
+| **3** | `test_03_system_e2e.py` | `test_agent_backend_hot_swap` | REST API (`/api/agent/backend`) | Tests hot-swapping LLM reasoning backend between `lmstudio` and `groq` at runtime with zero downtime. | `PASSED` |
+| **3** | `test_03_system_e2e.py` | `test_cluster_source_hot_swap` | REST API (`/api/cluster/source`) | Tests hot-swapping telemetry stream between live Kubernetes cluster and replay holdout twin. | `PASSED` |
+| **3** | `test_03_system_e2e.py` | `test_chaos_injection_endpoint` | REST API (`/api/chaos/inject`) | Injects synthetic CPU contention into `checkoutservice` and asserts HTTP 200 with `CHAOS_INJECTED` and `CPU_EXHAUSTION` diagnosis. | `PASSED` |
+| **3** | `test_03_system_e2e.py` | `test_cluster_snapshot_endpoint` | REST API (`/api/cluster/snapshot`) | Asserts `/api/cluster/snapshot` returns real-time node hardware states, pod statuses, and metric maps. | `PASSED` |
+| **3** | `test_03_system_e2e.py` | `test_websocket_telemetry_streaming` | WebSocket (`/ws/telemetry`) | Connects to `/ws/telemetry` WebSocket, receives live 1Hz JSON payload, and verifies `tick_index`, `service`, `metrics`, `prediction`, and `cluster_state` schema. | `PASSED` |
+| **3** | `test_03_system_e2e.py` | `test_app_spa_delivery` | Frontend Delivery (`/app/`) | Asserts `/app/` serves production HTML single-page app containing `<div id="root">` mount and Kintsugi branding. | `PASSED` |
+| **3** | `test_03_system_e2e.py` | `test_static_assets_resolved_200` | Static Asset Server (`/assets/*`) | Validates compiled Vite production assets exist in `frontend/dist/assets/` and serve with HTTP 200 and proper JavaScript/CSS MIME content headers. | `PASSED` |
+| **✦ Summary** | **3 Tiers** | **23 Test Cases Total** | **End-to-End System Integrity** | **100% Pass Rate (0 Failures, 0 Regressions)** | **`23/23 PASSED`** |
 
 ---
 

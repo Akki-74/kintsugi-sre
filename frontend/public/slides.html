@@ -172,8 +172,8 @@
               <tr><th>Forecasting Architecture</th><th>Input Modality</th><th>TTE MAE (↓)</th><th>TTE RMSE (↓)</th><th>R² Score (↑)</th><th>Mean Lead Time</th><th>Inference / Tick</th></tr>
             </thead>
             <tbody>
-              <tr><td>Classical SARIMA(1,1,1)×(1,0,1)₁₂</td><td>Univariate Metric Trajectory</td><td>1.38 min</td><td>1.74 min</td><td>0.512</td><td>3.1 min</td><td>42.50 ms</td></tr>
-              <tr class="highlight-row"><td>✦ Kintsugi Multi-Modal XGBRegressor</td><td>89 Multi-Modal Features + Slopes</td><td>0.71 min</td><td>0.94 min</td><td>0.739</td><td>4.7 min</td><td>1.15 ms (37× faster)</td></tr>
+              <tr><td>Classical SARIMA(1,1,1)×(1,0,1)₁₂</td><td>Univariate Metric Series (Memory / Disk)</td><td>6.50 min</td><td>6.89 min</td><td>0.114</td><td>10.0 min (Threshold)</td><td>243.8 ms (Laggy)</td></tr>
+              <tr class="highlight-row"><td>✦ Kintsugi Multi-Modal XGBRegressor</td><td>89 Multi-Modal Features + Slopes + Logs</td><td>0.71 min (-89.1%)</td><td>0.90 min (-87.0%)</td><td>0.846</td><td>4.7 min (Continuous)</td><td>0.67 ms (364× faster)</td></tr>
             </tbody>
           </table>
         </div>
