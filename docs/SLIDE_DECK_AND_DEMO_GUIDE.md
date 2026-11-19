@@ -1,6 +1,6 @@
 # 🏺 Kintsugi-AI — Official Slide Deck & Video Demo Walkthrough Guide
 
-This document provides the **10-Slide Presentation Deck** and the **Step-by-Step Video Recording Script** for hackathon judges and evaluators.
+This document provides the **10-Slide Presentation Deck** and the **Step-by-Step Video Recording Script** for users and evaluators.
 
 ---
 
@@ -10,7 +10,7 @@ This document provides the **10-Slide Presentation Deck** and the **Step-by-Step
 * **Title:** Kintsugi-AI: Autonomous Multi-Modal Kubernetes Failure Prediction & Ambient Remediation
 * **Tagline:** *"Catch the cracks. Verify the fix."*
 * **Inspiration:** The Japanese art of *Kintsugi* (金継ぎ)—mending broken ceramics with gold lacquer so the repaired object emerges stronger and more resilient than before.
-* **Presenters / Authors:** Hackathon Engineering Team
+* **Presenters / Authors:** Engineering Team
 * **Target Environment:** 10-microservice Google *OnlineBoutique* on Kubernetes
 * **Speaker Note:** *"Welcome! Today we present Kintsugi-AI, a cloud-native autonomous SRE system that replaces noisy, reactive alerts with a predictive Fast Brain and a safe, guardrailed Slow Brain."*
 

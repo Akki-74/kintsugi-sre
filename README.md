@@ -201,7 +201,7 @@ Your full-stack application will immediately go live on your free public Hugging
 
 ## ☸️ Bonus Objective: Consume K8s (In-Cluster Packaging)
 
-To satisfy the optional hackathon bonus **"Consume K8s: Package all dependencies in K8s to execute the solution"**, Kintsugi-AI provides complete, production-ready Kubernetes manifests in `k8s_manifests/`:
+To satisfy the optional bonus **"Consume K8s: Package all dependencies in K8s to execute the solution"**, Kintsugi-AI provides complete, production-ready Kubernetes manifests in `k8s_manifests/`:
 
 1. **Least-Privilege RBAC (`k8s_manifests/rbac.yaml`):**
    - `ServiceAccount`: `kintsugi-sre-agent`
@@ -299,7 +299,7 @@ Open **`http://localhost:5173`** (or **`http://localhost:8000/`**) in your brows
 
 ## 🎬 Presentation Video Demo & Walkthrough Script
 
-A complete 5-minute hackathon walkthrough is structured into two halves:
+A complete 5-minute technical walkthrough is structured into two halves:
 
 ### Part 1: Phase 1 — Prediction Engine & ML Breakthroughs (2.5 mins)
 - **The Problem:** Static Prometheus threshold rules create alert fatigue (14.8 FA/hr) and detect failures too late ($\Delta t = 148$s).
@@ -371,7 +371,7 @@ kintsugi-sre/
 
 ---
 
-## 🏆 Hackathon Milestone Checklist
+## 🏆 Technical Milestone Checklist
 
 - [x] **Milestone 1:** Empirical Data Inspection, Z-Score Baseline Normalization, Drain3 Log Signals, Strict Chronological Split (Train: Day 1, Test: Day 2 First 64%, Holdout: Day 2 Final 36%), Synthetic Gradual Exhaustion Traces.
 - [x] **Milestone 2:** 4-Model Ablation Study (B0 Thresholds vs M1 IsolationForest vs M2 Temporal XGBoost vs M3 Multi-Modal XGBoost), Honest Evaluation across Regime A (Latency $\Delta t$) and Regime B (Horizon Lead Time), Alert Fatigue ($1.71$ FA/hr).
@@ -384,4 +384,4 @@ kintsugi-sre/
 
 ## 📜 License
 
-MIT License. Designed and built with Google DeepMind Antigravity for the Kubernetes AIOps Hackathon.
+MIT License. Designed and built with Google DeepMind Antigravity for the Kubernetes AIOps .
