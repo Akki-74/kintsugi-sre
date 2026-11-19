@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <title>Kintsugi-AI — Hackathon Presentation Deck</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #04070f;
+      background-image:
+        radial-gradient(circle at 15% 15%, rgba(251, 191, 36, 0.10) 0%, transparent 40%),
+        radial-gradient(circle at 85% 20%, rgba(56, 189, 248, 0.08) 0%, transparent 42%),
+        linear-gradient(to right, rgba(30, 41, 59, 0.28) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(30, 41, 59, 0.28) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 32px 32px, 32px 32px;
+      color: #f8fafc;
+      overflow: hidden;
+    }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .glass {
+      background: rgba(15, 23, 42, 0.78);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(251, 191, 36, 0.3);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+    }
+    .slide { display: none; height: 100vh; width: 100vw; padding: 3.5rem 5rem; }
+    .slide.active { display: flex; flex-direction: column; justify-content: space-between; }
+    @media print {
+      body { overflow: visible; }
+      .slide { display: flex !important; page-break-after: always; height: 100vh; }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Slide 1: Title & Vision -->
+  <section class="slide active">
+    <div class="flex items-center justify-between">
+      <span class="mono text-xs px-3 py-1 rounded-full bg-amber-500/20 border border-amber-400/50 text-amber-300 font-bold">
+        GUIDEWIRE DEVTRAILS UNIVERSITY HACKATHON
+      </span>
+      <span class="mono text-xs text-slate-400">Use Case: AI & ML Agent for Predicting & Remediating K8s Cluster Issues</span>
+    </div>
+    <div class="my-auto max-w-4xl">
+      <div class="inline-block mono text-sm text-amber-400 mb-3 tracking-widest uppercase">✦ Kintsugi (金継ぎ) — Mending Fractures with Liquid Gold</div>
+      <h1 class="text-6xl font-extrabold tracking-tight bg-gradient-to-r from-amber-200 via-amber-400 to-cyan-300 bg-clip-text text-transparent leading-tight mb-6">
+        KINTSUGI-AI
+      </h1>
+      <p class="text-2xl text-slate-200 font-semibold mb-4">
+        Autonomous Multi-Modal Kubernetes Failure Prediction & Guardrailed Ambient Remediation
+      </p>
+      <p class="text-base text-slate-400 leading-relaxed max-w-3xl mb-8">
+        Unifying a <strong class="text-cyan-300">Fast Brain</strong> (89-Feature Multi-Modal Temporal XGBoost + SARIMA Horizon Benchmarking) with a <strong class="text-amber-300">Slow Brain</strong> (6-Node LangGraph Ambient SRE Agent powered by Qwen 3.8-27B & 5 Deterministic Safety Gates).
+      </p>
+      <div class="grid grid-cols-4 gap-4">
+        <div class="glass p-4 rounded-2xl">
+          <div class="mono text-xs text-slate-400">Macro-F1 Score</div>
+          <div class="text-3xl font-extrabold text-amber-300 mono mt-1">0.7132</div>
+          <div class="text-xs text-emerald-400 mt-1">+153% vs Static Rules</div>
+        </div>
+        <div class="glass p-4 rounded-2xl">
+          <div class="mono text-xs text-slate-400">Early Warning Lead Time</div>
+          <div class="text-3xl font-extrabold text-cyan-300 mono mt-1">4.7 min</div>
+          <div class="text-xs text-slate-300 mt-1">Before OOM / Disk Crash</div>
+        </div>
+        <div class="glass p-4 rounded-2xl">
+          <div class="mono text-xs text-slate-400">False Alarms / Hr</div>
+          <div class="text-3xl font-extrabold text-emerald-300 mono mt-1">1.71/hr</div>
+          <div class="text-xs text-slate-300 mt-1">Down from 14.8/hr</div>
+        </div>
+        <div class="glass p-4 rounded-2xl">
+          <div class="mono text-xs text-slate-400">Closed-Loop MTTR</div>
+          <div class="text-3xl font-extrabold text-amber-300 mono mt-1">27.6 sec</div>
+          <div class="text-xs text-slate-300 mt-1">Live K8s API Verified</div>
+        </div>
+      </div>
+    </div>
+    <div class="flex justify-between items-center text-xs mono text-slate-500">
+      <span>Live Cloud: https://kintsugi-ai.onrender.com</span>
+      <span>Slide 1 / 6 (Use ⬅ ➡ Arrow Keys)</span>
+    </div>
+  </section>
+
+  <!-- Slide 2: Problem & Two-Brain Architecture -->
+  <section class="slide">
+    <div class="flex items-center justify-between">
+      <h2 class="text-2xl font-extrabold text-amber-300 mono">01 // THE PROBLEM & TWO-BRAIN ARCHITECTURE</h2>
+      <span class="mono text-xs text-slate-400">Phase 1 (Fast Brain) + Phase 2 (Slow Brain)</span>
+    </div>
+    <div class="my-auto grid grid-cols-12 gap-6">
+      <div class="col-span-5 glass p-6 rounded-2xl flex flex-col justify-between">
+        <div>
+          <h3 class="text-lg font-bold text-rose-400 mb-3">Why Traditional Kubernetes Monitoring Fails</h3>
+          <ul class="space-y-3 text-sm text-slate-300">
+            <li>• <strong class="text-white">Static Threshold Alert Fatigue:</strong> Prometheus rules (>80% CPU) fire <strong class="text-rose-300">14.8 false alarms/hr</strong> on normal traffic bursts.</li>
+            <li>• <strong class="text-white">Single-Modality Blindness:</strong> Code exceptions & HTTP 500 bursts appear in container logs 60–90s before CPU or memory metrics react.</li>
+            <li>• <strong class="text-white">Dangerous Unbounded AI:</strong> Giving raw LLMs <code class="mono text-amber-300">kubectl</code> access risks deleting <code class="mono">kube-system</code> or thrashing replicas.</li>
+          </ul>
+        </div>
+        <div class="p-4 rounded-xl bg-amber-950/40 border border-amber-400/50 mt-4">
+          <div class="mono text-xs text-amber-300 font-bold mb-1">OUR ENGINEERING DISCOVERY</div>
+          <p class="text-xs text-slate-300">
+            Resolved a <strong class="text-white">+200,000,000-second (~6.3 yr) timestamp offset bug</strong> in the raw FSE'23 Nezha benchmark dataset by aligning UTC time strings directly.
+          </p>
+        </div>
+      </div>
+      <div class="col-span-7 glass p-6 rounded-2xl space-y-4">
+        <h3 class="text-lg font-bold text-cyan-300">The Kintsugi Two-Brain Closed-Loop Pipeline</h3>
+        <div class="p-4 rounded-xl bg-slate-950/90 border border-cyan-500/40">
+          <div class="mono text-xs text-cyan-300 font-bold">BRAIN 1: MULTI-MODAL PREDICTION ENGINE (1Hz Sub-Millisecond)</div>
+          <p class="text-xs text-slate-300 mt-1">
+            76 Baseline-Relative Z-Score Metric Features (lags, slopes, rolling stats) + 13 Drain3 Container Log Template Features ➔ <strong class="text-white">6-Class XGBoost Classifier + Resource Trajectory Regressor</strong>.
+          </p>
+        </div>
+        <div class="p-4 rounded-xl bg-slate-950/90 border border-amber-500/40">
+          <div class="mono text-xs text-amber-300 font-bold">BRAIN 2: CONSTRAINED LANGGRAPH AMBIENT AGENT (Groq Qwen 3.8-27B)</div>
+          <p class="text-xs text-slate-300 mt-1">
+            6-Node StateGraph: <code class="mono text-amber-200">MONITOR ➔ DIAGNOSE ➔ PLAN ➔ GUARDRAILS ➔ EXECUTE ➔ VERIFY</code>. Outputs strict Pydantic JSON plans backed by a deterministic SRE fallback matrix.
+          </p>
+        </div>
+        <div class="p-4 rounded-xl bg-slate-950/90 border border-emerald-500/40">
+          <div class="mono text-xs text-emerald-300 font-bold">5 MANDATORY SRE SAFETY GUARDRAILS</div>
+          <p class="text-xs text-slate-300 mt-1">
+            1. Namespace Lock (<code class="mono">hipster</code> only) | 2. 6-Action Allowlist | 3. Replica [1,5] & Mem [≤1024Mi] Clamping | 4. 120s Cooldown Lock | 5. K8s API <code class="mono">dry_run="All"</code> Pre-Flight Gate.
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="flex justify-between items-center text-xs mono text-slate-500">
+      <span>Kintsugi-AI Architecture</span>
+      <span>Slide 2 / 6</span>
+    </div>
+  </section>
+
+  <!-- Slide 3: Phase 1 Ablation & SARIMA vs XGBoost Study -->
+  <section class="slide">
+    <div class="flex items-center justify-between">
+      <h2 class="text-2xl font-extrabold text-cyan-300 mono">02 // PHASE 1: 4-MODEL ABLATION & SARIMA BENCHMARK</h2>
+      <span class="mono text-xs text-slate-400">Zero-Leakage Temporal Split (Day 1 Train / Day 2 Test & Holdout)</span>
+    </div>
+    <div class="my-auto space-y-5">
+      <div class="glass p-5 rounded-2xl">
+        <h3 class="mono text-xs uppercase text-amber-300 font-bold mb-3">Table 1: 4-Model Multi-Modal Classification Ablation (6 Fault Classes)</h3>
+        <table class="w-full text-left mono text-xs border-collapse">
+          <thead>
+            <tr class="border-b border-slate-700 text-slate-400">
+              <th class="py-2 px-3">Model Configuration</th>
+              <th class="py-2 px-3">Precision</th>
+              <th class="py-2 px-3">Recall</th>
+              <th class="py-2 px-3">Macro-F1</th>
+              <th class="py-2 px-3">Regime A Latency</th>
+              <th class="py-2 px-3">Top-1 Root Cause</th>
+              <th class="py-2 px-3">False Alarms/hr</th>
+            </tr>
+          </thead>
+          <tbody class="text-slate-200">
+            <tr class="border-b border-slate-800"><td class="py-2 px-3">Baseline 0: Prometheus Static Thresholds</td><td>0.2700</td><td>0.3495</td><td>0.2816</td><td>148.0s</td><td>33.3%</td><td>14.80 / hr</td></tr>
+            <tr class="border-b border-slate-800"><td class="py-2 px-3">Model 1: Unsupervised IsolationForest</td><td>0.2794</td><td>0.3643</td><td>0.2782</td><td>132.5s</td><td>41.7%</td><td>9.42 / hr</td></tr>
+            <tr class="border-b border-slate-800"><td class="py-2 px-3">Model 2: Temporal XGBoost (Metrics Only)</td><td>0.5414</td><td>0.6141</td><td>0.5706</td><td>108.4s</td><td>58.3%</td><td>3.14 / hr</td></tr>
+            <tr class="bg-amber-500/20 text-amber-200 font-bold"><td class="py-2.5 px-3">Model 3: Kintsugi Multi-Modal XGBoost (Metrics + Drain3 Logs)</td><td>0.7088</td><td>0.7189</td><td>0.7132</td><td>87.6s</td><td>66.7%</td><td>1.71 / hr</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="glass p-5 rounded-2xl">
+        <h3 class="mono text-xs uppercase text-cyan-300 font-bold mb-3">Table 2: Regime B Gradual Exhaustion Forecasting — Classical SARIMA vs. Multi-Modal XGBRegressor</h3>
+        <table class="w-full text-left mono text-xs border-collapse">
+          <thead>
+            <tr class="border-b border-slate-700 text-slate-400">
+              <th class="py-2 px-3">Forecasting Architecture</th>
+              <th class="py-2 px-3">Input Modality</th>
+              <th class="py-2 px-3">TTE MAE</th>
+              <th class="py-2 px-3">R² Score</th>
+              <th class="py-2 px-3">Mean Lead Time</th>
+              <th class="py-2 px-3">Inference Latency</th>
+            </tr>
+          </thead>
+          <tbody class="text-slate-200">
+            <tr class="border-b border-slate-800">
+              <td class="py-2 px-3">Classical SARIMA(1,1,1)x(1,0,1)_12</td>
+              <td>Univariate Metric Series</td>
+              <td>1.38 min</td>
+              <td>0.512</td>
+              <td>3.1 min</td>
+              <td>42.50 ms / tick</td>
+            </tr>
+            <tr class="bg-emerald-500/20 text-emerald-200 font-bold">
+              <td class="py-2.5 px-3">Kintsugi Multi-Modal XGBRegressor</td>
+              <td>89 Features (Metrics + Logs + Slopes)</td>
+              <td>0.71 min (-48.6%)</td>
+              <td>0.739</td>
+              <td>4.7 min</td>
+              <td>1.15 ms / tick (37x faster)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="flex justify-between items-center text-xs mono text-slate-500">
+      <span>+25.0% Relative Macro-F1 Gain from Drain3 Log Templates</span>
+      <span>Slide 3 / 6</span>
+    </div>
+  </section>
+
+  <!-- Slide 4: Diagnostic Plots -->
+  <section class="slide">
+    <div class="flex items-center justify-between">
+      <h2 class="text-2xl font-extrabold text-amber-300 mono">03 // PHASE 1 EMPIRICAL DIAGNOSTIC VISUALIZATIONS</h2>
+      <span class="mono text-xs text-slate-400">Generated from Held-Out Test Split (k8s_multimodal_test.csv)</span>
+    </div>
+    <div class="my-auto grid grid-cols-2 gap-5 max-h-[75vh]">
+      <div class="glass p-3 rounded-2xl flex flex-col items-center">
+        <span class="mono text-xs text-amber-300 font-bold mb-2">1. 4-Model Ablation Progression</span>
+        <img src="./plots/ablation_comparison.png" class="max-h-[26vh] object-contain rounded-lg" />
+      </div>
+      <div class="glass p-3 rounded-2xl flex flex-col items-center">
+        <span class="mono text-xs text-cyan-300 font-bold mb-2">2. 6-Class Normalized Confusion Matrix</span>
+        <img src="./plots/confusion_matrix.png" class="max-h-[26vh] object-contain rounded-lg" />
+      </div>
+      <div class="glass p-3 rounded-2xl flex flex-col items-center">
+        <span class="mono text-xs text-emerald-300 font-bold mb-2">3. Top 20 Multi-Modal Feature Importances</span>
+        <img src="./plots/feature_importance.png" class="max-h-[26vh] object-contain rounded-lg" />
+      </div>
+      <div class="glass p-3 rounded-2xl flex flex-col items-center">
+        <span class="mono text-xs text-purple-300 font-bold mb-2">4. Regime B Early-Warning Lead Time (Mean 4.7m)</span>
+        <img src="./plots/lead_time_distribution.png" class="max-h-[26vh] object-contain rounded-lg" />
+      </div>
+    </div>
+    <div class="flex justify-between items-center text-xs mono text-slate-500">
+      <span>phase1_prediction/plots/</span>
+      <span>Slide 4 / 6</span>
+    </div>
+  </section>
+
+  <!-- Slide 5: Phase 2 Live Remediation Benchmark & 3-Tier Testing -->
+  <section class="slide">
+    <div class="flex items-center justify-between">
+      <h2 class="text-2xl font-extrabold text-emerald-300 mono">04 // PHASE 2 REMEDIATION BENCHMARK & 3-TIER PYTEST SUITE</h2>
+      <span class="mono text-xs text-slate-400">Verified on 3-Node Kubernetes v1.36.1 Cluster</span>
+    </div>
+    <div class="my-auto grid grid-cols-12 gap-6">
+      <div class="col-span-7 glass p-5 rounded-2xl">
+        <h3 class="mono text-xs uppercase text-amber-300 font-bold mb-3">Closed-Loop Kubernetes Remediation Effectiveness (MTTR = 27.6s Mean)</h3>
+        <table class="w-full text-left mono text-xs border-collapse">
+          <thead>
+            <tr class="border-b border-slate-700 text-slate-400">
+              <th class="py-2 px-2">Chaos Scenario</th>
+              <th class="py-2 px-2">Target Service</th>
+              <th class="py-2 px-2">Qwen 3.8-27B Action</th>
+              <th class="py-2 px-2">MTTR</th>
+              <th class="py-2 px-2">Status</th>
+            </tr>
+          </thead>
+          <tbody class="text-slate-200">
+            <tr class="border-b border-slate-800"><td class="py-2.5 px-2">CPU Saturation (92%)</td><td>checkoutservice</td><td>SCALE_DEPLOYMENT (1➔3)</td><td>22.0s</td><td class="text-amber-300 font-bold">✦ Repaired</td></tr>
+            <tr class="border-b border-slate-800"><td class="py-2.5 px-2">Memory Leak Ramp</td><td>cartservice</td><td>PATCH_RESOURCES (512Mi)</td><td>28.0s</td><td class="text-amber-300 font-bold">✦ Repaired</td></tr>
+            <tr class="border-b border-slate-800"><td class="py-2.5 px-2">HTTP 500 Exception Burst</td><td>paymentservice</td><td>RESTART_POD (Rolling)</td><td>18.0s</td><td class="text-amber-300 font-bold">✦ Repaired</td></tr>
+            <tr class="border-b border-slate-800"><td class="py-2.5 px-2">Node Disk Pressure</td><td>productcatalog</td><td>CORDON_AND_RELOCATE</td><td>35.0s</td><td class="text-amber-300 font-bold">✦ Repaired</td></tr>
+            <tr><td class="py-2.5 px-2">Downstream Timeout</td><td>frontend</td><td>APPLY_TRAFFIC_SHAPING</td><td>35.0s</td><td class="text-amber-300 font-bold">✦ Repaired</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="col-span-5 glass p-5 rounded-2xl space-y-3">
+        <h3 class="mono text-xs uppercase text-cyan-300 font-bold">3-Tier Automated Verification (23/23 Passing)</h3>
+        <div class="p-3 rounded-xl bg-slate-950/90 border border-slate-800">
+          <div class="mono text-xs text-emerald-400 font-bold">✓ Tier 1: Unit Tests (tests/test_01_unit.py)</div>
+          <p class="text-xs text-slate-300 mt-1">89-feature alignment, SARIMA bounds, Qwen <code class="mono">&lt;think&gt;</code> parser, adversarial <code class="mono">kube-system</code> block, replica clamping, 120s cooldown.</p>
+        </div>
+        <div class="p-3 rounded-xl bg-slate-950/90 border border-slate-800">
+          <div class="mono text-xs text-emerald-400 font-bold">✓ Tier 2: Integration Tests (tests/test_02_integration.py)</div>
+          <p class="text-xs text-slate-300 mt-1">Phase 1 ➔ Phase 2 LangGraph 6-node autonomous loop & Human-in-the-Loop (HITL) pause/approve/reject transitions.</p>
+        </div>
+        <div class="p-3 rounded-xl bg-slate-950/90 border border-slate-800">
+          <div class="mono text-xs text-emerald-400 font-bold">✓ Tier 3: System & Web E2E (tests/test_03_system_e2e.py)</div>
+          <p class="text-xs text-slate-300 mt-1">All FastAPI REST routes, live 1Hz <code class="mono">/ws/telemetry</code> WebSocket contract, and compiled React SPA asset verification.</p>
+        </div>
+      </div>
+    </div>
+    <div class="flex justify-between items-center text-xs mono text-slate-500">
+      <span>GitHub Actions CI/CD Automated on Every Push</span>
+      <span>Slide 5 / 6</span>
+    </div>
+  </section>
+
+  <!-- Slide 6: Live Demo Launchpad -->
+  <section class="slide">
+    <div class="flex items-center justify-between">
+      <h2 class="text-2xl font-extrabold text-amber-300 mono">05 // LIVE MULTI-CLUSTER & CLOUD DEMONSTRATION</h2>
+      <span class="mono text-xs text-slate-400">100% Free ($0.00) Open-Source Stack</span>
+    </div>
+    <div class="my-auto text-center max-w-3xl mx-auto space-y-6">
+      <div class="inline-block p-4 rounded-2xl bg-amber-500/15 border border-amber-400/50 text-amber-300 mono text-sm font-bold shadow-[0_0_30px_rgba(251,191,36,0.3)]">
+        ✦ "Catch the cracks. Verify the fix."
+      </div>
+      <h3 class="text-4xl font-extrabold text-white">Live Demonstration Environments</h3>
+      <div class="grid grid-cols-3 gap-4 text-left">
+        <a href="/app/" target="_blank" class="glass p-5 rounded-2xl hover:border-amber-400 transition-all block">
+          <div class="mono text-xs text-amber-300 font-bold mb-1">1. KINTSUGI COMMAND CENTER</div>
+          <div class="text-sm font-bold text-white mb-1">localhost:8000/app/</div>
+          <p class="text-xs text-slate-400">Live 10-service topology, Chaos Deck, Qwen 3.8-27B console & Gold Seam.</p>
+        </a>
+        <a href="https://localhost:8443" target="_blank" class="glass p-5 rounded-2xl hover:border-cyan-400 transition-all block">
+          <div class="mono text-xs text-cyan-300 font-bold mb-1">2. OFFICIAL K8S DASHBOARD</div>
+          <div class="text-sm font-bold text-white mb-1">localhost:8443</div>
+          <p class="text-xs text-slate-400">Verify real pod scaling (1➔3 replicas) across desktop-worker & worker2.</p>
+        </a>
+        <a href="https://kintsugi-ai.onrender.com" target="_blank" class="glass p-5 rounded-2xl hover:border-emerald-400 transition-all block">
+          <div class="mono text-xs text-emerald-300 font-bold mb-1">3. PUBLIC CLOUD DEPLOY</div>
+          <div class="text-sm font-bold text-white mb-1">kintsugi-ai.onrender.com</div>
+          <p class="text-xs text-slate-400">24/7 Cloud Digital Twin Replay & Groq Qwen 3.8-27B live testing.</p>
+        </a>
+      </div>
+    </div>
+    <div class="flex justify-between items-center text-xs mono text-slate-500">
+      <span>Thank You! // Questions & Live Testing</span>
+      <span>Slide 6 / 6</span>
+    </div>
+  </section>
+
+  <!-- Floating Navigation Controls -->
+  <div class="fixed bottom-4 right-6 z-50 flex items-center gap-2 no-print">
+    <button onclick="prevSlide()" class="px-3 py-1.5 rounded-lg glass mono text-xs text-slate-200 hover:text-amber-300 cursor-pointer">⬅ Prev</button>
+    <button onclick="nextSlide()" class="px-3 py-1.5 rounded-lg glass mono text-xs text-slate-200 hover:text-amber-300 cursor-pointer">Next ➡</button>
+    <button onclick="window.print()" class="px-3 py-1.5 rounded-lg bg-amber-500/20 border border-amber-400/60 mono text-xs text-amber-200 hover:bg-amber-500/30 cursor-pointer">🖨️ Save PDF</button>
+    <a href="/app/" class="px-3 py-1.5 rounded-lg bg-cyan-500/20 border border-cyan-400/60 mono text-xs text-cyan-200 hover:bg-cyan-500/30">🚀 Launch App</a>
+  </div>
+
+  <script>
+    const slides = document.querySelectorAll('.slide');
+    let idx = 0;
+    function showSlide(n) {
+      slides.forEach(s => s.classList.remove('active'));
+      idx = (n + slides.length) % slides.length;
+      slides[idx].classList.add('active');
+    }
+    function nextSlide() { showSlide(idx + 1); }
+    function prevSlide() { showSlide(idx - 1); }
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ') nextSlide();
+      if (e.key === 'ArrowLeft') prevSlide();
+    });
+  </script>
+</body>
+</html>

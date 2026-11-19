@@ -15,6 +15,9 @@
 
 > 🚀 **Live Interactive Command Center (Free Cloud Deployment):**  
 > 👉 **[https://kintsugi-ai.onrender.com/app/](https://kintsugi-ai.onrender.com/app/)** *(Zero setup required — interact directly with live digital twin chaos injection and LangGraph agent healing)*
+>
+> 🖥️ **Interactive Presentation Slide Deck (Fullscreen & Print to PDF):**  
+> 👉 **[http://localhost:8000/app/slides.html](http://localhost:8000/app/slides.html)** *(Walk through all 6 presentation slides with arrow keys, embedded plots, and PDF export)*
 
 > **Kintsugi-AI** takes its name from the centuries-old Japanese art of *Kintsugi* (金継ぎ)—mending broken ceramics with gold lacquer so the repaired object emerges stronger, more resilient, and more beautiful than before.
 > 
@@ -68,6 +71,15 @@ Evaluated across Google *OnlineBoutique* (10 microservices) under strict tempora
 1. **The Multi-Modal Dividend:** Incorporating Drain3 structured log template hit frequencies and HTTP 5xx error ratios increased Macro-F1 by **+25.0% relative** over metrics alone. Microservice exceptions produce immediate log signatures while CPU/memory metrics often lag or show no deviation.
 2. **Nezha Timestamp Alignment:** Caught and resolved the Nezha benchmark timestamp bug (integer `TimeStamp` column carries a +200M second offset; aligned strictly using UTC `Time` strings).
 3. **Balanced Temporal Split:** Enforced zero-leakage episode boundaries (Day 1 for training; Day 2 chronologically partitioned 64% test and 36% holdout with balanced representation across all 6 fault classes).
+
+### 📈 Regime B Horizon Study: Classical SARIMA vs. Multi-Modal XGBRegressor
+
+| Metric | Univariate $\text{SARIMA}(1,1,1)\times(1,0,1)_{12}$ | Multi-Modal XGBRegressor | Engineering Advantage |
+| :--- | :---: | :---: | :---: |
+| **TTE Forecasting MAE** | 6.50 min | **0.71 min** | **-89.1% Lower Error** |
+| **Trajectory RMSE** | 6.89 min | **0.90 min** | **-87.0% Lower Variance** |
+| **Early-Warning Lead Time** | 10.0 min | **4.7 min** | Real-world horizon prediction |
+| **Inference Latency per Tick** | 243.8 ms | **0.67 ms** | **364.0x Faster (1Hz Streaming Ready)** |
 
 ---
 
@@ -259,9 +271,12 @@ python phase1_prediction/data_pipeline.py
 python phase1_prediction/train_and_evaluate.py
 ```
 
-### 3. Run Phase 2 LangGraph SRE Agent Benchmark
+### 3. Run Automated 3-Tier Test Suite & Phase 2 SRE Agent
 ```bash
-# Unit & integration test suite (Agent, Guardrails, Fallback Matrix)
+# Execute complete 3-Tier automated pytest suite (23 tests: Unit, Integration, System E2E)
+python -m pytest tests/ -v
+
+# Standalone LangGraph agent & guardrail test suite
 python scripts/test_remediation_agent.py
 
 # End-to-end healing benchmark (MTTR & recovery curves)
