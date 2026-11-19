@@ -66,8 +66,8 @@ class KubernetesClusterAdapter:
                 "emailservice": {"replicas": 1, "cpu_limit": "200m", "mem_limit": "128Mi", "status": "Running"},
             },
             "nodes": {
-                "kind-control-plane": {"cordoned": False, "ready": True},
-                "kind-worker": {"cordoned": False, "ready": True},
+                "desktop-control-plane": {"cordoned": False, "ready": True},
+                "desktop-worker": {"cordoned": False, "ready": True},
             },
             "recent_actions": []
         }
@@ -184,7 +184,7 @@ class KubernetesClusterAdapter:
                 )
 
             elif plan.selected_action == ActionType.CORDON_AND_RELOCATE:
-                node = plan.parameters.target_node or "kind-worker"
+                node = plan.parameters.target_node or "desktop-worker"
                 self.core_v1.patch_node(name=node, body={"spec": {"unschedulable": True}})
                 msg = f"Cordoned degraded node '{node}' and initiated pod eviction."
                 return RemediationExecutionResult(
@@ -263,7 +263,7 @@ class KubernetesClusterAdapter:
             details = {"status": "Running", "restart_ts": t_exec, "mode": "DIGITAL_TWIN"}
 
         elif plan.selected_action == ActionType.CORDON_AND_RELOCATE:
-            node = p.target_node or "kind-worker"
+            node = p.target_node or "desktop-worker"
             if node in self._mock_cluster_state["nodes"]:
                 self._mock_cluster_state["nodes"][node]["cordoned"] = True
             msg = f"[Digital Twin] Cordoned worker node '{node}' and rescheduled {svc}."
