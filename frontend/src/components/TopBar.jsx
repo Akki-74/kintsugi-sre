@@ -35,10 +35,10 @@ export default function TopBar({
         </div>
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-base font-bold text-white tracking-wide">KINTSUGI<span className="text-cyan-400">.AI</span></h1>
-            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-950/80 border border-cyan-800/80 text-cyan-300">v1.0-FSE23</span>
+            <h1 className="text-base font-bold text-white tracking-wide">KINTSUGI<span className="text-amber-400">.AI</span></h1>
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-950/80 border border-amber-800/80 text-amber-300">v1.0-FSE23</span>
           </div>
-          <p className="text-xs text-slate-400">Catch the cracks. Verify the fix. (Autonomous SRE Agent)</p>
+          <p className="text-xs text-slate-400">Early Warning and Verified Remediation for Kubernetes</p>
         </div>
       </div>
 

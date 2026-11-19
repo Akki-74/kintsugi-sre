@@ -31,7 +31,7 @@ function ServiceNode({ data }) {
     predicted: 'border-amber-400 bg-amber-950/40 shadow-amber-950/40 text-amber-300 animate-pulse',
     incident: 'border-rose-500 bg-rose-950/50 shadow-rose-950/50 text-rose-300 animate-bounce',
     remediating: 'border-cyan-400 bg-cyan-950/40 shadow-cyan-950/40 text-cyan-300 animate-pulse',
-    verified_repaired: 'border-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.5)] bg-gradient-to-br from-slate-900/95 via-amber-950/40 to-slate-900/95 text-amber-300',
+    verified_repaired: 'border-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.45)] ring-1 ring-amber-400/50 bg-gradient-to-br from-slate-900/95 via-amber-950/40 to-slate-900/95 text-amber-300',
   };
 
   const badgeStyles = {
@@ -60,7 +60,7 @@ function ServiceNode({ data }) {
         </div>
         {status === 'verified_repaired' ? (
           <span className="text-[10px] font-mono px-2 py-0.5 rounded border font-bold bg-amber-950/90 border-amber-400 text-amber-300 shadow-[0_0_8px_rgba(251,191,36,0.5)] flex items-center gap-1 animate-pulse">
-            ✦ Kintsugi Verified
+            ✦ Kintsugi Repaired
           </span>
         ) : (
           <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded border font-semibold ${badgeStyles[status]}`}>
@@ -162,11 +162,17 @@ export default function ClusterTopology({
     return initialNodes.map((n) => {
       const live = serviceStates[n.id] || {};
       let nodeStatus = 'healthy';
-      if (live.is_verified_repaired || live.is_repaired) {
+      if (
+        live.is_verified_repaired ||
+        live.is_repaired ||
+        live.repaired === true ||
+        live.status === 'VERIFIED' ||
+        live.status === 'VerifiedRepaired'
+      ) {
         nodeStatus = 'verified_repaired';
-      } else if (live.is_remediating) {
+      } else if (live.is_remediating || live.status === 'Remediating') {
         nodeStatus = 'remediating';
-      } else if (live.is_incident) {
+      } else if (live.is_incident || live.status === 'Incident') {
         nodeStatus = 'incident';
       } else if (live.is_predicted_failure) {
         nodeStatus = 'predicted';
@@ -227,7 +233,7 @@ export default function ClusterTopology({
             <span className="h-2 w-2 rounded-full bg-cyan-400" /> Healing
           </span>
           <span className="flex items-center gap-1.5 text-amber-300 font-bold">
-            <span className="h-2 w-2 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]" /> ✦ Kintsugi Verified
+            <span className="h-2 w-2 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]" /> ✦ Kintsugi Repaired
           </span>
         </div>
       </div>

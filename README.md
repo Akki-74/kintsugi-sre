@@ -99,7 +99,7 @@ Evaluated across Google *OnlineBoutique* (10 microservices) under strict tempora
 |  [1. Context Collector] -> Pulls K8s Pod Status, Resource Specs & Last 30 Logs    |
 |            |                                                                      |
 |            v                                                                      |
-|  [2. Structured Reasoner] -> LM Studio (Qwen2.5-3B) / Groq (Llama-3.3-70B)        |
+|  [2. Structured Reasoner] -> Groq (Qwen 3.8-27B) / LM Studio (Qwen2.5-3B)     |
 |            |                 Enforces Pydantic JSON Schema + Rule Fallback        |
 |            v                                                                      |
 |  [3. SRE Safety Guardrails] -> 5 Deterministic Safety Gates                        |
@@ -156,9 +156,31 @@ Kintsugi-AI is packaged with a multi-stage Dockerfile that builds the React fron
    ```
 3. **Configure Free LLM Secret:**
    In your Space **Settings** $\to$ **Variables and secrets** $\to$ **New secret**:
-   - `GROQ_API_KEY`: `<your_free_groq_api_key>` (enables Llama-3.3-70B cloud reasoning at 0 cost).
+   - `GROQ_API_KEY`: `<your_free_groq_api_key>` (enables Qwen 3.8-27B cloud reasoning at $0 cost).
+   - `GROQ_MODEL`: `qwen/qwen3.8-27b`
+   - `CLUSTER_MODE`: `REPLAY_HOLDOUT`
 
 Your full-stack application will immediately go live on your free public Hugging Face URL!
+
+---
+
+## ☸️ Bonus Objective: Consume K8s (In-Cluster Packaging)
+
+To satisfy the optional hackathon bonus **"Consume K8s: Package all dependencies in K8s to execute the solution"**, Kintsugi-AI provides complete, production-ready Kubernetes manifests in `k8s_manifests/`:
+
+1. **Least-Privilege RBAC (`k8s_manifests/rbac.yaml`):**
+   - `ServiceAccount`: `kintsugi-sre-agent`
+   - `ClusterRole`: Constrained strictly to `pods`, `pods/log`, `nodes`, `deployments`, `deployments/scale`, and `networkpolicies` (read, list, patch).
+2. **Unified Deployment (`k8s_manifests/kintsugi_agent.yaml`):**
+   - Packages the FastAPI + WebSocket backend, React UI, Phase 1 XGBoost inference engine, and LangGraph Ambient SRE Agent into a single pod.
+3. **Deploy or Verify with One Command:**
+   ```bash
+   # Pre-flight client-side verification:
+   kubectl apply --dry-run=client -f k8s_manifests/kintsugi_agent.yaml
+
+   # In-cluster deployment:
+   kubectl apply -f k8s_manifests/kintsugi_agent.yaml
+   ```
 
 ---
 
