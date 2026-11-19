@@ -114,6 +114,24 @@ Evaluated across Google *OnlineBoutique* (10 microservices) under strict tempora
 
 ---
 
+## 🏆 4 Standout Architectural Achievements
+
+1. **Dual-Engine Hot-Swapping at Runtime (`backend/main.py` & `frontend/TopBar.jsx`):**
+   - Operational API endpoints (`/api/cluster/source` and `/api/agent/backend`) allow operators to hot-swap on the fly with zero server restarts between:
+     - **Telemetry Stream:** `LIVE_K8S` (real Prometheus PromQL queries + live Kubernetes API) $\leftrightarrow$ `REPLAY_HOLDOUT` (isolated 2,480-row held-out Digital Twin stream).
+     - **LLM Brain:** Groq Cloud (`qwen/qwen3.8-27b`) $\leftrightarrow$ Local LM Studio (`qwen2.5-3b-instruct`).
+2. **Dedicated Regime B Horizon Regressor (`phase1_prediction/saved_models/tte_regressor.json`):**
+   - In parallel with the 6-class `XGBClassifier`, a specialized `XGBRegressor` computes precise Time-to-Exhaustion (TTE) for gradual failure modes (`MEMORY_EXHAUSTION`, `DISK_EXHAUSTION`), achieving **$0.71$ min MAE** ($R^2 = 0.846$) and providing a **$4.7$ minute mean early-warning lead time** prior to container OOMKilled evictions.
+3. **Multi-Node Physical Topology Alignment (`phase2_remediation/k8s_adapter.py`):**
+   - Node-level remediation primitives (`CORDON_AND_RELOCATE`) are mapped to the real multi-node topology (`desktop-control-plane`, `desktop-worker`, `desktop-worker2`). Degraded worker nodes are cordoned via `CoreV1Api.patch_node`, and target pods are cleanly rescheduled to healthy peer worker nodes.
+4. **Live End-to-End Kubernetes Scaling & Gold Seam Verification:**
+   - Evaluated via live `/api/chaos/inject` (`cpu_contention` on `checkoutservice`):
+     - `qwen/qwen3.8-27b` diagnosed 92.0% CPU saturation with 0.95 confidence and selected `SCALE_DEPLOYMENT` (replicas: 3).
+     - Official Kubernetes Python SDK patched deployment scale in `hipster` from 1/1 to 3/3 ready pods across physical worker nodes.
+     - Closed-loop verification confirmed recovery via `/api/cluster/snapshot`, returning `"is_verified_repaired": true` and sealing the microservice node in glowing metallic gold (**✦ Kintsugi Repaired**).
+
+---
+
 ## ✦ The Kintsugi UI Innovation: "The Gold Seam"
 
 In the interactive **Service Topology Map**, microservice nodes transition through 5 distinct visual states:
