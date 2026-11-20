@@ -171,51 +171,44 @@ For gradual resource depletion (`MEMORY_EXHAUSTION`, `DISK_EXHAUSTION`), Kintsug
 
 ## 🏛️ Two-Brain System Architecture
 
-```text
-+-----------------------------------------------------------------------------------+
-|                   DATA SOURCES & KUBERNETES ENVIRONMENTS                          |
-|  Mode A: Nezha OnlineBoutique Multi-Modal Dataset (Train / Test / Holdout)        |
-|  Mode B: Live 3-Node `kind` Kubernetes Cluster (Prometheus + K8s API + Chaos Pods)|
-+---------------------+-----------------------------------------+-------------------+
-                      | (Metrics Stream)                        | (Logs & K8s Events)
-                      v                                         v
-+-----------------------------------------------------------------------------------+
-|                 PHASE 1: MULTI-MODAL PREDICTION ENGINE ("Fast Brain")             |
-|                                                                                   |
-|  1. Baseline-Relative Feature Pipeline      2. Drain3 Log Template Extractor      |
-|     (Z-score vs healthy baseline, slopes,      (Sliding window error counts,      |
-|      rolling means/stds, lag deltas)            exception & warning frequencies)  |
-|                        \                                   /                      |
-|                         v                                 v                       |
-|        +-----------------------------------------------------------------+        |
-|        |  Multi-Modal XGBoost Classifier + Resource Trajectory Regressor |        |
-|        |  Outputs: Fault Class (6 states), Target Service, Confidence %, |        |
-|        |           Regime (Onset Detection vs. Time-to-Exhaustion)       |        |
-|        +--------------------------------+--------------------------------+        |
-+-----------------------------------------|-----------------------------------------+
-                                          | (Wakes Agent if Confidence >= 0.50
-                                          |  AND Cooldown Lock == False)
-                                          v
-+-----------------------------------------------------------------------------------+
-|               PHASE 2: LANGGRAPH AMBIENT SRE AGENT ("Slow Brain")                 |
-|                                                                                   |
-|  [1. MONITOR]    -> Detects anomaly window & locks target service                 |
-|            |                                                                      |
-|            v                                                                      |
-|  [2. DIAGNOSE]   -> Pulls K8s Pod Status, Resource Specs & Last 30 Container Logs |
-|            |                                                                      |
-|            v                                                                      |
-|  [3. PLAN]       -> Groq Cloud (qwen/qwen3.8-27b) / LM Studio (Qwen2.5-3B)        |
-|            |        Strips <think> tags, enforces Pydantic Schema + Rule Fallback |
-|            v                                                                      |
-|  [4. GUARDRAILS] -> 5 Deterministic Safety Gates                                  |
-|            |        (Namespace Lock, Bounds, 120s Cooldown, K8s `dry_run="All"`)  |
-|            v                                                                      |
-|  [5. EXECUTE]    -> Official Python K8s SDK (AppsV1Api & CoreV1Api)               |
-|            |                                                                      |
-|            v                                                                      |
-|  [6. VERIFY]     -> Polls Metric Z-Scores & Pod Readiness; Seals Pod in Gold!     |
-+-----------------------------------------------------------------------------------+
+```mermaid
+flowchart TD
+    subgraph S1["1. DATA SOURCES & KUBERNETES ENVIRONMENTS"]
+        D1["Nezha Multi-Modal Observability Benchmark<br/>(Day 1 Train Split: 24,180 rows | Day 2 Test Split: 4,340 rows)"]
+        D2["Live 3-Node Kubernetes Cluster (v1.36.1)<br/>(desktop-control-plane + desktop-worker + desktop-worker2)"]
+    end
+
+    subgraph S2["2. PHASE 1: MULTI-MODAL PREDICTION ENGINE ('Fast Brain')"]
+        F1["Baseline-Relative Feature Pipeline<br/>(89 Features: Z-scores, slopes, rolling std/mean, lag deltas)"]
+        F2["Drain3 Log Template Extractor<br/>(Sliding window error counts, template entropy, keyword flags)"]
+        M1["Multi-Modal XGBoost Classifier + XGBRegressor<br/>(6-Class Fault Taxonomy & Regime B Continuous TTE Forecasting)"]
+    end
+
+    D2 -->|"Prometheus PromQL Metrics Stream (1Hz)"| F1
+    D2 -->|"Container stdout JSON Logs & Events"| F2
+    D1 -.->|"Zero-Leakage Episode Partitioning"| M1
+    F1 --> M1
+    F2 --> M1
+
+    M1 -->|"Anomaly Trigger: Confidence >= 0.50<br/>& Anti-Thrash Cooldown Lock == False"| N1
+
+    subgraph S3["3. PHASE 2: LANGGRAPH AMBIENT SRE AGENT ('Slow Brain')"]
+        N1["1. MONITOR<br/>(Detects anomaly window & locks target microservice)"]
+        N2["2. DIAGNOSE<br/>(Pulls Pod status, CPU/Mem cgroup limits & last 30 container logs)"]
+        N3["3. PLAN<br/>(Dual Reasoner: Groq Qwen3.8-27B / LM Studio &lt;think&gt; Parser & Fallback)"]
+        N4["4. GUARDRAILS<br/>(5 Deterministic Safety Gates: Namespace Lock, Clamping, 120s Cooldown, dry_run='All')"]
+        N5["5. EXECUTE<br/>(Official Kubernetes Python SDK: AppsV1Api & CoreV1Api live mutations)"]
+        N6["6. VERIFY<br/>(Polls metric Z-scores, confirms pod readiness, and seals Kintsugi Gold Seam)"]
+
+        N1 --> N2
+        N2 --> N3
+        N3 --> N4
+        N4 --> N5
+        N5 --> N6
+    end
+
+    N5 -->|"Live K8s Mutation: Scale (1/1 to 3/3), Patch Limit, Restart, Cordon"| D2
+    N6 -->|"Verified Repaired: ✦ Topology Gold Seam Sealed"| D2
 ```
 
 ---
