@@ -31,7 +31,8 @@ export default function TopBar({
   kintsugiStats
 }) {
   const agentMode = status?.agent_mode || 'AUTONOMOUS';
-  const clusterMode = status?.cluster_mode || 'LIVE_K8S';
+  const isK8sConnected = Boolean(status?.is_k8s_connected);
+  const clusterMode = status?.cluster_mode || (isK8sConnected ? 'LIVE_K8S' : 'DISCONNECTED');
   const llmBackend = status?.llm_backend || 'GROQ_CLOUD';
 
   return (
@@ -84,33 +85,23 @@ export default function TopBar({
           <button
             onClick={onToggleClusterSource}
             className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium border transition-all ${
-              clusterMode === 'LIVE_K8S'
-                ? status?.is_k8s_connected
-                  ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-300 hover:bg-emerald-900/60 shadow-[0_0_12px_rgba(16,185,129,0.2)]'
-                  : 'bg-rose-950/60 border-rose-500/50 text-rose-300 hover:bg-rose-900/60 shadow-[0_0_12px_rgba(244,63,94,0.2)]'
-                : 'bg-cyan-950/60 border-cyan-500/50 text-cyan-300 hover:bg-cyan-900/60'
+              isK8sConnected
+                ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-300 hover:bg-emerald-900/60 shadow-[0_0_12px_rgba(16,185,129,0.25)]'
+                : 'bg-rose-950/60 border-rose-500/50 text-rose-300 hover:bg-rose-900/60 shadow-[0_0_12px_rgba(244,63,94,0.2)]'
             }`}
             title={
-              clusterMode === 'LIVE_K8S'
-                ? status?.is_k8s_connected
-                  ? 'Live Kubernetes Cluster Connected (3-Node Control Plane). Click to switch to Replay Stream.'
-                  : 'Live Cluster Offline. Click to switch to Replay Stream.'
-                : 'Streaming Chronological Telemetry. Click to switch to Live K8s Cluster.'
+              isK8sConnected
+                ? 'Live Kubernetes Cluster Connected (3-Node Control Plane). Click to inspect connection.'
+                : 'Live Cluster Offline. Click to inspect connection gate.'
             }
           >
             <Radio
               className={`h-3.5 w-3.5 ${
-                clusterMode === 'LIVE_K8S' && !status?.is_k8s_connected
-                  ? 'text-rose-400'
-                  : 'animate-pulse'
+                isK8sConnected ? 'text-emerald-400 animate-pulse' : 'text-rose-400'
               }`}
             />
-            <span className="font-mono-code text-[11px]">
-              {clusterMode === 'LIVE_K8S'
-                ? status?.is_k8s_connected
-                  ? 'LIVE K8S (3-NODE)'
-                  : 'K8S OFFLINE'
-                : 'REPLAY STREAM'}
+            <span className="font-mono-code text-[11px] font-bold">
+              {isK8sConnected ? 'LIVE K8S (3-NODE ONLINE)' : 'K8S OFFLINE'}
             </span>
           </button>
 

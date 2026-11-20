@@ -258,7 +258,7 @@
         "mae_minutes": 6.5,
         "rmse_minutes": 6.89,
         "lead_time_minutes": 10.0,
-        "latency_per_tick_ms": 243.8,
+        "latency_per_tick_ms": 79.3,
         "streaming_viability": "Unsuitable for 1Hz real-time loop (~180ms per tick introduces WebSocket lag)"
       },
       "multimodal_xgbregressor": {
@@ -267,7 +267,7 @@
         "mae_minutes": 0.71,
         "rmse_minutes": 0.9,
         "lead_time_minutes": 4.7,
-        "latency_per_tick_ms": 0.67,
+        "latency_per_tick_ms": 0.93,
         "streaming_viability": "Production Ready (<1.5ms per tick allows line-rate 1Hz WebSocket streaming)"
       }
     },

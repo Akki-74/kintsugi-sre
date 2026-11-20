@@ -103,11 +103,13 @@ def health():
         if hasattr(engine.agent, "prometheus") and engine.agent.prometheus
         else False
     )
+    is_connected = bool(getattr(engine.agent.k8s, "is_connected", False))
     return {
         "status": "healthy",
-        "cluster_mode": engine.agent.k8s.mode,
-        "is_k8s_connected": engine.agent.k8s.is_connected,
-        "cluster_source": getattr(engine, "cluster_source", "replay"),
+        "cluster_mode": "LIVE_K8S" if is_connected else "STANDALONE",
+        "raw_mode": engine.agent.k8s.mode,
+        "is_k8s_connected": is_connected,
+        "cluster_source": getattr(engine, "cluster_source", "live" if is_connected else "replay"),
         "prometheus_reachable": prom_reachable,
         "llm_backend": llm_info.get("preferred_backend", "groq"),
         "groq_configured": llm_info.get("groq_configured", False),

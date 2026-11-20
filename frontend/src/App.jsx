@@ -93,6 +93,8 @@ export default function App() {
         }));
         if (!st.is_k8s_connected) {
           setShowClusterGate(true);
+        } else {
+          setShowClusterGate(false);
         }
       }
       if (topRes.ok) setTopology(await topRes.json());
@@ -171,7 +173,12 @@ export default function App() {
               remediation_plan: payload.pending_plan || ag.remediation_plan || prev.remediation_plan,
               pending_plan: payload.pending_plan || prev.pending_plan
             }));
-            if (ag.planned_action) {
+            if (ag.history && Array.isArray(ag.history) && ag.history.length > 0) {
+              setAgentLogs((prev) => {
+                const combined = [...ag.history, ...prev];
+                return Array.from(new Set(combined)).slice(0, 50);
+              });
+            } else if (ag.planned_action) {
               setAgentLogs((prev) => [
                 `[LangGraph Stage: ${ag.state}] Action: ${ag.planned_action} (Status: ${ag.execution_status || 'IN_PROGRESS'})`,
                 ...prev.slice(0, 49)

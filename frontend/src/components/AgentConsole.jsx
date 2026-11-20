@@ -11,7 +11,14 @@ import {
   Sparkles,
   AlertOctagon,
   Lock,
-  ArrowRightLeft
+  ArrowRightLeft,
+  ChevronRight,
+  Info,
+  Activity,
+  Layers,
+  Cpu,
+  RefreshCw,
+  GitCommit
 } from 'lucide-react';
 
 const LANGGRAPH_STAGES = [
@@ -22,6 +29,69 @@ const LANGGRAPH_STAGES = [
   'EXECUTE',
   'VERIFY'
 ];
+
+const STAGE_DETAILS = {
+  MONITOR: {
+    name: '1. Monitor',
+    short: 'Ingest',
+    icon: Activity,
+    title: 'Node 1: Monitor Telemetry Ingestion',
+    role: 'Ingests 89-feature Z-scores, raw cgroup metrics, and Drain3 log templates at 1Hz.',
+    inputs: 'cgroups v2, eBPF metrics, container stderr/stdout, Prometheus scrape',
+    outputs: 'Normalized feature vector, anomaly probability, TTE prediction',
+    action: 'Dispatches LangGraph state machine when anomaly confidence >= 0.50'
+  },
+  DIAGNOSE: {
+    name: '2. Diagnose',
+    short: 'Correlate',
+    icon: Cpu,
+    title: 'Node 2: Root-Cause Diagnosis',
+    role: 'Correlates fault signatures with live container logs and Prometheus latency drifts.',
+    inputs: '89-feature drift vector, tail logs (15 lines), live PromQL queries',
+    outputs: 'diagnosed_summary, correlated error tokens, target microservice',
+    action: 'Passes enriched diagnostic context to Dual-Brain LLM Reasoner'
+  },
+  PLAN: {
+    name: '3. Plan',
+    short: 'Reason',
+    icon: Sparkles,
+    title: 'Node 3: Dual-Brain LLM Reasoner',
+    role: 'Prompts Groq Qwen3.8-27B or local LM Studio to generate a strict Pydantic RemediationPlan.',
+    inputs: 'System prompt, diagnostic payload, current replicas, bounds contract',
+    outputs: 'Pydantic RemediationPlan (action_type, target_service, parameters)',
+    action: 'Falls back deterministically to SRE Fallback Matrix if LLM offline'
+  },
+  GUARDRAILS: {
+    name: '4. Guardrails',
+    short: 'Safety',
+    icon: ShieldCheck,
+    title: 'Node 4: 5 Deterministic Safety Gates',
+    role: 'Verifies proposed mutation against 5 strict invariants before touching cluster API.',
+    inputs: 'Proposed RemediationPlan, live K8s cluster schema',
+    outputs: 'GuardrailValidationResult (passed: bool, violations: list)',
+    action: 'Blocks illegal namespaces, bounds breaches, or 120s cooldown thrashing'
+  },
+  EXECUTE: {
+    name: '5. Execute',
+    short: 'Mutate',
+    icon: Layers,
+    title: 'Node 5: Cluster API Execution / HITL Gate',
+    role: 'Executes verified action via K8s API with dry_run="All" check or pauses for Operator.',
+    inputs: 'Verified plan, Human-in-the-Loop flag, dry_run="All" validation',
+    outputs: 'RemediationExecutionResult (status: SUCCESS, message: string)',
+    action: 'Invokes Kubernetes apps/v1 client to scale, patch limits, or restart pod'
+  },
+  VERIFY: {
+    name: '6. Verify',
+    short: 'Heal',
+    icon: CheckCircle2,
+    title: 'Node 6: Closed-Loop MTTR Verification',
+    role: 'Re-queries Prometheus & K8s to verify pod health and seals repaired node in Kintsugi Gold.',
+    inputs: 'Post-action pod ready replicas, recovery latency curve',
+    outputs: 'MTTR summary (seconds), gold seam visual verification token',
+    action: 'Marks service as VerifiedRepaired and resets incident status'
+  }
+};
 
 const GUARDRAIL_GATES = [
   { id: 'ns', label: 'Namespace Lock (hipster)' },
@@ -70,6 +140,7 @@ export default function AgentConsole({
   onToggleMode
 }) {
   const [copied, setCopied] = useState(false);
+  const [selectedStageInspect, setSelectedStageInspect] = useState(null);
 
   const currentStage = (agentState?.current_node || agentState?.stage || 'MONITOR').toUpperCase();
   const activePlan = agentState?.remediation_plan || agentState?.pending_plan || agentState?.last_plan;
@@ -118,11 +189,14 @@ export default function AgentConsole({
             <Bot className="h-4 w-4 text-amber-300" />
           </div>
           <div className="min-w-0">
-            <h2 className="font-display text-xs font-bold uppercase tracking-wider text-white truncate">
-              Phase 2 Slow-Brain: LangGraph SRE
+            <h2 className="font-display text-xs font-bold uppercase tracking-wider text-white truncate flex items-center gap-1.5">
+              <span>LangGraph SRE Slow-Brain</span>
+              <span className="rounded bg-amber-500/20 border border-amber-400/50 px-1.5 py-0.2 font-mono-code text-[9px] text-amber-300">
+                StateGraph Active
+              </span>
             </h2>
             <p className="font-mono-code text-[10px] text-slate-400 truncate">
-              StateGraph Orchestrator • 5 Safety Gates Active
+              6-Stage Directed Graph • 5 Safety Gates Enforced
             </p>
           </div>
         </div>
@@ -173,28 +247,76 @@ export default function AgentConsole({
         )}
       </div>
 
-      {/* 6-Node LangGraph Pipeline Stepper */}
-      <div className="border-b border-slate-800/80 bg-slate-900/50 px-3 py-2">
-        <div className="grid grid-cols-6 gap-1 text-center">
+      {/* VISUAL LANGGRAPH STATEGRAPH PIPELINE */}
+      <div className="border-b border-slate-800/80 bg-slate-950/70 p-2.5">
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="font-mono-code text-[10px] font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+            <GitCommit className="h-3 w-3 text-amber-400" />
+            <span>LangGraph State Machine Topology</span>
+          </span>
+          <span className="font-mono-code text-[10px] text-amber-300/80">
+            Current: <strong className="text-amber-200">{currentStage}</strong>
+          </span>
+        </div>
+
+        {/* 6-Node Visual Flowchart */}
+        <div className="grid grid-cols-6 gap-1 relative">
           {LANGGRAPH_STAGES.map((stage, idx) => {
+            const meta = STAGE_DETAILS[stage];
+            const Icon = meta.icon;
             const isDone = idx < activeStageIdx || currentStage === 'VERIFY';
             const isCurrent = idx === activeStageIdx;
+            const isInspecting = selectedStageInspect === stage;
+
             return (
-              <div
+              <button
                 key={stage}
-                className={`flex flex-col items-center rounded-lg border px-1 py-1 text-center font-mono-code text-[9px] font-bold transition-all truncate ${
+                onClick={() => setSelectedStageInspect((prev) => (prev === stage ? null : stage))}
+                className={`flex flex-col items-center justify-center rounded-xl p-1.5 border text-center transition-all cursor-pointer relative group ${
                   isCurrent
-                    ? 'bg-amber-500/25 border-amber-400 text-amber-200 shadow-[0_0_12px_rgba(245,158,11,0.3)]'
+                    ? 'bg-amber-500/25 border-amber-400 text-amber-200 shadow-[0_0_15px_rgba(245,158,11,0.4)] animate-pulse'
                     : isDone
-                    ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300'
-                    : 'bg-slate-950/60 border-slate-800 text-slate-500'
-                }`}
+                    ? 'bg-emerald-950/70 border-emerald-500/50 text-emerald-300'
+                    : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:border-slate-700'
+                } ${isInspecting ? 'ring-2 ring-amber-400' : ''}`}
+                title={`Click to inspect LangGraph ${stage} node specification`}
               >
-                <span className="truncate">{idx + 1}.{stage}</span>
-              </div>
+                <div className="flex items-center gap-1 mb-0.5">
+                  <Icon className={`h-3 w-3 ${isCurrent ? 'text-amber-300' : isDone ? 'text-emerald-400' : 'text-slate-500'}`} />
+                  {isDone && <CheckCircle2 className="h-2.5 w-2.5 text-emerald-400" />}
+                </div>
+                <span className="font-mono-code text-[9px] font-bold leading-none truncate w-full">
+                  {meta.name}
+                </span>
+                <span className="text-[8px] text-slate-400 font-mono-code leading-none mt-0.5 opacity-80 group-hover:opacity-100">
+                  {meta.short}
+                </span>
+              </button>
             );
           })}
         </div>
+
+        {/* Interactive Deep Node Inspector Drawer */}
+        {selectedStageInspect && (
+          <div className="mt-2 p-2.5 rounded-xl bg-slate-900/90 border border-amber-500/40 text-[10px] font-mono-code space-y-1 animate-fade-in">
+            <div className="flex items-center justify-between text-amber-300 font-bold border-b border-slate-800 pb-1">
+              <span>{STAGE_DETAILS[selectedStageInspect].title}</span>
+              <button
+                onClick={() => setSelectedStageInspect(null)}
+                className="text-slate-400 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="text-slate-300 text-[10px] leading-tight">
+              {STAGE_DETAILS[selectedStageInspect].role}
+            </p>
+            <div className="grid grid-cols-2 gap-1 pt-1 text-[9px] text-slate-400">
+              <div><strong className="text-cyan-300">Inputs:</strong> {STAGE_DETAILS[selectedStageInspect].inputs}</div>
+              <div><strong className="text-emerald-300">Outputs:</strong> {STAGE_DETAILS[selectedStageInspect].outputs}</div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Prominent Human-in-the-Loop Operator Approval Box */}
@@ -320,7 +442,7 @@ export default function AgentConsole({
             logs.map((entry, i) => {
               const text = typeof entry === 'string' ? entry : entry.message || JSON.stringify(entry);
               const isGold = text.includes('Kintsugi') || text.includes('VERIFY') || text.includes('repaired') || text.includes('Gold');
-              const isErr = text.includes('ALERT') || text.includes('FRACTURE') || text.includes('Inject') || text.includes('CHAOS');
+              const isErr = text.includes('ALERT') || text.includes('FRACTURE') || text.includes('Inject') || text.includes('CHAOS') || text.includes('REJECTED');
               return (
                 <div
                   key={i}

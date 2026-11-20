@@ -156,13 +156,18 @@ class AmbientRemediationAgent:
         if hasattr(self.k8s, "is_connected") and self.k8s.is_connected:
             live_logs = self.k8s.get_pod_logs(svc, namespace="hipster", tail_lines=15)
             if live_logs and not live_logs[0].startswith("No pods found") and not live_logs[0].startswith("Error"):
-                logs.extend(live_logs)
+                if not logs:
+                    logs.extend(live_logs)
+                else:
+                    err_logs = [l for l in live_logs if "error" in l.lower() or "exception" in l.lower() or "warn" in l.lower()]
+                    logs.extend(err_logs)
 
-        # 2. Enrich with live Prometheus metrics if reachable
+        # 2. Enrich with live Prometheus metrics if reachable (fill missing metrics without overwriting active incident data)
         if self.prometheus and getattr(self.prometheus, "is_reachable", False):
             prom_metrics = self.prometheus.get_service_metrics(svc)
             if prom_metrics:
-                telemetry.update(prom_metrics)
+                for k, v in prom_metrics.items():
+                    telemetry.setdefault(k, v)
 
         summary = f"Detected {fault} on {svc}. Correlated with {len(logs)} container log records."
         hist.append(f"DIAGNOSE: {summary}")

@@ -39,7 +39,7 @@ class DigitalTwinReplayEngine:
         self.pending_hitl_plan = None
         self.cluster_source = (
             "live"
-            if os.environ.get("CLUSTER_MODE") == "LIVE_K8S" and getattr(self.agent.k8s, "is_connected", False)
+            if getattr(self.agent.k8s, "is_connected", False)
             else "replay"
         )
         
@@ -51,7 +51,8 @@ class DigitalTwinReplayEngine:
         self._load_artifacts()
 
     def set_cluster_source(self, source: str) -> str:
-        self.cluster_source = source.lower().strip()
+        s = source.lower().strip()
+        self.cluster_source = "live" if "live" in s else "replay"
         return self.cluster_source
 
     def set_llm_backend(self, backend: str) -> str:
@@ -312,12 +313,28 @@ class DigitalTwinReplayEngine:
                 autonomous_mode=self.autonomous_mode,
                 human_approved=None
             )
+            plan_obj = agent_state.get("proposed_plan")
+            plan_dict = (
+                plan_obj.model_dump()
+                if (plan_obj and hasattr(plan_obj, "model_dump"))
+                else (plan_obj.dict() if plan_obj else None)
+            )
+            g_obj = agent_state.get("guardrail_result")
+            g_dict = (
+                g_obj.model_dump()
+                if (g_obj and hasattr(g_obj, "model_dump"))
+                else (g_obj.dict() if g_obj else None)
+            )
             agent_event = {
                 "state": agent_state.get("current_state"),
-                "planned_action": agent_state.get("proposed_plan").selected_action.value if agent_state.get("proposed_plan") else None,
-                "reasoning": agent_state.get("proposed_plan").reasoning_summary if agent_state.get("proposed_plan") else None,
+                "current_node": agent_state.get("current_state"),
+                "planned_action": plan_obj.selected_action.value if plan_obj else None,
+                "reasoning": plan_obj.reasoning_summary if plan_obj else None,
                 "history": agent_state.get("step_history", []),
                 "execution_status": agent_state.get("execution_result").status if agent_state.get("execution_result") else None,
+                "remediation_plan": plan_dict,
+                "guardrail_result": g_dict,
+                "verification_result": agent_state.get("verification_result"),
             }
             if agent_state.get("current_state") == "AWAITING_APPROVAL":
                 self.pending_hitl_plan = {
