@@ -304,44 +304,91 @@ class DigitalTwinReplayEngine:
         # Dispatch Phase 2 Ambient Agent if anomaly detected
         agent_event = None
         if pred_class != "NORMAL" and confidence >= 0.50:
-            agent_state = self.agent.process_telemetry_tick(
-                predicted_fault=pred_class,
-                target_service=service,
-                confidence=confidence,
-                telemetry=metrics,
-                recent_logs=[f"Log template alert: error_count={metrics['log_error_count']}"],
-                autonomous_mode=self.autonomous_mode,
-                human_approved=None
-            )
-            plan_obj = agent_state.get("proposed_plan")
-            plan_dict = (
-                plan_obj.model_dump()
-                if (plan_obj and hasattr(plan_obj, "model_dump"))
-                else (plan_obj.dict() if plan_obj else None)
-            )
-            g_obj = agent_state.get("guardrail_result")
-            g_dict = (
-                g_obj.model_dump()
-                if (g_obj and hasattr(g_obj, "model_dump"))
-                else (g_obj.dict() if g_obj else None)
-            )
-            agent_event = {
-                "state": agent_state.get("current_state"),
-                "current_node": agent_state.get("current_state"),
-                "planned_action": plan_obj.selected_action.value if plan_obj else None,
-                "reasoning": plan_obj.reasoning_summary if plan_obj else None,
-                "history": agent_state.get("step_history", []),
-                "execution_status": agent_state.get("execution_result").status if agent_state.get("execution_result") else None,
-                "remediation_plan": plan_dict,
-                "guardrail_result": g_dict,
-                "verification_result": agent_state.get("verification_result"),
-            }
-            if agent_state.get("current_state") == "AWAITING_APPROVAL":
-                self.pending_hitl_plan = {
-                    "plan": agent_state["proposed_plan"],
-                    "service": service,
-                    "fault": pred_class
+            # Check 1: If a plan is already pending human operator approval, DO NOT call LangGraph/LLM again
+            if self.pending_hitl_plan is not None:
+                p_obj = self.pending_hitl_plan.get("plan")
+                plan_dict = (
+                    p_obj.model_dump()
+                    if (p_obj and hasattr(p_obj, "model_dump"))
+                    else (p_obj.dict() if p_obj else None)
+                )
+                agent_event = {
+                    "state": "AWAITING_APPROVAL",
+                    "current_node": "AWAITING_APPROVAL",
+                    "planned_action": p_obj.selected_action.value if p_obj else None,
+                    "reasoning": p_obj.reasoning_summary if p_obj else None,
+                    "history": [f"EXECUTE: Paused in HUMAN_IN_THE_LOOP mode. Waiting for operator approval on {service}."],
+                    "execution_status": "AWAITING_APPROVAL",
+                    "remediation_plan": plan_dict,
+                    "guardrail_result": {"passed": True, "violations": []},
+                    "verification_result": None,
                 }
+            # Check 2: If the service is in 120s anti-thrash cooldown lock, it was already remediated! DO NOT call LLM!
+            elif self.agent.guardrails.is_service_in_cooldown(service)[0]:
+                is_cd, cd_left = self.agent.guardrails.is_service_in_cooldown(service)
+                agent_event = {
+                    "state": "GUARDRAIL_COOLDOWN",
+                    "current_node": "GUARDRAILS",
+                    "planned_action": "COOLDOWN_LOCK",
+                    "reasoning": f"Service '{service}' is protected by 120s Anti-Thrash Cooldown ({cd_left:.1f}s remaining).",
+                    "history": [f"GUARDRAILS: Anti-thrash cooldown active for {service} ({cd_left:.1f}s remaining)."],
+                    "execution_status": "LOCKED",
+                    "remediation_plan": None,
+                    "guardrail_result": {"passed": False, "violations": [f"Cooldown lock active: {cd_left:.1f}s remaining"]},
+                    "verification_result": None,
+                }
+            # Check 3: If service was already verified repaired in this incident cycle
+            elif getattr(self.agent.k8s, "_digital_twin_state", getattr(self.agent.k8s, "_mock_cluster_state", {})).get("services", {}).get(service, {}).get("is_verified_repaired", False):
+                agent_event = {
+                    "state": "VERIFIED",
+                    "current_node": "VERIFY",
+                    "planned_action": "VERIFIED_REPAIRED",
+                    "reasoning": f"Service '{service}' was already healed and sealed in Kintsugi Gold.",
+                    "history": [f"VERIFY: Pod recovery confirmed. Gold Seam active for {service}."],
+                    "execution_status": "SUCCESS",
+                    "remediation_plan": None,
+                    "guardrail_result": {"passed": True, "violations": []},
+                    "verification_result": {"status": "RECOVERED", "action_executed": "PREVIOUS_REMEDIATION"},
+                }
+            else:
+                agent_state = self.agent.process_telemetry_tick(
+                    predicted_fault=pred_class,
+                    target_service=service,
+                    confidence=confidence,
+                    telemetry=metrics,
+                    recent_logs=[f"Log template alert: error_count={metrics['log_error_count']}"],
+                    autonomous_mode=self.autonomous_mode,
+                    human_approved=None
+                )
+                plan_obj = agent_state.get("proposed_plan")
+                plan_dict = (
+                    plan_obj.model_dump()
+                    if (plan_obj and hasattr(plan_obj, "model_dump"))
+                    else (plan_obj.dict() if plan_obj else None)
+                )
+                g_obj = agent_state.get("guardrail_result")
+                g_dict = (
+                    g_obj.model_dump()
+                    if (g_obj and hasattr(g_obj, "model_dump"))
+                    else (g_obj.dict() if g_obj else None)
+                )
+                agent_event = {
+                    "state": agent_state.get("current_state"),
+                    "current_node": agent_state.get("current_state"),
+                    "planned_action": plan_obj.selected_action.value if plan_obj else None,
+                    "reasoning": plan_obj.reasoning_summary if plan_obj else None,
+                    "history": agent_state.get("step_history", []),
+                    "execution_status": agent_state.get("execution_result").status if agent_state.get("execution_result") else None,
+                    "remediation_plan": plan_dict,
+                    "guardrail_result": g_dict,
+                    "verification_result": agent_state.get("verification_result"),
+                }
+                if agent_state.get("current_state") == "AWAITING_APPROVAL":
+                    self.pending_hitl_plan = {
+                        "plan": agent_state["proposed_plan"],
+                        "service": service,
+                        "fault": pred_class
+                    }
 
         cluster_snap = self.agent.k8s.get_cluster_snapshot()
 

@@ -182,9 +182,31 @@ class AmbientRemediationAgent:
     def _node_plan(self, state: AgentState) -> Dict[str, Any]:
         """Calls structured LLM reasoning (or Fallback Matrix) to formulate plan."""
         hist = list(state["step_history"])
+        svc = state["target_service"]
+        fault = state["predicted_fault"]
+
+        # Fast safety bypass: If service is in cooldown lock, reuse deterministic fallback without calling LLM
+        is_cd, cd_left = self.guardrails.is_service_in_cooldown(svc)
+        if is_cd:
+            from phase2_remediation.actions import FaultToActionMatrix
+            plan = FaultToActionMatrix.get_fallback_plan(
+                service=svc,
+                fault_class=fault,
+                confidence=state.get("confidence", 0.95),
+                telemetry=state.get("telemetry", {})
+            )
+            source = "COOLDOWN_PROTECTED_RULE"
+            hist.append(f"PLAN: Cooldown lock active ({cd_left:.1f}s remaining). Re-using verified rule fallback.")
+            return {
+                "proposed_plan": plan,
+                "reasoning_source": source,
+                "step_history": hist,
+                "current_state": "PLANNED",
+            }
+
         plan, source = self.llm_client.plan_remediation(
-            fault_class=state["predicted_fault"],
-            predicted_service=state["target_service"],
+            fault_class=fault,
+            predicted_service=svc,
             confidence=state["confidence"],
             telemetry_summary=state.get("telemetry", {}),
             recent_logs=state.get("recent_logs", [])

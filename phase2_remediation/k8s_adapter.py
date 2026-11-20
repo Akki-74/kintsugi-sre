@@ -51,6 +51,9 @@ class KubernetesClusterAdapter:
                 self.is_connected = False
                 self.mode = "DIGITAL_TWIN_SANDBOX"
 
+        self._last_snapshot_time = 0.0
+        self._cached_snapshot = None
+
         # Initialize In-Memory State for High-Fidelity Digital Twin
         self._digital_twin_state = {
             "services": {
@@ -121,6 +124,7 @@ class KubernetesClusterAdapter:
 
     def execute_remediation(self, plan: RemediationPlan) -> RemediationExecutionResult:
         """Executes the verified remediation plan."""
+        self._last_snapshot_time = 0.0
         t_exec = time.time()
 
         if self.is_connected:
@@ -392,13 +396,21 @@ class KubernetesClusterAdapter:
             logger.warning(f"Failed to read live node state: {e}")
             return self._digital_twin_state.get("nodes", {})
 
-    def get_cluster_snapshot(self) -> Dict[str, Any]:
-        """Returns combined cluster state from live K8s or digital twin."""
+    def get_cluster_snapshot(self, force_refresh: bool = False) -> Dict[str, Any]:
+        """Returns combined cluster state from live K8s or digital twin with 3-second cache."""
+        now = time.time()
+        if not force_refresh and (now - getattr(self, "_last_snapshot_time", 0.0)) < 3.0 and getattr(self, "_cached_snapshot", None):
+            return self._cached_snapshot
+
         if self.is_connected:
             self.get_live_service_state()
             self.get_live_node_state()
-        return {
+
+        snap = {
             "mode": self.mode,
             "is_connected": self.is_connected,
             "state": self._digital_twin_state
         }
+        self._last_snapshot_time = now
+        self._cached_snapshot = snap
+        return snap

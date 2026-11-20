@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import time
 import logging
 from typing import Dict, Any, Optional, Tuple, List
 
@@ -65,6 +66,9 @@ class DualBackendLLMClient:
 
         self.last_backend_used: Optional[str] = None
         self.last_error: Optional[str] = None
+        self._groq_client: Optional[OpenAI] = None
+        self._local_client: Optional[OpenAI] = None
+        self._plan_cache: Dict[str, Tuple[float, RemediationPlan]] = {}
 
     @staticmethod
     def _extract_clean_json(raw_text: str) -> dict:
@@ -79,7 +83,16 @@ class DualBackendLLMClient:
         return json.loads(cleaned)
 
     def _call_openai_compatible(self, base_url: str, api_key: str, model: str, user_prompt: str) -> RemediationPlan:
-        client = OpenAI(base_url=base_url, api_key=api_key, timeout=15.0)
+        # Persistent client reuse to eliminate connection & TLS handshake overhead
+        if "groq.com" in base_url:
+            if not self._groq_client:
+                self._groq_client = OpenAI(base_url=base_url, api_key=api_key, timeout=7.0)
+            client = self._groq_client
+        else:
+            if not self._local_client:
+                self._local_client = OpenAI(base_url=base_url, api_key=api_key, timeout=4.0)
+            client = self._local_client
+
         response = client.chat.completions.create(
             model=model,
             messages=[
@@ -107,6 +120,15 @@ class DualBackendLLMClient:
                                    recent_logs: Optional[List[str]] = None,
                                    current_replicas: int = 1,
                                    namespace: str = "hipster") -> Tuple[RemediationPlan, str]:
+        # Deduplication cache: if the exact same service & fault was planned within 15s, re-use it!
+        cache_key = f"{service}:{fault_class}"
+        now = time.time()
+        if cache_key in self._plan_cache:
+            ts, cached_plan = self._plan_cache[cache_key]
+            if now - ts < 15.0:
+                logger.info(f"Re-using cached plan for {cache_key} (age: {now - ts:.1f}s)")
+                return cached_plan, self.last_backend_used or f"GROQ_CLOUD ({self.groq_model})"
+
         user_prompt = json.dumps({
             "target_service": service,
             "target_namespace": namespace,
@@ -117,7 +139,8 @@ class DualBackendLLMClient:
             "recent_pod_logs": (recent_logs or [])[-10:],
         }, indent=2)
 
-        backends = ["groq", "lm_studio"] if self.preferred_backend != "lm_studio" else ["lm_studio", "groq"]
+        # Do not hang on localhost LM Studio if Groq was preferred
+        backends = ["groq"] if self.preferred_backend != "lm_studio" else ["lm_studio", "groq"]
         errors = []
 
         for b in backends:
@@ -133,6 +156,7 @@ class DualBackendLLMClient:
                     )
                     self.last_backend_used = f"GROQ_CLOUD ({self.groq_model})"
                     self.last_error = None
+                    self._plan_cache[cache_key] = (now, plan)
                     return plan, self.last_backend_used
                 elif b == "lm_studio":
                     plan = self._call_openai_compatible(
@@ -143,6 +167,7 @@ class DualBackendLLMClient:
                     )
                     self.last_backend_used = f"LM_STUDIO_LOCAL ({self.local_model})"
                     self.last_error = None
+                    self._plan_cache[cache_key] = (now, plan)
                     return plan, self.last_backend_used
             except Exception as e:
                 errors.append(f"{b}: {str(e)}")
@@ -157,6 +182,7 @@ class DualBackendLLMClient:
             namespace=namespace,
         )
         self.last_backend_used = "DETERMINISTIC_FALLBACK_MATRIX"
+        self._plan_cache[cache_key] = (now, fallback_plan)
         return fallback_plan, self.last_backend_used
 
     def plan_remediation(self,

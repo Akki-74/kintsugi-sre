@@ -190,15 +190,15 @@ def get_benchmark_results():
 
 
 @app.post("/api/chaos/inject")
-def inject_chaos(req: ChaosRequest):
+async def inject_chaos(req: ChaosRequest):
     """Trigger manual chaos injection on a specific microservice."""
     fault = req.fault_type or req.scenario or req.fault or "cpu_contention"
-    result = engine.inject_chaos(req.service, fault)
+    result = await asyncio.to_thread(engine.inject_chaos, req.service, fault)
     return result
 
 
 @app.post("/api/agent/mode")
-def set_agent_mode(req: ModeRequest):
+async def set_agent_mode(req: ModeRequest):
     """Toggle between Autonomous mode and Human-in-the-Loop mode."""
     if req.autonomous is not None:
         val = bool(req.autonomous)
@@ -214,22 +214,22 @@ def set_agent_mode(req: ModeRequest):
 
 
 @app.post("/api/agent/approve")
-def approve_action(body: Optional[Dict[str, Any]] = None):
+async def approve_action(body: Optional[Dict[str, Any]] = None):
     """Operator approval in Human-in-the-Loop mode."""
     if body and body.get("approved") is False:
-        return engine.reject_pending_plan()
-    return engine.approve_pending_plan()
+        return await asyncio.to_thread(engine.reject_pending_plan)
+    return await asyncio.to_thread(engine.approve_pending_plan)
 
 
 @app.post("/api/agent/reject")
-def reject_action():
+async def reject_action():
     """Operator rejection in Human-in-the-Loop mode."""
-    return engine.reject_pending_plan()
+    return await asyncio.to_thread(engine.reject_pending_plan)
 
 
 @app.get("/api/cluster/snapshot")
-def get_cluster_snapshot():
-    return engine.agent.k8s.get_cluster_snapshot()
+async def get_cluster_snapshot():
+    return await asyncio.to_thread(engine.agent.k8s.get_cluster_snapshot)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -243,12 +243,13 @@ async def websocket_telemetry_stream(websocket: WebSocket):
 
     try:
         while True:
-            # Generate next telemetry tick from held-out digital twin replay
-            tick_data = engine.get_next_tick()
+            # Generate next telemetry tick asynchronously without blocking the event loop
+            tick_data = await asyncio.to_thread(engine.get_next_tick)
             await websocket.send_json(tick_data)
             await asyncio.sleep(engine.tick_speed_sec)
     except WebSocketDisconnect:
-        active_connections.remove(websocket)
+        if websocket in active_connections:
+            active_connections.remove(websocket)
         print(f"WebSocket client disconnected. Remaining: {len(active_connections)}")
     except Exception as e:
         if websocket in active_connections:

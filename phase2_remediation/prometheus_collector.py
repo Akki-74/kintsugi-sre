@@ -124,7 +124,15 @@ class PrometheusCollector:
             return []
 
     def get_service_metrics(self, service: str) -> Dict[str, float]:
-        """Returns live metrics for a specific OnlineBoutique service."""
+        """Returns live metrics for a specific OnlineBoutique service with 2.0s cache."""
+        now = time.time()
+        if not hasattr(self, "_metrics_cache"):
+            self._metrics_cache = {}
+        if service in self._metrics_cache:
+            ts, cached_metrics = self._metrics_cache[service]
+            if now - ts < 2.0:
+                return cached_metrics
+
         metrics = {}
         for metric_name, query_template in SERVICE_QUERIES.items():
             query = query_template.format(service=service)
@@ -138,6 +146,7 @@ class PrometheusCollector:
                     metrics[metric_name] = 0.0
             else:
                 metrics[metric_name] = 0.0
+        self._metrics_cache[service] = (now, metrics)
         return metrics
 
     def get_all_services_metrics(self) -> Dict[str, Dict[str, float]]:
