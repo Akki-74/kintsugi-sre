@@ -301,30 +301,31 @@ class DigitalTwinReplayEngine:
                 "log_error_count": float(row.get("log_error_count", 0.0)),
             }
 
-        # Dispatch Phase 2 Ambient Agent if anomaly detected
+        # Dispatch Phase 2 Ambient Agent if anomaly detected or plan awaiting approval
         agent_event = None
-        if pred_class != "NORMAL" and confidence >= 0.50:
-            # Check 1: If a plan is already pending human operator approval, DO NOT call LangGraph/LLM again
-            if self.pending_hitl_plan is not None:
-                p_obj = self.pending_hitl_plan.get("plan")
-                plan_dict = (
-                    p_obj.model_dump()
-                    if (p_obj and hasattr(p_obj, "model_dump"))
-                    else (p_obj.dict() if p_obj else None)
-                )
-                agent_event = {
-                    "state": "AWAITING_APPROVAL",
-                    "current_node": "AWAITING_APPROVAL",
-                    "planned_action": p_obj.selected_action.value if p_obj else None,
-                    "reasoning": p_obj.reasoning_summary if p_obj else None,
-                    "history": [f"EXECUTE: Paused in HUMAN_IN_THE_LOOP mode. Waiting for operator approval on {service}."],
-                    "execution_status": "AWAITING_APPROVAL",
-                    "remediation_plan": plan_dict,
-                    "guardrail_result": {"passed": True, "violations": []},
-                    "verification_result": None,
-                }
+        if self.pending_hitl_plan is not None:
+            # Check 1: If a plan is already pending human operator approval, emit stable approval state
+            p_obj = self.pending_hitl_plan.get("plan")
+            plan_dict = (
+                p_obj.model_dump()
+                if (p_obj and hasattr(p_obj, "model_dump"))
+                else (p_obj.dict() if p_obj else None)
+            )
+            hitl_svc = self.pending_hitl_plan.get("service", service)
+            agent_event = {
+                "state": "AWAITING_APPROVAL",
+                "current_node": "AWAITING_APPROVAL",
+                "planned_action": p_obj.selected_action.value if p_obj else None,
+                "reasoning": p_obj.reasoning_summary if p_obj else None,
+                "history": [f"EXECUTE: Paused in HUMAN_IN_THE_LOOP mode. Waiting for operator approval on {hitl_svc}."],
+                "execution_status": "AWAITING_APPROVAL",
+                "remediation_plan": plan_dict,
+                "guardrail_result": {"passed": True, "violations": []},
+                "verification_result": None,
+            }
+        elif pred_class != "NORMAL" and confidence >= 0.50:
             # Check 2: If the service is in 120s anti-thrash cooldown lock, it was already remediated! DO NOT call LLM!
-            elif self.agent.guardrails.is_service_in_cooldown(service)[0]:
+            if self.agent.guardrails.is_service_in_cooldown(service)[0]:
                 is_cd, cd_left = self.agent.guardrails.is_service_in_cooldown(service)
                 agent_event = {
                     "state": "GUARDRAIL_COOLDOWN",
@@ -391,6 +392,8 @@ class DigitalTwinReplayEngine:
                     }
 
         cluster_snap = self.agent.k8s.get_cluster_snapshot()
+        is_conn = bool(getattr(self.agent.k8s, "is_connected", False))
+        prom_ok = bool(getattr(getattr(self.agent, "prometheus", None), "is_reachable", False))
 
         tick_payload = {
             "tick_index": idx,
@@ -407,7 +410,15 @@ class DigitalTwinReplayEngine:
             "agent_event": agent_event,
             "cluster_state": cluster_snap["state"]["services"],
             "pending_hitl": (self.pending_hitl_plan is not None),
-            "pending_plan": self.pending_hitl_plan["plan"].dict() if self.pending_hitl_plan else None,
+            "pending_plan": (
+                self.pending_hitl_plan["plan"].dict()
+                if (self.pending_hitl_plan and hasattr(self.pending_hitl_plan["plan"], "dict"))
+                else None
+            ),
             "autonomous_mode": self.autonomous_mode,
+            "is_k8s_connected": is_conn,
+            "cluster_mode": "LIVE_K8S" if is_conn else "STANDALONE",
+            "cluster_source": self.cluster_source,
+            "prometheus_reachable": prom_ok,
         }
         return tick_payload

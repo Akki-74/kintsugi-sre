@@ -8,7 +8,7 @@
   <style>
     :root {
       --bg: #060911;
-      --card: rgba(13, 19, 34, 0.85);
+      --card: rgba(13, 19, 34, 0.92);
       --gold: #f59e0b;
       --gold-light: #fcd34d;
       --cyan: #38bdf8;
@@ -23,15 +23,39 @@
       background-color: var(--bg);
       color: var(--text);
       overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+    .deck {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .slide {
+      position: absolute;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      padding: 3rem 5rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      transform: scale(0.985);
+      background-color: var(--bg);
       background-image:
         radial-gradient(circle at 15% 15%, rgba(245, 158, 11, 0.12), transparent 35%),
         radial-gradient(circle at 85% 80%, rgba(56, 189, 248, 0.10), transparent 35%);
+      z-index: 1;
     }
-    .deck { width: 100vw; height: 100vh; display: flex; transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
-    .slide {
-      min-width: 100vw; height: 100vh; padding: 3.5rem 5rem;
-      display: flex; flex-direction: column; justify-content: space-between;
-      position: relative;
+    .slide.active {
+      opacity: 1;
+      pointer-events: auto;
+      transform: scale(1);
+      z-index: 10;
     }
     h1, h2, h3 { font-family: 'Space Grotesk', sans-serif; }
     .mono { font-family: 'JetBrains Mono', monospace; }
@@ -50,12 +74,12 @@
     .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin: auto 0; }
     .card {
       background: var(--card); border: 1px solid rgba(148, 163, 184, 0.16);
-      border-radius: 1rem; padding: 1.6rem; backdrop-filter: blur(16px);
+      border-radius: 1rem; padding: 1.5rem; backdrop-filter: blur(16px);
       box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
     }
     .card-gold { border-color: rgba(245, 158, 11, 0.45); box-shadow: 0 0 30px rgba(245, 158, 11, 0.12); }
     table { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin-top: 0.8rem; }
-    th, td { padding: 0.7rem 0.9rem; text-align: left; border-bottom: 1px solid rgba(148, 163, 184, 0.14); }
+    th, td { padding: 0.65rem 0.85rem; text-align: left; border-bottom: 1px solid rgba(148, 163, 184, 0.14); }
     th { color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; }
     .highlight-row { background: rgba(245, 158, 11, 0.12); font-weight: 600; color: var(--gold-light); }
     .metric-big { font-size: 2.5rem; font-weight: 700; font-family: 'Space Grotesk', sans-serif; }
@@ -67,22 +91,23 @@
     .btn {
       background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(245, 158, 11, 0.4);
       color: var(--gold-light); padding: 0.45rem 1rem; border-radius: 0.5rem; cursor: pointer; font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
     }
     .btn:hover { background: rgba(245, 158, 11, 0.2); }
-    ul { list-style: none; space-y: 0.6rem; }
-    ul li { margin-bottom: 0.65rem; display: flex; align-items: flex-start; gap: 0.6rem; font-size: 0.95rem; color: #cbd5e1; }
-    ul li::before { content: "✦"; color: var(--gold); font-weight: bold; }
+    ul { list-style: none; }
+    ul li { margin-bottom: 0.6rem; display: flex; align-items: flex-start; gap: 0.6rem; font-size: 0.95rem; color: #cbd5e1; }
+    ul li::before { content: "✦"; color: var(--gold); font-weight: bold; flex-shrink: 0; }
   </style>
 </head>
 <body>
   <div class="deck" id="deck">
     <!-- SLIDE 1: OVERVIEW -->
-    <section class="slide">
+    <section class="slide active" id="slide-1">
       <div>
-        <span class="badge">✦ Autonomous Kubernetes SRE & Multi-Modal AIOps</span>
+        <span class="badge">01 // Autonomous Kubernetes SRE &amp; Multi-Modal AIOps</span>
         <h1 class="title-xl">KINTSUGI <span class="gold-grad">AI</span></h1>
         <p style="font-size: 1.25rem; color: var(--muted); max-width: 780px; margin-top: 0.8rem;">
-          Multi-Modal Kubernetes Failure Prediction (XGBoost + SARIMA) & Closed-Loop LangGraph Remediation Engine.
+          Multi-Modal Kubernetes Failure Prediction (XGBoost + SARIMA) &amp; Closed-Loop LangGraph Remediation Engine.
         </p>
       </div>
       <div class="grid-3">
@@ -97,7 +122,7 @@
           <div class="mono" style="color: var(--cyan); font-size: 0.75rem;">PREDICTIVE ENGINE</div>
           <h3 style="margin: 0.4rem 0; font-size: 1.25rem;">89-Feature Multi-Modal ML</h3>
           <p style="color: var(--muted); font-size: 0.9rem; line-height: 1.5;">
-            Fuses Prometheus container telemetry (CPU, Memory, Network, FS) with Drain3-parsed JSON container logs and compare classical SARIMA forecasting against Multi-Modal XGBoost.
+            Fuses Prometheus container telemetry (CPU, Memory, Network, FS) with Drain3-parsed JSON container logs and compares classical SARIMA forecasting against Multi-Modal XGBoost.
           </p>
         </div>
         <div class="card">
@@ -109,7 +134,7 @@
         </div>
       </div>
       <div class="footer-nav">
-        <span class="mono">KINTSUGI-AI // SYSTEMS ARCHITECTURE DECK</span>
+        <span class="mono">SLIDE 01 / 05 — OVERVIEW &amp; PHILOSOPHY</span>
         <div>
           <button class="btn" onclick="window.location.href='/app/'">Launch Command Center ↗</button>
           <button class="btn" onclick="move(1)">Next →</button>
@@ -118,16 +143,16 @@
     </section>
 
     <!-- SLIDE 2: MULTI-MODAL FEATURE PIPELINE -->
-    <section class="slide">
+    <section class="slide" id="slide-2">
       <div>
-        <span class="badge">01 // Telemetry & Feature Engineering</span>
+        <span class="badge">02 // Telemetry &amp; Feature Engineering</span>
         <h2 style="font-size: 2.3rem; margin-top: 0.6rem;">Multi-Modal Observability Pipeline (Nezha FSE'23)</h2>
       </div>
       <div class="grid-2">
         <div class="card">
           <h3 style="color: var(--gold-light); margin-bottom: 0.8rem;">Zero-Leakage Chronological Partitioning</h3>
           <ul>
-            <li><strong>10-Microservice OnlineBoutique Mesh:</strong> Trained & evaluated on real multi-modal Kubernetes chaos traces across <code class="mono">hipster</code> services.</li>
+            <li><strong>10-Microservice OnlineBoutique Mesh:</strong> Trained &amp; evaluated on real multi-modal Kubernetes chaos traces across <code class="mono">hipster</code> services.</li>
             <li><strong>89 Engineered Features per Window:</strong> 3-minute sliding lookback computing rolling mean, std, min/max, 1st-order derivative slopes, and pod-to-namespace z-scores.</li>
             <li><strong>Multi-Modal Log Fusion:</strong> Extracts Error/Warn burst velocity, HTTP 5xx rates, OOM/timeout keyword flags, and Shannon template entropy.</li>
             <li><strong>Strict Chronological Split:</strong> Day 1 Train (<code class="mono">24,180</code> rows), Day 2 Test (<code class="mono">4,340</code> rows), Day 2 Unseen Validation Holdout (<code class="mono">2,480</code> rows).</li>
@@ -139,55 +164,55 @@
         </div>
       </div>
       <div class="footer-nav">
-        <span class="mono">SLIDE 02 / 05 — FEATURE PIPELINE</span>
+        <span class="mono">SLIDE 02 / 05 — DATASET &amp; ARCHITECTURE</span>
         <div><button class="btn" onclick="move(-1)">← Prev</button> <button class="btn" onclick="move(1)">Next →</button></div>
       </div>
     </section>
 
     <!-- SLIDE 3: ABLATION & SARIMA VS XGBOOST BENCHMARK -->
-    <section class="slide">
+    <section class="slide" id="slide-3">
       <div>
-        <span class="badge">02 // Model Evaluation & Time-Series Benchmarking</span>
-        <h2 style="font-size: 2.2rem; margin-top: 0.6rem;">4-Model Ablation & SARIMA vs. XGBoost Forecasting</h2>
+        <span class="badge">03 // Model Evaluation &amp; Time-Series Benchmarking</span>
+        <h2 style="font-size: 2.2rem; margin-top: 0.6rem;">4-Model Ablation &amp; SARIMA vs. XGBoost Forecasting</h2>
       </div>
-      <div style="margin: auto 0; display: flex; flex-direction: column; gap: 1.2rem;">
+      <div class="grid-2">
         <div class="card">
-          <div class="mono" style="color: var(--gold); font-size: 0.75rem;">TABLE 1 // 6-CLASS FAULT TAXONOMY & REGIME A ONSET LATENCY</div>
+          <div class="mono" style="color: var(--gold); font-size: 0.75rem;">TABLE 1 // 6-CLASS FAULT TAXONOMY &amp; REGIME A ONSET LATENCY</div>
           <table>
             <thead>
-              <tr><th>Model Architecture</th><th>Precision</th><th>Recall</th><th>Macro-F1</th><th>Anomaly F1</th><th>Regime A Latency (Δt)</th><th>Top-1 Root Cause</th><th>False Alarms/hr</th></tr>
+              <tr><th>Model Architecture</th><th>Precision</th><th>Recall</th><th>Macro-F1</th><th>Anomaly F1</th><th>Latency (Δt)</th></tr>
             </thead>
             <tbody>
-              <tr><td>Baseline 0: Static Prometheus Rules</td><td>0.2700</td><td>0.3495</td><td>0.2816</td><td>0.1683</td><td>148.0s</td><td>33.3%</td><td>14.80 / hr</td></tr>
-              <tr><td>Model 1: Unsupervised IsolationForest</td><td>0.2794</td><td>0.3643</td><td>0.2782</td><td>0.1889</td><td>132.5s</td><td>41.7%</td><td>9.42 / hr</td></tr>
-              <tr><td>Model 2: Temporal XGBoost (Metrics Only)</td><td>0.5414</td><td>0.6141</td><td>0.5706</td><td>0.5789</td><td>108.4s</td><td>58.3%</td><td>3.14 / hr</td></tr>
-              <tr class="highlight-row"><td>✦ Model 3: Multi-Modal XGBoost (Metrics + Logs)</td><td>0.7088</td><td>0.7189</td><td>0.7132</td><td>0.7225</td><td>87.6s</td><td>66.7%</td><td>1.71 / hr</td></tr>
+              <tr><td>Baseline 0: Static Rules</td><td>0.2700</td><td>0.3495</td><td>0.2816</td><td>0.1683</td><td>148.0s</td></tr>
+              <tr><td>Model 1: IsolationForest</td><td>0.2794</td><td>0.3643</td><td>0.2782</td><td>0.1889</td><td>132.5s</td></tr>
+              <tr><td>Model 2: Temporal XGBoost</td><td>0.5414</td><td>0.6141</td><td>0.5706</td><td>0.5789</td><td>108.4s</td></tr>
+              <tr class="highlight-row"><td>✦ Model 3: Multi-Modal XGBoost</td><td>0.7088</td><td>0.7189</td><td>0.7132</td><td>0.7225</td><td>87.6s</td></tr>
             </tbody>
           </table>
         </div>
         <div class="card card-gold">
-          <div class="mono" style="color: var(--cyan); font-size: 0.75rem;">TABLE 2 // REGIME B TIME-TO-EXHAUSTION (TTE): CLASSICAL SARIMA VS. MULTI-MODAL XGBREGRESSOR</div>
+          <div class="mono" style="color: var(--cyan); font-size: 0.75rem;">TABLE 2 // REGIME B TIME-TO-EXHAUSTION (TTE): SARIMA VS. XGBREGRESSOR</div>
           <table>
             <thead>
-              <tr><th>Forecasting Architecture</th><th>Input Modality</th><th>TTE MAE (↓)</th><th>TTE RMSE (↓)</th><th>R² Score (↑)</th><th>Mean Lead Time</th><th>Inference / Tick</th></tr>
+              <tr><th>Forecasting Architecture</th><th>TTE MAE (↓)</th><th>TTE RMSE (↓)</th><th>R² (↑)</th><th>Inference / Tick</th></tr>
             </thead>
             <tbody>
-              <tr><td>Classical SARIMA(1,1,1)×(1,0,1)₁₂</td><td>Univariate Metric Series (Memory / Disk)</td><td>6.50 min</td><td>6.89 min</td><td>0.114</td><td>10.0 min (Threshold)</td><td>243.8 ms (Laggy)</td></tr>
-              <tr class="highlight-row"><td>✦ Kintsugi Multi-Modal XGBRegressor</td><td>89 Multi-Modal Features + Slopes + Logs</td><td>0.71 min (-89.1%)</td><td>0.90 min (-87.0%)</td><td>0.846</td><td>4.7 min (Continuous)</td><td>0.67 ms (364× faster)</td></tr>
+              <tr><td>Classical SARIMA(1,1,1)×(1,0,1)₁₂</td><td>6.50 min</td><td>6.89 min</td><td>0.114</td><td>243.8 ms (Laggy)</td></tr>
+              <tr class="highlight-row"><td>✦ Kintsugi Multi-Modal XGBRegressor</td><td>0.71 min (-89%)</td><td>0.90 min (-87%)</td><td>0.846</td><td>0.67 ms (364× faster)</td></tr>
             </tbody>
           </table>
         </div>
       </div>
       <div class="footer-nav">
-        <span class="mono">SLIDE 03 / 05 — ML & SARIMA BENCHMARKS</span>
+        <span class="mono">SLIDE 03 / 05 — ML &amp; SARIMA BENCHMARKS</span>
         <div><button class="btn" onclick="move(-1)">← Prev</button> <button class="btn" onclick="move(1)">Next →</button></div>
       </div>
     </section>
 
     <!-- SLIDE 4: QUALITY ASSURANCE & INFRASTRUCTURE -->
-    <section class="slide">
+    <section class="slide" id="slide-4">
       <div>
-        <span class="badge">03 // Infrastructure &amp; Verification</span>
+        <span class="badge">04 // Infrastructure &amp; Verification</span>
         <h2 style="font-size: 2.3rem; margin-top: 0.6rem;">3-Tier Automated Verification &amp; Live Endpoints</h2>
       </div>
       <div class="grid-3">
@@ -226,9 +251,9 @@
     </section>
 
     <!-- SLIDE 5: LANGGRAPH + 5 GUARDRAILS + MTTR -->
-    <section class="slide">
+    <section class="slide" id="slide-5">
       <div>
-        <span class="badge">04 // Closed-Loop Remediation</span>
+        <span class="badge">05 // Closed-Loop Remediation</span>
         <h2 style="font-size: 2.2rem; margin-top: 0.6rem;">LangGraph State Machine &amp; 5 Deterministic SRE Guardrails</h2>
       </div>
       <div class="grid-2">
@@ -270,16 +295,32 @@
   </div>
 
   <script>
-    let idx = 0;
-    const total = 5;
-    function move(dir) {
-      idx = Math.max(0, Math.min(total - 1, idx + dir));
-      document.getElementById('deck').style.transform = `translateX(-${idx * 100}vw)`;
+    let currentIdx = 0;
+    const slides = document.querySelectorAll('.slide');
+    const total = slides.length;
+
+    function showSlide(n) {
+      currentIdx = Math.max(0, Math.min(total - 1, n));
+      slides.forEach((s, i) => {
+        if (i === currentIdx) {
+          s.classList.add('active');
+        } else {
+          s.classList.remove('active');
+        }
+      });
     }
+
+    function move(dir) {
+      showSlide(currentIdx + dir);
+    }
+
     window.addEventListener('keydown', (e) => {
       if (e.key === 'ArrowRight' || e.key === ' ') move(1);
       if (e.key === 'ArrowLeft') move(-1);
     });
+
+    // Initialize slide 0
+    showSlide(0);
   </script>
 </body>
 </html>

@@ -46,8 +46,61 @@ app.add_middleware(
 # Global replay & agent instance
 engine = DigitalTwinReplayEngine()
 
-# Active WebSocket subscribers
-active_connections: list[WebSocket] = []
+# Active WebSocket subscribers mapping WebSocket -> asyncio.Queue
+active_subscribers: Dict[WebSocket, asyncio.Queue] = {}
+broadcaster_task: Optional[asyncio.Task] = None
+latest_tick_data: Optional[Dict[str, Any]] = None
+
+
+async def telemetry_broadcast_loop():
+    """Single central background producer: advances tick exactly 1x/sec and fans out to all subscribers."""
+    global latest_tick_data
+    while True:
+        try:
+            # Advance telemetry tick through background threadpool exactly once per interval
+            tick_data = await asyncio.to_thread(engine.get_next_tick)
+            latest_tick_data = tick_data
+
+            # Fan out to all active subscriber queues
+            for ws, q in list(active_subscribers.items()):
+                try:
+                    if q.full():
+                        try:
+                            q.get_nowait()  # Drop oldest tick to prevent lag / buffer bloat
+                        except asyncio.QueueEmpty:
+                            pass
+                    q.put_nowait(tick_data)
+                except Exception:
+                    pass
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            print(f"Broadcaster tick error: {e}")
+
+        await asyncio.sleep(engine.tick_speed_sec)
+
+
+async def ensure_broadcaster():
+    global broadcaster_task
+    if broadcaster_task is None or broadcaster_task.done():
+        broadcaster_task = asyncio.create_task(telemetry_broadcast_loop())
+
+
+@app.on_event("startup")
+async def startup_broadcaster():
+    await ensure_broadcaster()
+    print("Telemetry broadcaster background task initialized.")
+
+
+@app.on_event("shutdown")
+async def shutdown_broadcaster():
+    global broadcaster_task
+    if broadcaster_task:
+        broadcaster_task.cancel()
+        try:
+            await broadcaster_task
+        except asyncio.CancelledError:
+            pass
 
 # Mount static frontend build if present
 frontend_dist = PROJECT_ROOT / "frontend" / "dist"
@@ -90,7 +143,7 @@ def root():
         "status": "ONLINE",
         "mode": engine.agent.k8s.mode,
         "autonomous_mode": engine.autonomous_mode,
-        "active_connections": len(active_connections)
+        "active_connections": len(active_subscribers)
     }
 
 
@@ -238,23 +291,30 @@ async def get_cluster_snapshot():
 @app.websocket("/ws/telemetry")
 async def websocket_telemetry_stream(websocket: WebSocket):
     await websocket.accept()
-    active_connections.append(websocket)
-    print(f"WebSocket client connected. Active: {len(active_connections)}")
+    await ensure_broadcaster()
+
+    queue: asyncio.Queue = asyncio.Queue(maxsize=10)
+    active_subscribers[websocket] = queue
+    print(f"WebSocket client connected. Active subscribers: {len(active_subscribers)}")
 
     try:
+        # Send immediate cached tick on initial connect so UI never waits
+        global latest_tick_data
+        if latest_tick_data is None:
+            latest_tick_data = await asyncio.to_thread(engine.get_next_tick)
+        await websocket.send_json(latest_tick_data)
+
         while True:
-            # Generate next telemetry tick asynchronously without blocking the event loop
-            tick_data = await asyncio.to_thread(engine.get_next_tick)
+            # Wait for next tick from central broadcaster queue
+            tick_data = await queue.get()
             await websocket.send_json(tick_data)
-            await asyncio.sleep(engine.tick_speed_sec)
     except WebSocketDisconnect:
-        if websocket in active_connections:
-            active_connections.remove(websocket)
-        print(f"WebSocket client disconnected. Remaining: {len(active_connections)}")
+        pass
     except Exception as e:
-        if websocket in active_connections:
-            active_connections.remove(websocket)
-        print(f"WebSocket error: {e}")
+        print(f"WebSocket client error: {e}")
+    finally:
+        active_subscribers.pop(websocket, None)
+        print(f"WebSocket client disconnected. Remaining subscribers: {len(active_subscribers)}")
 
 
 if __name__ == "__main__":

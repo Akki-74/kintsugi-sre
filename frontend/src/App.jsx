@@ -75,6 +75,8 @@ export default function App() {
   streamPausedRef.current = streamPaused;
   const soundEnabledRef = useRef(false);
   soundEnabledRef.current = soundEnabled;
+  const selectedServiceRef = useRef(selectedService);
+  selectedServiceRef.current = selectedService;
 
   // Fetch initial status, topology, and cluster snapshot
   const fetchInitialData = useCallback(async () => {
@@ -130,20 +132,56 @@ export default function App() {
   useEffect(() => {
     const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${proto}//${window.location.host}/ws/telemetry`;
-    let ws;
-    let reconnectTimer;
+    let ws = null;
+    let reconnectTimer = null;
+    let isUnmounted = false;
 
     const connectWs = () => {
-      ws = new WebSocket(wsUrl);
-      ws.onopen = () => setWsConnected(true);
-      ws.onclose = () => {
-        setWsConnected(false);
-        reconnectTimer = setTimeout(connectWs, 2500);
+      if (isUnmounted) return;
+      if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) {
+        return;
+      }
+
+      try {
+        ws = new WebSocket(wsUrl);
+      } catch (err) {
+        console.error('WebSocket init error:', err);
+        clearTimeout(reconnectTimer);
+        reconnectTimer = setTimeout(connectWs, 2000);
+        return;
+      }
+
+      ws.onopen = () => {
+        if (!isUnmounted) setWsConnected(true);
       };
+
+      ws.onclose = () => {
+        if (isUnmounted) return;
+        setWsConnected(false);
+        clearTimeout(reconnectTimer);
+        reconnectTimer = setTimeout(connectWs, 2000);
+      };
+
+      ws.onerror = () => {
+        try {
+          if (ws) ws.close();
+        } catch (_) {}
+      };
+
       ws.onmessage = (evt) => {
         if (streamPausedRef.current) return;
         try {
           const payload = JSON.parse(evt.data);
+
+          // Update authoritative cluster connection health from live tick
+          if (payload.is_k8s_connected !== undefined) {
+            setStatus((prev) => ({
+              ...prev,
+              is_k8s_connected: payload.is_k8s_connected,
+              cluster_mode: payload.cluster_mode || prev.cluster_mode,
+              prometheus_reachable: payload.prometheus_reachable ?? prev.prometheus_reachable
+            }));
+          }
 
           // Update cluster nodes if provided
           if (payload.cluster_nodes) setClusterNodes(payload.cluster_nodes);
@@ -194,6 +232,14 @@ export default function App() {
               remediation_plan: payload.pending_plan,
               pending_plan: payload.pending_plan
             }));
+          } else {
+            // No active incident or pending plan: clear awaiting_approval if previously set
+            setAgentState((prev) => {
+              if (prev.awaiting_approval) {
+                return { ...prev, awaiting_approval: false, status: 'MONITOR' };
+              }
+              return prev;
+            });
           }
 
           // Sync topology node statuses from cluster_state map
@@ -222,12 +268,12 @@ export default function App() {
             setTopology(payload.topology);
           }
 
-          // Extract selected service metrics for time-series charts
+          // Extract selected service metrics for time-series charts using stable ref
+          const currentSel = selectedServiceRef.current;
           const svcMap = payload.services || payload.cluster_state || {};
-          const nodesArr = payload.topology?.nodes || topology?.nodes || [];
           const activeNode =
-            svcMap[selectedService] ||
-            nodesArr.find((n) => (n.id || n.service) === selectedService) ||
+            svcMap[currentSel] ||
+            (payload.service === currentSel ? payload.metrics : null) ||
             payload.metrics;
 
           if (activeNode) {
@@ -256,10 +302,20 @@ export default function App() {
 
     connectWs();
     return () => {
+      isUnmounted = true;
       clearTimeout(reconnectTimer);
-      if (ws) ws.close();
+      if (ws) {
+        ws.onopen = null;
+        ws.onclose = null;
+        ws.onerror = null;
+        ws.onmessage = null;
+        try {
+          ws.close();
+        } catch (_) {}
+        ws = null;
+      }
     };
-  }, [selectedService, topology]);
+  }, []); // Mount once on load; single connection, zero reconnect thrashing
 
   // Compute Live Executive Ribbon KPIs
   const kintsugiStats = useMemo(() => {
