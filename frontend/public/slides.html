@@ -184,11 +184,52 @@
       </div>
     </section>
 
-    <!-- SLIDE 4: LANGGRAPH + 5 GUARDRAILS + MTTR -->
+    <!-- SLIDE 4: QUALITY ASSURANCE & INFRASTRUCTURE -->
     <section class="slide">
       <div>
-        <span class="badge">03 // Closed-Loop Remediation</span>
-        <h2 style="font-size: 2.2rem; margin-top: 0.6rem;">LangGraph State Machine & 5 Deterministic SRE Guardrails</h2>
+        <span class="badge">03 // Infrastructure &amp; Verification</span>
+        <h2 style="font-size: 2.3rem; margin-top: 0.6rem;">3-Tier Automated Verification &amp; Live Endpoints</h2>
+      </div>
+      <div class="grid-3">
+        <div class="card">
+          <div class="metric-big gold-grad">23 / 23</div>
+          <div class="mono" style="color: var(--muted); font-size: 0.75rem; margin-bottom: 0.8rem;">3-TIER PYTEST SUITE PASSING</div>
+          <ul>
+            <li><strong>Tier 1 (Unit):</strong> 89-feature schema, SARIMA bounds, Qwen <code class="mono">&lt;think&gt;</code> parser, 5 SRE guardrails.</li>
+            <li><strong>Tier 2 (Integration):</strong> 6-node LangGraph autonomous + Human-in-the-Loop approval flows.</li>
+            <li><strong>Tier 3 (System E2E):</strong> FastAPI REST, WebSocket 1Hz stream, React bundle delivery.</li>
+          </ul>
+        </div>
+        <div class="card card-gold">
+          <div class="metric-big" style="color: var(--cyan);">3 Nodes</div>
+          <div class="mono" style="color: var(--muted); font-size: 0.75rem; margin-bottom: 0.8rem;">MULTI-NODE KUBERNETES TOPOLOGY</div>
+          <ul>
+            <li><code class="mono">desktop-control-plane</code> + <code class="mono">desktop-worker</code> + <code class="mono">desktop-worker2</code></li>
+            <li>10 OnlineBoutique microservices in <code class="mono">hipster</code> namespace</li>
+            <li>Prometheus + Grafana + K8s Web Dashboard v2.7.0</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="metric-big" style="color: var(--emerald);">Live</div>
+          <div class="mono" style="color: var(--muted); font-size: 0.75rem; margin-bottom: 0.8rem;">CLOUD &amp; LOCAL COMMAND CENTER</div>
+          <ul>
+            <li><strong>Cloud App:</strong> <a href="https://kintsugi-ai.onrender.com/app/" target="_blank" style="color:var(--gold-light);">kintsugi-ai.onrender.com</a></li>
+            <li><strong>Local Command Center:</strong> <a href="http://localhost:8000/app/" target="_blank" style="color:var(--cyan);">localhost:8000/app/</a></li>
+            <li><strong>K8s Dashboard:</strong> <a href="https://localhost:8443" target="_blank" style="color:var(--emerald);">localhost:8443</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-nav">
+        <span class="mono">SLIDE 04 / 05 — INFRASTRUCTURE &amp; VERIFICATION</span>
+        <div><button class="btn" onclick="move(-1)">← Prev</button> <button class="btn" onclick="move(1)">Next →</button></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 5: LANGGRAPH + 5 GUARDRAILS + MTTR -->
+    <section class="slide">
+      <div>
+        <span class="badge">04 // Closed-Loop Remediation</span>
+        <h2 style="font-size: 2.2rem; margin-top: 0.6rem;">LangGraph State Machine &amp; 5 Deterministic SRE Guardrails</h2>
       </div>
       <div class="grid-2">
         <div class="card card-gold">
@@ -219,48 +260,7 @@
         </div>
       </div>
       <div class="footer-nav">
-        <span class="mono">SLIDE 04 / 05 — REMEDIATION & GUARDRAILS</span>
-        <div><button class="btn" onclick="move(-1)">← Prev</button> <button class="btn" onclick="move(1)">Next →</button></div>
-      </div>
-    </section>
-
-    <!-- SLIDE 5: QUALITY ASSURANCE & INFRASTRUCTURE -->
-    <section class="slide">
-      <div>
-        <span class="badge">04 // Infrastructure & Verification</span>
-        <h2 style="font-size: 2.3rem; margin-top: 0.6rem;">3-Tier Automated Verification & Live Endpoints</h2>
-      </div>
-      <div class="grid-3">
-        <div class="card">
-          <div class="metric-big gold-grad">23 / 23</div>
-          <div class="mono" style="color: var(--muted); font-size: 0.75rem; margin-bottom: 0.8rem;">3-TIER PYTEST SUITE PASSING</div>
-          <ul>
-            <li><strong>Tier 1 (Unit):</strong> 89-feature schema, SARIMA bounds, Qwen <code class="mono">&lt;think&gt;</code> parser, 5 SRE guardrails.</li>
-            <li><strong>Tier 2 (Integration):</strong> 6-node LangGraph autonomous + Human-in-the-Loop approval flows.</li>
-            <li><strong>Tier 3 (System E2E):</strong> FastAPI REST, WebSocket 1Hz stream, React bundle delivery.</li>
-          </ul>
-        </div>
-        <div class="card card-gold">
-          <div class="metric-big" style="color: var(--cyan);">3 Nodes</div>
-          <div class="mono" style="color: var(--muted); font-size: 0.75rem; margin-bottom: 0.8rem;">MULTI-NODE KUBERNETES TOPOLOGY</div>
-          <ul>
-            <li><code class="mono">desktop-control-plane</code> + <code class="mono">desktop-worker</code> + <code class="mono">desktop-worker2</code></li>
-            <li>10 OnlineBoutique microservices in <code class="mono">hipster</code> namespace</li>
-            <li>Prometheus + Grafana + K8s Web Dashboard v2.7.0</li>
-          </ul>
-        </div>
-        <div class="card">
-          <div class="metric-big" style="color: var(--emerald);">Live</div>
-          <div class="mono" style="color: var(--muted); font-size: 0.75rem; margin-bottom: 0.8rem;">CLOUD & LOCAL COMMAND CENTER</div>
-          <ul>
-            <li><strong>Cloud App:</strong> <a href="https://kintsugi-ai.onrender.com/app/" target="_blank" style="color:var(--gold-light);">kintsugi-ai.onrender.com</a></li>
-            <li><strong>Local Command Center:</strong> <a href="http://localhost:8000/app/" target="_blank" style="color:var(--cyan);">localhost:8000/app/</a></li>
-            <li><strong>K8s Dashboard:</strong> <a href="https://localhost:8443" target="_blank" style="color:var(--emerald);">localhost:8443</a></li>
-          </ul>
-        </div>
-      </div>
-      <div class="footer-nav">
-        <span class="mono">SLIDE 05 / 05 — INFRASTRUCTURE & ENDPOINTS</span>
+        <span class="mono">SLIDE 05 / 05 — CLOSED-LOOP REMEDIATION &amp; MTTR</span>
         <div>
           <button class="btn" onclick="move(-1)">← Prev</button>
           <button class="btn" onclick="window.location.href='/app/'">Open Live Command Center ↗</button>
