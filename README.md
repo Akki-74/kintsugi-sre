@@ -50,7 +50,17 @@
 10. [$0 Free Cloud Deployment (Render.com & Docker)](#-0-free-cloud-deployment-rendercom--docker)
 11. [3-Tier Automated Verification Suite (`pytest`)](#-3-tier-automated-verification-suite-pytest)
 12. [REST & WebSocket API Reference](#-rest--websocket-api-reference)
-13. [Local Quickstart Guide](#-local-quickstart-guide)
+13. [Complete Local Cluster Setup, Execution & Runbook Guide (Steps 1–9)](#-complete-local-cluster-setup-execution--runbook-guide)
+    - [Prerequisites & Initial Setup](#prerequisites--initial-setup)
+    - [STEP 1: Start / Wake Up the 3-Node Kubernetes Cluster](#step-1-start--wake-up-the-3-node-kubernetes-cluster)
+    - [STEP 2: Deploy RBAC & 10 Microservices (hipster Namespace)](#step-2-deploy-rbac--the-10-microservices-hipster-namespace)
+    - [STEP 3: Setup / Verify Monitoring (Prometheus, Grafana & Dashboard)](#step-3-setup--verify-monitoring-prometheus-grafana--k8s-dashboard)
+    - [STEP 4: Start All Port-Forwards](#step-4-start-all-port-forwards-prometheus-grafana-k8s-dashboard)
+    - [STEP 5: Run Backend Server & Frontend UI](#step-5-run-the-backend-server--frontend-ui)
+    - [STEP 6: Live Manual E2E Testing & Cluster Reset Commands](#step-6-live-manual-end-to-end-testing--cluster-reset-commands)
+    - [STEP 7: Run ML Pipeline, Benchmarks & Automated Pytests](#step-7-run-ml-pipeline-benchmarks--automated-test-suites)
+    - [STEP 9: Pause Everything & Free Up RAM When Done](#step-9-pause-everything--free-up-ram-when-done)
+    - [Quick URL Cheat Sheet](#-quick-url-cheat-sheet-when-everything-is-running)
 14. [End-to-End Technical Walkthrough Guide](#-end-to-end-technical-walkthrough-guide)
 15. [Project Structure](#-project-structure)
 16. [Technical Milestone Checklist](#-technical-milestone-checklist)
@@ -213,8 +223,8 @@ For gradual resource depletion (`MEMORY_EXHAUSTION`, `DISK_EXHAUSTION`), Kintsug
 ## 🏆 4 Standout Architectural Achievements
 
 1. **Dual-Engine Hot-Swapping at Runtime (`backend/main.py` & `frontend/src/components/TopBar.jsx`):**
-   - Operational API endpoints (`/api/cluster/source` and `/api/agent/backend`) allow operators to hot-swap on the fly with zero server restarts between:
-     - **Telemetry Stream:** `LIVE_K8S` (live Prometheus PromQL queries + live Kubernetes API) $\leftrightarrow$ `REPLAY_HOLDOUT` (chronological telemetry stream from held-out multi-modal dataset).
+   - Operational API endpoints allow operators to hot-swap on the fly with zero server restarts:
+     - **Telemetry Stream:** Strictly Live Kubernetes Cluster Telemetry (direct PromQL queries from Prometheus + official Kubernetes API streaming live metrics across all 10 microservices at 1Hz).
      - **LLM Brain:** Groq Cloud (`qwen/qwen3.8-27b`) $\leftrightarrow$ Local LM Studio (`qwen2.5-3b-instruct`).
 2. **Dedicated Regime B Horizon Regressor (`phase1_prediction/saved_models/tte_regressor.json`):**
    - In parallel with the 6-class `XGBClassifier`, a specialized `XGBRegressor` computes continuous Time-to-Exhaustion (TTE) for gradual failure modes (`MEMORY_EXHAUSTION`, `DISK_EXHAUSTION`), achieving **$0.71$ min MAE** and providing a **$4.7$ minute mean early-warning lead time** prior to container `OOMKilled` evictions.
@@ -458,7 +468,7 @@ python -m pytest tests/ -v
 | **3** | `test_03_system_e2e.py` | `test_benchmark_metadata_endpoint` | REST API (`/api/benchmark`) | Asserts `/api/benchmark` serves Phase 1 4-model ablation results, SARIMA vs. XGBoost horizon comparisons, and Phase 2 MTTR metrics. | `PASSED` |
 | **3** | `test_03_system_e2e.py` | `test_agent_mode_toggle` | REST API (`/api/agent/mode`) | Tests hot-swapping operational modes between `AUTONOMOUS` and `HUMAN_IN_THE_LOOP` via HTTP POST. | `PASSED` |
 | **3** | `test_03_system_e2e.py` | `test_agent_backend_hot_swap` | REST API (`/api/agent/backend`) | Tests hot-swapping LLM reasoning backend between `lmstudio` and `groq` at runtime with zero downtime. | `PASSED` |
-| **3** | `test_03_system_e2e.py` | `test_cluster_source_hot_swap` | REST API (`/api/cluster/source`) | Tests hot-swapping telemetry stream between live Kubernetes cluster and replay holdout twin. | `PASSED` |
+| **3** | `test_03_system_e2e.py` | `test_cluster_source_hot_swap` | REST API (`/api/cluster/source`) | Asserts `/api/cluster/source` maintains strict live Kubernetes cluster stream locking (`live`). | `PASSED` |
 | **3** | `test_03_system_e2e.py` | `test_chaos_injection_endpoint` | REST API (`/api/chaos/inject`) | Injects synthetic CPU contention into `checkoutservice` and asserts HTTP 200 with `CHAOS_INJECTED` and `CPU_EXHAUSTION` diagnosis. | `PASSED` |
 | **3** | `test_03_system_e2e.py` | `test_cluster_snapshot_endpoint` | REST API (`/api/cluster/snapshot`) | Asserts `/api/cluster/snapshot` returns real-time node hardware states, pod statuses, and metric maps. | `PASSED` |
 | **3** | `test_03_system_e2e.py` | `test_websocket_telemetry_streaming` | WebSocket (`/ws/telemetry`) | Connects to `/ws/telemetry` WebSocket, receives live 1Hz JSON payload, and verifies `tick_index`, `service`, `metrics`, `prediction`, and `cluster_state` schema. | `PASSED` |
@@ -472,66 +482,210 @@ python -m pytest tests/ -v
 
 | Method | Endpoint | Description |
 | :---: | :--- | :--- |
-| `GET` | `/api/status` | Returns active cluster mode (`LIVE_K8S` / `REPLAY_HOLDOUT`), LLM backend, agent mode, and model readiness. |
+| `GET` | `/api/status` | Returns active cluster mode (`LIVE_K8S`), LLM backend, agent mode, and model readiness. |
 | `GET` | `/api/topology` | Returns the 10-service OnlineBoutique graph nodes, dependency edges, replica counts, and Kintsugi repair states. |
 | `GET` | `/api/cluster/snapshot` | Returns current per-service telemetry metrics, Phase 1 predictions, and 3-node hardware capacity status. |
 | `GET` | `/api/benchmark` | Returns Phase 1 4-model ablation metrics, SARIMA vs. XGBRegressor horizon metrics, and Phase 2 MTTR benchmarks. |
 | `POST` | `/api/chaos/inject` | Injects targeted fault scenarios (`cpu_contention`, `memory_leak`, `exception_burst`, `disk_pressure`, `network_latency`). |
 | `POST` | `/api/agent/mode` | Toggles LangGraph operating mode between `AUTONOMOUS` and `HUMAN_IN_THE_LOOP`. |
 | `POST` | `/api/agent/approve` | Approves or rejects a pending `AWAITING_APPROVAL` remediation plan in Human-in-the-Loop mode. |
-| `POST` | `/api/cluster/source` | Hot-swaps telemetry stream between `LIVE_K8S` and `REPLAY_HOLDOUT` at runtime. |
+| `POST` | `/api/cluster/source` | Confirms telemetry pipeline is locked to `LIVE_K8S` cluster stream. |
 | `POST` | `/api/agent/backend` | Hot-swaps LLM engine between `GROQ_CLOUD` (`qwen/qwen3.8-27b`) and `LOCAL_LM_STUDIO`. |
 | `WS` | `/ws/telemetry` | Streams 1Hz real-time multi-modal telemetry ticks, Phase 1 anomaly predictions, and LangGraph state transitions. |
 
 ---
 
-## ⚡ Local Quickstart Guide
+## ⚡ Complete Local Cluster Setup, Execution & Runbook Guide
 
-### 1. Installation
+### Prerequisites & Initial Setup
 ```bash
 git clone https://github.com/Akki-74/kintsugi-sre.git
 cd kintsugi-sre
+python -m venv venv
+.\venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
 
-### 2. Run Phase 1 Data Pipeline, Ablation Suite & SARIMA Benchmark
-```bash
-# 1. Inspect raw Nezha benchmark telemetry & timestamp offsets
-python scripts/inspect_nezha.py
+### STEP 1: Start / Wake Up the 3-Node Kubernetes Cluster
+#### 1A. Fast Wake-Up (If your 3 nodes already exist in Docker)
+```powershell
+# 1. Start the 3 kind node containers
+docker start desktop-control-plane desktop-worker desktop-worker2
 
-# 2. Build leak-free 89-feature Z-scored multi-modal datasets
-python phase1_prediction/data_pipeline.py
+# 2. Tune Linux kernel inotify limits (prevents kube-apiserver / etcd TLS timeouts on WSL2)
+docker exec desktop-control-plane sysctl -w fs.inotify.max_user_instances=8192 fs.inotify.max_user_watches=524288
+docker exec desktop-worker sysctl -w fs.inotify.max_user_instances=8192 fs.inotify.max_user_watches=524288
+docker exec desktop-worker2 sysctl -w fs.inotify.max_user_instances=8192 fs.inotify.max_user_watches=524288
 
-# 3. Train all 4 ablation models + TTE Regressor & generate diagnostic plots
-python phase1_prediction/train_and_evaluate.py
+# 3. Label all 3 nodes for the Kintsugi SRE mesh & ensure workers are uncordoned
+kubectl label nodes desktop-control-plane desktop-worker desktop-worker2 kintsugi.sre/mesh=active --overwrite
+kubectl uncordon desktop-worker
+kubectl uncordon desktop-worker2
 
-# 4. Run Classical SARIMA vs. Multi-Modal XGBRegressor horizon benchmark
-python phase1_prediction/sarima_benchmark.py
+# 4. Verify all 3 nodes are Ready
+kubectl get nodes -o wide
 ```
 
-### 3. Run Automated 3-Tier Test Suite & Phase 2 SRE Agent
-```bash
-# Execute complete 3-Tier automated pytest suite (Unit, Integration, System E2E)
+### STEP 2: Deploy RBAC & the 10 Microservices (hipster Namespace)
+*(If your pods are already running from earlier, `kubectl apply` will simply ensure they match the manifest state).*
+
+```powershell
+# 1. Apply least-privilege RBAC (ServiceAccount, ClusterRole, ClusterRoleBinding)
+kubectl apply -f k8s_manifests/rbac.yaml
+
+# 2. Create the hipster namespace (if not already present) & deploy all 10 OnlineBoutique services
+kubectl create namespace hipster --dry-run=client -o yaml | kubectl apply -f -
+kubectl apply -f k8s_manifests/sample_microservices.yaml
+
+# 3. Wait for all 10 microservice pods to reach 1/1 Running
+kubectl wait --for=condition=Ready pods --all -n hipster --timeout=120s
+
+# 4. Verify all 10 pods and node placements
+kubectl get pods -n hipster -o wide
+```
+
+### STEP 3: Setup / Verify Monitoring (Prometheus, Grafana & K8s Dashboard)
+#### 3A. Check if Monitoring & Dashboard Pods are Already Running
+```powershell
+kubectl get pods -n monitoring
+kubectl get pods -n kubernetes-dashboard
+```
+
+#### 3B. (Only if fresh/missing) Install Prometheus, Grafana & Kubernetes Dashboard from Scratch
+*(Skip 3B if `kubectl get pods` above already shows them Running).*
+
+```powershell
+# 1. Install Prometheus + Grafana via Helm in `monitoring` namespace
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+helm upgrade --install monitoring prometheus-community/kube-prometheus-stack `
+  --namespace monitoring --create-namespace `
+  -f k8s_manifests/prom-values.yaml
+
+# 2. Install Official Kubernetes Web Dashboard v2.7.0 & Admin ServiceAccount
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.7.0/aio/deploy/recommended.yaml
+kubectl apply -f k8s_manifests/dashboard-admin.yaml
+```
+
+### STEP 4: Start All Port-Forwards (Prometheus, Grafana, K8s Dashboard)
+```powershell
+# 1. Clear any stale background kubectl port-forward processes
+Get-Process kubectl -ErrorAction SilentlyContinue | Stop-Process -Force
+
+# 2. Forward Prometheus UI & PromQL API -> http://localhost:9090
+Start-Process kubectl -ArgumentList "port-forward -n monitoring svc/monitoring-kube-prometheus-prometheus 9090:9090" -WindowStyle Minimized
+
+# 3. Forward Grafana Dashboards -> http://localhost:3000 (Login: admin / admin)
+Start-Process kubectl -ArgumentList "port-forward -n monitoring svc/monitoring-grafana 3000:80" -WindowStyle Minimized
+
+# 4. Forward Official Kubernetes Web Dashboard -> https://localhost:8443
+Start-Process kubectl -ArgumentList "port-forward -n kubernetes-dashboard svc/kubernetes-dashboard 8443:443" -WindowStyle Minimized
+
+# 5. Generate Bearer Token to log into https://localhost:8443 (copy the output token)
+Write-Host "`n--- KUBERNETES DASHBOARD LOGIN TOKEN (https://localhost:8443) ---" -ForegroundColor Yellow
+kubectl -n kubernetes-dashboard create token admin-user
+Write-Host "-----------------------------------------------------------------`n" -ForegroundColor Yellow
+```
+
+### STEP 5: Run the Backend Server & Frontend UI
+#### 5A. Terminal 1 — Start the FastAPI + WebSocket + LangGraph Backend (Port 8000)
+```powershell
+cd C:\Users\akank\Downloads\k8\Kubepulse-ai
+
+# Force Live Kubernetes Cluster Mode & Groq Cloud Qwen3.8-27B
+$env:CLUSTER_MODE = "LIVE_K8S"
+$env:LLM_BACKEND  = "GROQ_CLOUD"
+$env:GROQ_MODEL   = "qwen/qwen3.8-27b"
+
+# Start FastAPI server with hot-reload
+python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+#### 5B. Terminal 2 — Start Vite Dev Server for Live Manual UI/UX Editing (Port 5173)
+*(Use this while actively editing files in `frontend/src/`)*:
+```powershell
+cd C:\Users\akank\Downloads\k8\Kubepulse-ai\frontend
+npm install
+npm run dev
+# Live Dev UI (Instant HMR): http://localhost:5173
+```
+
+#### 5C. Compile Frontend Production Bundle (`frontend/dist`)
+*(Run this after you finish making manual UI/UX edits so FastAPI serves your updated UI at `http://localhost:8000/app/`)*:
+```powershell
+cd C:\Users\akank\Downloads\k8\Kubepulse-ai\frontend
+npm run build
+cd ..
+# Unified Production UI: http://localhost:8000/app/
+# Interactive Architecture Slide Deck: http://localhost:8000/app/slides.html
+```
+
+### STEP 6: Live Manual End-to-End Testing & Cluster Reset Commands
+Open a 3rd PowerShell terminal to watch real Kubernetes mutations happen live while you click buttons in the UI:
+```powershell
+# Watch pods in `hipster` scale, restart, or relocate in real time
+kubectl get pods -n hipster -o wide -w
+```
+
+#### Trigger Chaos via CLI (or use the UI Chaos Lab / Ctrl+K Omnibar)
+```powershell
+# 1. Check live backend health & cluster connection status
+Invoke-RestMethod -Uri "http://localhost:8000/api/status" | ConvertTo-Json -Depth 4
+
+# 2. Inject Live CPU Contention on checkoutservice (Scales 1/1 -> 3/3 pods)
+Invoke-RestMethod -Method Post -Uri "http://localhost:8000/api/chaos/inject" `
+  -ContentType "application/json" `
+  -Body '{"scenario": "cpu_contention", "service": "checkoutservice"}' | ConvertTo-Json -Depth 5
+```
+
+#### Reset Cluster State Back to Baseline (Between Manual Tests)
+```powershell
+# Uncordon any cordoned worker nodes
+kubectl uncordon desktop-worker
+kubectl uncordon desktop-worker2
+
+# Reset all deployments in hipster back to 1 replica & original resource specs
+kubectl apply -f k8s_manifests/sample_microservices.yaml
+kubectl scale deployment --all -n hipster --replicas=1
+```
+
+### STEP 7: Run ML Pipeline, Benchmarks & Automated Test Suites
+```powershell
+cd C:\Users\akank\Downloads\k8\Kubepulse-ai
+
+# 1. Run the 3-Tier Automated Pytest Suite (23 tests: Unit, Integration, System E2E)
 python -m pytest tests/ -v
 
-# Standalone LangGraph agent & guardrail verification script
+# 2. Run the Standalone Phase 2 LangGraph & Guardrail Verification Suite (6/6 scenarios)
 python scripts/test_remediation_agent.py
 
-# End-to-end healing benchmark (MTTR & recovery curves across all 5 chaos scenarios)
+# 3. (Optional) Re-run SARIMA vs. Multi-Modal XGBRegressor Benchmark
+python phase1_prediction/sarima_benchmark.py
+
+# 4. (Optional) Re-run Phase 2 MTTR Closed-Loop Benchmark
 python phase2_remediation/remediation_benchmark.py
 ```
 
-### 4. Launch Full-Stack Command Center UI
-```bash
-# Start unified FastAPI + WebSocket + React Command Center on port 8000
-python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+### STEP 9: Pause Everything & Free Up RAM When Done
+```powershell
+# 1. Stop background kubectl port-forwards
+Get-Process kubectl -ErrorAction SilentlyContinue | Stop-Process -Force
 
-# (Optional) For hot-reload frontend development:
-cd frontend
-npm install
-npm run dev
+# 2. Stop the 3 Kubernetes node containers (frees ~6GB RAM without losing your pods/deployments)
+docker stop desktop-control-plane desktop-worker desktop-worker2
 ```
-Open **`http://localhost:8000/app/`** (or `http://localhost:5173`) in your browser.
+
+### 📋 Quick URL Cheat Sheet (When Everything is Running)
+| Service | URL | Credentials / Notes |
+| :--- | :--- | :--- |
+| **Kintsugi Command Center (Prod)** | [`http://localhost:8000/app/`](http://localhost:8000/app/) | Served directly by FastAPI (Unified Port 8000) |
+| **Kintsugi Command Center (Vite HMR)** | [`http://localhost:5173`](http://localhost:5173) | Live UI/UX frontend development server |
+| **Architecture Slide Deck** | [`http://localhost:8000/app/slides.html`](http://localhost:8000/app/slides.html) | Navigate via arrow keys `←` / `→` |
+| **FastAPI Swagger Docs** | [`http://localhost:8000/docs`](http://localhost:8000/docs) | Interactive REST API tester |
+| **Prometheus UI** | [`http://localhost:9090`](http://localhost:9090) | PromQL query explorer & metric scraper |
+| **Grafana Dashboards** | [`http://localhost:3000`](http://localhost:3000) | Login: `admin` / `admin` |
+| **Kubernetes Web Dashboard** | [`https://localhost:8443`](https://localhost:8443) | Paste token from `kubectl -n kubernetes-dashboard create token admin-user` |
+| **Live Render Cloud Deployment** | [`https://kintsugi-ai.onrender.com/app/`](https://kintsugi-ai.onrender.com/app/) | Public cloud instance |
 
 ---
 

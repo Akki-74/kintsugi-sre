@@ -19,7 +19,6 @@ export default function TopBar({
   status,
   wsConnected,
   onToggleMode,
-  onToggleClusterSource,
   onOpenClusterGate,
   onToggleBackend,
   onOpenBenchmark,
@@ -81,9 +80,9 @@ export default function TopBar({
 
         {/* Right Controls & Runtime Hot-Swaps */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Telemetry Source Switcher & Cluster Gate */}
+          {/* Live Cluster Status & Connection Gate */}
           <button
-            onClick={onToggleClusterSource}
+            onClick={onOpenClusterGate}
             className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium border transition-all ${
               isK8sConnected
                 ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-300 hover:bg-emerald-900/60 shadow-[0_0_12px_rgba(16,185,129,0.25)]'

@@ -37,7 +37,7 @@
       inset: 0;
       width: 100vw;
       height: 100vh;
-      padding: 3rem 5rem;
+      padding: clamp(1.2rem, 3.2vh, 2.8rem) clamp(1.5rem, 4.5vw, 4.5rem);
       display: flex;
       flex-direction: column;
       justify-content: space-between;
@@ -50,6 +50,7 @@
         radial-gradient(circle at 15% 15%, rgba(245, 158, 11, 0.12), transparent 35%),
         radial-gradient(circle at 85% 80%, rgba(56, 189, 248, 0.10), transparent 35%);
       z-index: 1;
+      overflow: hidden;
     }
     .slide.active {
       opacity: 1;
@@ -97,6 +98,117 @@
     ul { list-style: none; }
     ul li { margin-bottom: 0.6rem; display: flex; align-items: flex-start; gap: 0.6rem; font-size: 0.95rem; color: #cbd5e1; }
     ul li::before { content: "✦"; color: var(--gold); font-weight: bold; flex-shrink: 0; }
+
+    /* SLIDE 5: Full Viewport Precision Auto-Fitting for Any Zoom & Screen Size */
+    #slide-5 {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    #slide-5 .slide-header {
+      flex-shrink: 0;
+    }
+    #slide-5 .slide-header h2 {
+      font-size: clamp(1.2rem, 2.2vh + 0.4vw, 2.1rem);
+      margin-top: clamp(0.2rem, 0.6vh, 0.5rem);
+      line-height: 1.15;
+    }
+    #slide-5 .grid-2 {
+      flex: 1;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: clamp(0.75rem, 1.8vw, 1.8rem);
+      align-items: stretch;
+      margin: clamp(0.35rem, 1vh, 0.9rem) 0;
+    }
+    #slide-5 .card {
+      padding: clamp(0.6rem, 1.4vh, 1.25rem);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-evenly;
+      min-height: 0;
+      overflow: hidden;
+    }
+    #slide-5 .card h3 {
+      font-size: clamp(0.88rem, 1.6vh, 1.15rem);
+      margin-bottom: clamp(0.25rem, 0.7vh, 0.5rem);
+      flex-shrink: 0;
+    }
+    #slide-5 ul {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      flex: 1;
+      min-height: 0;
+      gap: clamp(0.2rem, 0.5vh, 0.45rem);
+    }
+    #slide-5 ul li {
+      margin-bottom: 0;
+      font-size: clamp(0.68rem, 1.35vh, 0.88rem);
+      line-height: 1.3;
+      gap: 0.45rem;
+    }
+    #slide-5 ul li code {
+      font-size: 0.88em;
+      padding: 0.1rem 0.35rem;
+      border-radius: 0.25rem;
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+    }
+    #slide-5 .table-title {
+      font-size: clamp(0.65rem, 1.2vh, 0.75rem);
+      margin-bottom: clamp(0.2rem, 0.4vh, 0.35rem);
+      flex-shrink: 0;
+    }
+    #slide-5 table {
+      width: 100%;
+      flex: 1;
+      min-height: 0;
+      margin-top: 0;
+      font-size: clamp(0.66rem, 1.3vh, 0.84rem);
+    }
+    #slide-5 th, #slide-5 td {
+      padding: clamp(0.22rem, 0.65vh, 0.5rem) clamp(0.4rem, 0.7vw, 0.75rem);
+      line-height: 1.25;
+    }
+    #slide-5 .footer-nav {
+      flex-shrink: 0;
+      padding-top: clamp(0.35rem, 0.9vh, 0.8rem);
+      font-size: clamp(0.68rem, 1.2vh, 0.8rem);
+    }
+    #slide-5 .btn {
+      padding: clamp(0.3rem, 0.75vh, 0.45rem) clamp(0.6rem, 1vw, 1rem);
+      font-size: clamp(0.7rem, 1.2vh, 0.8rem);
+    }
+
+    /* Fallback for extreme zoom (>=175%) or tiny screen heights (<= 580px) */
+    @media (max-height: 580px), (max-width: 860px) {
+      body, .deck {
+        overflow-y: auto !important;
+        height: auto !important;
+        min-height: 100vh !important;
+      }
+      .slide {
+        position: relative !important;
+        min-height: 100vh !important;
+        height: auto !important;
+        padding: 1.25rem !important;
+        overflow-y: visible !important;
+      }
+      .slide:not(.active) {
+        display: none !important;
+      }
+      #slide-5 .grid-2 {
+        grid-template-columns: 1fr !important;
+        gap: 0.85rem !important;
+        margin: 0.75rem 0 !important;
+      }
+      #slide-5 .card {
+        padding: 0.85rem !important;
+        overflow: visible !important;
+      }
+    }
   </style>
 </head>
 <body>
@@ -252,13 +364,13 @@
 
     <!-- SLIDE 5: LANGGRAPH + 5 GUARDRAILS + MTTR -->
     <section class="slide" id="slide-5">
-      <div>
+      <div class="slide-header">
         <span class="badge">05 // Closed-Loop Remediation</span>
-        <h2 style="font-size: 2.2rem; margin-top: 0.6rem;">LangGraph State Machine &amp; 5 Deterministic SRE Guardrails</h2>
+        <h2>LangGraph State Machine &amp; 5 Deterministic SRE Guardrails</h2>
       </div>
       <div class="grid-2">
         <div class="card card-gold">
-          <h3 style="color: var(--gold-light); margin-bottom: 0.8rem;">5 Hardened SRE Safety Gates</h3>
+          <h3 style="color: var(--gold-light);">5 Hardened SRE Safety Gates</h3>
           <ul>
             <li><strong>1. Namespace Isolation Lock:</strong> Hard-blocks mutations in <code class="mono">kube-system</code>, <code class="mono">monitoring</code>, and <code class="mono">local-path-storage</code>.</li>
             <li><strong>2. Strict 6-Action Allowlist:</strong> <code class="mono">SCALE_DEPLOYMENT</code>, <code class="mono">RESTART_POD</code>, <code class="mono">PATCH_RESOURCES</code>, <code class="mono">CORDON_AND_RELOCATE</code>, <code class="mono">APPLY_TRAFFIC_SHAPING</code>, <code class="mono">NO_ACTION</code>.</li>
@@ -268,7 +380,7 @@
           </ul>
         </div>
         <div class="card">
-          <div class="mono" style="color: var(--emerald); font-size: 0.75rem;">LIVE CLUSTER REMEDIATION MTTR (3-NODE K8S v1.36.1)</div>
+          <div class="mono table-title" style="color: var(--emerald);">LIVE CLUSTER REMEDIATION MTTR (3-NODE K8S v1.36.1)</div>
           <table>
             <thead>
               <tr><th>Fault Scenario</th><th>Service</th><th>Action Executed</th><th>MTTR</th></tr>

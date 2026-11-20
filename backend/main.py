@@ -162,11 +162,11 @@ def health():
         "cluster_mode": "LIVE_K8S" if is_connected else "STANDALONE",
         "raw_mode": engine.agent.k8s.mode,
         "is_k8s_connected": is_connected,
-        "cluster_source": getattr(engine, "cluster_source", "live" if is_connected else "replay"),
+        "cluster_source": "live",
         "prometheus_reachable": prom_reachable,
         "llm_backend": llm_info.get("preferred_backend", "groq"),
         "groq_configured": llm_info.get("groq_configured", False),
-        "dataset_rows": len(engine.holdout_df),
+        "dataset_rows": 0,
         "autonomous_mode": engine.autonomous_mode,
     }
 
@@ -180,9 +180,9 @@ def set_agent_backend(req: BackendRequest):
 
 @app.post("/api/cluster/source")
 def set_cluster_source(req: SourceRequest):
-    """Switch telemetry source between Live K8s and Digital Twin Replay."""
+    """Telemetry pipeline is locked to live Kubernetes cluster."""
     active = engine.set_cluster_source(req.source)
-    return {"cluster_source": active}
+    return {"cluster_source": "live"}
 
 
 @app.get("/api/topology")

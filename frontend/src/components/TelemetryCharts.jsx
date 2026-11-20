@@ -272,17 +272,17 @@ export default function TelemetryCharts({
 
       {/* TAB 1: LIVE TELEMETRY CHARTS + QUICK CHAOS INJECTORS */}
       {activeTab === 'telemetry' && (
-        <div className="flex-1 flex flex-col justify-between p-3 gap-2 overflow-y-auto min-h-0">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 flex-1 min-h-[110px]">
+        <div className="flex-1 flex flex-col p-3 gap-2 min-h-0 overflow-hidden">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 flex-1 min-h-0 overflow-hidden">
             {/* CPU Chart */}
-            <div className="rounded-xl bg-slate-950/70 border border-slate-800/80 p-2.5 flex flex-col min-w-0">
-              <div className="flex justify-between items-center text-[11px] font-mono-code mb-1">
+            <div className="rounded-xl bg-slate-950/70 border border-slate-800/80 p-2.5 flex flex-col min-w-0 min-h-0 overflow-hidden relative shadow-sm">
+              <div className="flex justify-between items-center text-[11px] font-mono-code mb-1 flex-shrink-0">
                 <span className="text-slate-400">CPU USAGE (%)</span>
                 <span className="text-cyan-300 font-bold">{Number(latestPoint.cpu || 0).toFixed(1)}%</span>
               </div>
-              <div className="flex-1 min-h-[75px] w-full">
+              <div className="flex-1 min-h-0 w-full relative overflow-hidden">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={telemetryHistory}>
+                  <AreaChart data={telemetryHistory} margin={{ top: 4, right: 4, left: 4, bottom: 2 }}>
                     <defs>
                       <linearGradient id="cpuGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#38bdf8" stopOpacity={0.45} />
@@ -314,14 +314,14 @@ export default function TelemetryCharts({
             </div>
 
             {/* Memory Chart */}
-            <div className="rounded-xl bg-slate-950/70 border border-slate-800/80 p-2.5 flex flex-col min-w-0">
-              <div className="flex justify-between items-center text-[11px] font-mono-code mb-1">
+            <div className="rounded-xl bg-slate-950/70 border border-slate-800/80 p-2.5 flex flex-col min-w-0 min-h-0 overflow-hidden relative shadow-sm">
+              <div className="flex justify-between items-center text-[11px] font-mono-code mb-1 flex-shrink-0">
                 <span className="text-slate-400">MEMORY &amp; OOM (%)</span>
                 <span className="text-amber-300 font-bold">{Number(latestPoint.memory || 0).toFixed(1)}%</span>
               </div>
-              <div className="flex-1 min-h-[75px] w-full">
+              <div className="flex-1 min-h-0 w-full relative overflow-hidden">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={telemetryHistory}>
+                  <AreaChart data={telemetryHistory} margin={{ top: 4, right: 4, left: 4, bottom: 2 }}>
                     <defs>
                       <linearGradient id="memGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.45} />
@@ -353,14 +353,14 @@ export default function TelemetryCharts({
             </div>
 
             {/* P90 Latency Chart */}
-            <div className="rounded-xl bg-slate-950/70 border border-slate-800/80 p-2.5 flex flex-col min-w-0">
-              <div className="flex justify-between items-center text-[11px] font-mono-code mb-1">
+            <div className="rounded-xl bg-slate-950/70 border border-slate-800/80 p-2.5 flex flex-col min-w-0 min-h-0 overflow-hidden relative shadow-sm">
+              <div className="flex justify-between items-center text-[11px] font-mono-code mb-1 flex-shrink-0">
                 <span className="text-slate-400">P90 RPC LATENCY (ms)</span>
                 <span className="text-emerald-300 font-bold">{Number(latestPoint.latency || 0).toFixed(0)} ms</span>
               </div>
-              <div className="flex-1 min-h-[75px] w-full">
+              <div className="flex-1 min-h-0 w-full relative overflow-hidden">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={telemetryHistory}>
+                  <AreaChart data={telemetryHistory} margin={{ top: 4, right: 4, left: 4, bottom: 2 }}>
                     <defs>
                       <linearGradient id="latGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#10b981" stopOpacity={0.45} />
@@ -392,26 +392,30 @@ export default function TelemetryCharts({
           </div>
 
           {/* Quick Chaos Bar at Bottom of Charts */}
-          <div className="pt-2 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-1.5">
-            <span className="flex items-center gap-1 font-mono-code text-[11px] text-slate-400">
-              <Flame className="h-3.5 w-3.5 text-rose-400" />
+          <div className="relative z-20 flex-shrink-0 pt-2 pb-1 px-3 border-t border-slate-800/80 bg-slate-950/90 backdrop-blur-md rounded-xl flex flex-wrap items-center justify-between gap-1.5 shadow-lg">
+            <span className="flex items-center gap-1.5 font-mono-code text-[11px] text-slate-300 font-medium">
+              <Flame className="h-3.5 w-3.5 text-rose-400 flex-shrink-0" />
               <span>Quick Chaos ({selectedService}):</span>
             </span>
-            <div className="flex flex-wrap items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5 relative z-30">
               {EXPANDED_CHAOS_OPTIONS.slice(0, 5).map((opt) => {
                 const Icon = opt.icon;
                 const isFiring = firingId === opt.id;
                 return (
                   <button
                     key={opt.id}
+                    type="button"
                     disabled={chaosLoading}
-                    onClick={() => handleFireChaos(opt.id, opt.defaultService)}
-                    className={`flex items-center gap-1 rounded-lg border px-2.5 py-1 font-mono-code text-[10px] font-semibold transition-all ${
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleFireChaos(opt.id, opt.defaultService);
+                    }}
+                    className={`relative z-30 pointer-events-auto cursor-pointer flex items-center gap-1 rounded-lg border px-2.5 py-1 font-mono-code text-[10px] font-semibold transition-all hover:brightness-125 hover:scale-[1.02] active:scale-95 ${
                       isFiring ? 'scale-105 ring-2 ring-rose-400' : ''
-                    } ${opt.color} disabled:opacity-50`}
+                    } ${opt.color} disabled:opacity-50 disabled:cursor-not-allowed`}
                     title={`Inject ${opt.label} on ${selectedService}`}
                   >
-                    <Icon className="h-3 w-3" />
+                    <Icon className="h-3 w-3 flex-shrink-0" />
                     <span>{opt.shortName}</span>
                   </button>
                 );

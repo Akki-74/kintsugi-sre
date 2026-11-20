@@ -91,12 +91,16 @@ class PrometheusCollector:
         ).rstrip("/")
         self.timeout_sec = timeout_sec
         self._is_reachable = None
+        self._last_reach_check = 0.0
 
     @property
     def is_reachable(self) -> bool:
-        """Checks if Prometheus is accessible."""
-        if self._is_reachable is not None:
+        """Checks if Prometheus is accessible with a 5-second dynamic check."""
+        now = time.time()
+        if self._is_reachable is not None and (now - getattr(self, "_last_reach_check", 0.0)) < 5.0:
             return self._is_reachable
+
+        self._last_reach_check = now
         try:
             url = f"{self.prometheus_url}/api/v1/status/runtimeinfo"
             req = urllib.request.Request(url, method="GET")

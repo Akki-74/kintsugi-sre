@@ -90,10 +90,10 @@ class TestRestApiContract:
         assert res.json()["preferred_backend"] == "groq"
 
     def test_cluster_source_hot_swap(self):
-        # Switch to replay
-        res = client.post("/api/cluster/source", json={"source": "replay"})
+        # Telemetry is strictly locked to live cluster
+        res = client.post("/api/cluster/source", json={"source": "live"})
         assert res.status_code == 200
-        assert res.json()["cluster_source"] == "replay"
+        assert res.json()["cluster_source"] == "live"
 
     def test_chaos_injection_endpoint(self):
         res = client.post("/api/chaos/inject", json={"service": "checkoutservice", "fault_type": "cpu_contention"})

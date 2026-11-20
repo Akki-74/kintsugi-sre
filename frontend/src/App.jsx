@@ -413,26 +413,6 @@ export default function App() {
     }
   };
 
-  const handleToggleClusterSource = async () => {
-    const nextSource = status.cluster_mode === 'LIVE_K8S' ? 'REPLAY_HOLDOUT' : 'LIVE_K8S';
-    try {
-      const res = await fetch('/api/cluster/source', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ source: nextSource })
-      });
-      if (res.ok) {
-        setStatus((prev) => ({ ...prev, cluster_mode: nextSource }));
-        setAgentLogs((prev) => [
-          `[TELEMETRY SOURCE] Switched telemetry pipeline to ${nextSource === 'LIVE_K8S' ? 'Live Kubernetes Cluster' : 'Chronological Telemetry Replay Stream'}.`,
-          ...prev
-        ]);
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
   const handleToggleBackend = async () => {
     const nextBackend = status.llm_backend?.includes('GROQ') ? 'LOCAL_LM_STUDIO' : 'GROQ_CLOUD';
     try {
@@ -527,12 +507,6 @@ export default function App() {
       },
       {
         category: 'Control Plane',
-        label: 'Hot-Swap Telemetry Source (LIVE K8S CLUSTER ↔ REPLAY TELEMETRY STREAM)',
-        icon: Radio,
-        action: handleToggleClusterSource
-      },
-      {
-        category: 'Control Plane',
         label: 'Inspect Live Kubernetes Cluster & SRE Connection Gate',
         icon: Server,
         action: () => setShowClusterGate(true)
@@ -575,7 +549,6 @@ export default function App() {
         status={status}
         wsConnected={wsConnected}
         onToggleMode={handleToggleMode}
-        onToggleClusterSource={handleToggleClusterSource}
         onOpenClusterGate={() => setShowClusterGate(true)}
         onToggleBackend={handleToggleBackend}
         onOpenBenchmark={handleOpenBenchmark}
