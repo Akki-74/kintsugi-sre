@@ -34,22 +34,27 @@
 3. [Phase 1 Deep Dive: Multi-Modal Prediction Engine ("Fast Brain")](#-phase-1-deep-dive-multi-modal-prediction-engine-fast-brain)
    - [Data Engineering & Nezha Timestamp Alignment](#1-data-engineering--nezha-timestamp-alignment)
    - [89-Feature Multi-Modal Engineering Pipeline](#2-89-feature-multi-modal-engineering-pipeline)
-   - [6-Class Operational Fault Taxonomy](#3-6-class-operational-fault-taxonomy)
-   - [Formal 4-Model Classification Ablation Study](#4-formal-4-model-classification-ablation-study)
-   - [Regime B Horizon Study: Classical SARIMA vs. Multi-Modal XGBRegressor](#5-regime-b-horizon-study-classical-sarima-vs-multi-modal-xgbregressor)
+   - [Mathematical Formulation of Feature Engineering Space](#3-mathematical-formulation-of-feature-engineering-space)
+   - [6-Class Operational Fault Taxonomy](#4-6-class-operational-fault-taxonomy)
+   - [Formal 4-Model Classification Ablation Study](#5-formal-4-model-classification-ablation-study)
+   - [Regime B Horizon Study: Classical SARIMA vs. Multi-Modal XGBRegressor](#6-regime-b-horizon-study-classical-sarima-vs-multi-modal-xgbregressor)
 4. [Two-Brain System Architecture](#️-two-brain-system-architecture)
 5. [4 Standout Architectural Achievements](#-4-standout-architectural-achievements)
 6. [Phase 2 Deep Dive: LangGraph Ambient SRE Agent ("Slow Brain")](#️-phase-2-deep-dive-langgraph-ambient-sre-agent-slow-brain)
    - [6-Node StateGraph Lifecycle](#1-6-node-stategraph-lifecycle)
    - [Dual LLM Reasoning Engine & `<think>` Parser](#2-dual-llm-reasoning-engine--think-parser)
-   - [5 Deterministic SRE Safety Guardrails](#3-5-deterministic-sre-safety-guardrails-zero-unbounded-execution)
-   - [Closed-Loop Remediation Benchmark (MTTR)](#4-closed-loop-remediation-benchmark-mttr)
+   - [Pydantic Action Catalog & Contract](#3-pydantic-action-catalog--contract)
+   - [Deterministic SRE Fallback Matrix](#4-deterministic-sre-fallback-matrix)
+   - [5 Deterministic SRE Safety Guardrails](#5-5-deterministic-sre-safety-guardrails-zero-unbounded-execution)
+   - [Closed-Loop Remediation Benchmark (MTTR)](#6-closed-loop-remediation-benchmark-mttr)
 7. [The Kintsugi UI Innovation: "The Gold Seam"](#-the-kintsugi-ui-innovation-the-gold-seam)
 8. [Live 3-Node Kubernetes & Observability Infrastructure](#️-live-3-node-kubernetes--observability-infrastructure)
 9. [In-Cluster Kubernetes Packaging ("Consume K8s")](#️-in-cluster-kubernetes-packaging-consume-k8s)
 10. [$0 Free Cloud Deployment (Render.com & Docker)](#-0-free-cloud-deployment-rendercom--docker)
 11. [3-Tier Automated Verification Suite (`pytest`)](#-3-tier-automated-verification-suite-pytest)
-12. [REST & WebSocket API Reference](#-rest--websocket-api-reference)
+12. [Complete REST & WebSocket API Specification](#-complete-rest--websocket-api-specification)
+    - [REST Endpoints Specification](#rest-endpoints-specification)
+    - [1Hz WebSocket Telemetry Protocol Specification (`/ws/telemetry`)](#1hz-websocket-telemetry-protocol-specification-wstelemetry)
 13. [Complete Local Cluster Setup, Execution & Runbook Guide (Steps 1–9)](#-complete-local-cluster-setup-execution--runbook-guide)
     - [Prerequisites & Initial Setup](#prerequisites--initial-setup)
     - [STEP 1: Start / Wake Up the 3-Node Kubernetes Cluster](#step-1-start--wake-up-the-3-node-kubernetes-cluster)
@@ -61,9 +66,10 @@
     - [STEP 7: Run ML Pipeline, Benchmarks & Automated Pytests](#step-7-run-ml-pipeline-benchmarks--automated-test-suites)
     - [STEP 9: Pause Everything & Free Up RAM When Done](#step-9-pause-everything--free-up-ram-when-done)
     - [Quick URL Cheat Sheet](#-quick-url-cheat-sheet-when-everything-is-running)
-14. [End-to-End Technical Walkthrough Guide](#-end-to-end-technical-walkthrough-guide)
-15. [Project Structure](#-project-structure)
-16. [Technical Milestone Checklist](#-technical-milestone-checklist)
+14. [Production Troubleshooting, Failure Recovery & Operational FAQ](#-production-troubleshooting-failure-recovery--operational-faq)
+15. [End-to-End Technical Walkthrough Guide](#-end-to-end-technical-walkthrough-guide)
+16. [Project Structure](#-project-structure)
+17. [Technical Milestone Checklist](#-technical-milestone-checklist)
 
 ---
 
@@ -110,26 +116,62 @@ During data inspection (`scripts/inspect_nezha.py`), we identified and resolved 
    - **Test Split (`k8s_multimodal_test.csv`):** Day 2 First 64% (`2022-08-23`) — **`4,340` rows (`3.21 MB`)**
    - **Validation Holdout (`k8s_multimodal_replay_holdout.csv`):** Day 2 Final 36% (`2022-08-23`) — **`2,480` rows (`1.84 MB`)**
 
+---
+
 ### 2. 89-Feature Multi-Modal Engineering Pipeline
 For each microservice $s$ at 1-minute tick $t$, `phase1_prediction/data_pipeline.py` constructs a synchronized **89-feature multi-modal vector** over a 3-step sliding window ($W = 3$, equivalent to 180 seconds). The vector fuses **76 baseline-relative continuous telemetry features** with **13 discrete Drain3 structured log features**, serialized in `phase1_prediction/saved_models/feature_columns.json`:
 
 $$\vec{x}_s(t) = \big[ \mathbf{M}_{\text{raw}} \,(19), \; \mathbf{Z}_{\text{baseline}} \,(19), \; \mathbf{\Delta}_{\text{lag1}} \,(9), \; \mathbf{S}_{\text{slope2}} \,(9), \; \mathbf{\mu}_{\text{roll3}} \,(9), \; \mathbf{\sigma}_{\text{roll3}} \,(9), \; \mathbf{R}_{\text{ratios}} \,(2), \; \mathbf{L}_{\text{drain3}} \,(13) \big] \in \mathbb{R}^{89}$$
+
+---
+
+### 3. Mathematical Formulation of Feature Engineering Space
+
+#### A. Baseline-Relative Z-Score Normalization
+Standardizes raw metric values against healthy baseline distributions observed during Day 1 training ($\mu_{\text{train}, s, m}, \sigma_{\text{train}, s, m}$) with an asymptotic numerical floor ($\epsilon = 10^{-6}$) to prevent division-by-zero during zero-variance idle states:
+$$Z_{s, m}(t) = \frac{x_{s, m}(t) - \mu_{\text{train}, s, m}}{\max\big(\sigma_{\text{train}, s, m}, \; 10^{-6}\big)}$$
+
+#### B. First-Order Difference (Velocity)
+Measures the instantaneous 1-minute directional rate of metric change:
+$$\Delta_1 x_{s, m}(t) = x_{s, m}(t) - x_{s, m}(t-1)$$
+
+#### C. Second-Order Central Difference (Slope / Acceleration)
+Estimates the continuous linear trajectory slope over sliding window $W=3$ to capture acceleration toward container cgroup exhaustion ceilings:
+$$\text{Slope}_2 x_{s, m}(t) = \frac{x_{s, m}(t) - x_{s, m}(t-2)}{2}$$
+
+#### D. Rolling Window Expectation & Variance (Mean & Standard Deviation)
+Captures local trend-smoothing and metric jitter / scheduling instability across window $W=3$:
+$$\mu_{\text{roll3}, s, m}(t) = \frac{1}{3} \sum_{k=0}^{2} x_{s, m}(t-k)$$
+$$\sigma_{\text{roll3}, s, m}(t) = \sqrt{\frac{1}{2} \sum_{k=0}^{2} \Big( x_{s, m}(t-k) - \mu_{\text{roll3}, s, m}(t) \Big)^2}$$
+
+#### E. Cross-Metric Architectural Ratios
+Quantifies internal bottleneck shifts and network amplification:
+$$R_{\text{latency}}(t) = \frac{\text{PodServerLatencyP90}(t)}{\max\big(\text{PodClientLatencyP90}(t), \; 10^{-6}\big)}$$
+$$R_{\text{network}}(t) = \frac{\text{NetworkTransmitBytes}(t)}{\max\big(\text{NetworkReceiveBytes}(t), \; 10^{-6}\big)}$$
+
+#### F. Drain3 Online Prefix-Tree Log Entropy & Template Mining
+Online structured parsing maps unstructured raw log strings $\mathcal{L}_t = \{l_1, \dots, l_K\}$ into cluster templates $\{T_1, \dots, T_M\}$ via a deep prefix tree. Log entropy $H_{\text{log}}(t)$ quantifies diagnostic uncertainty and catastrophic failure bursts:
+$$p_i(t) = \frac{\text{count}(T_i, t)}{\sum_{j=1}^M \text{count}(T_j, t)}, \qquad H_{\text{log}}(t) = - \sum_{i=1}^M p_i(t) \log_2 \big(p_i(t) + 10^{-6}\big)$$
+
+---
 
 #### Comprehensive 89-Feature Architectural Breakdown
 
 | Feature Category | Dim | Feature Names / Representations | Engineering Significance & Mathematical Formulation |
 | :--- | :---: | :--- | :--- |
 | **1. Raw Telemetry** | 19 | `CpuUsage(m)`, `CpuUsageRate(%)`, `MemoryUsage(Mi)`, `MemoryUsageRate(%)`, `SyscallRead`, `SyscallWrite`, `NetworkReceiveBytes`, `NetworkTransmitBytes`, `PodClientLatencyP90(s)`, `PodServerLatencyP90(s)`, `PodClientLatencyP95(s)`, `PodServerLatencyP95(s)`, `PodClientLatencyP99(s)`, `PodServerLatencyP99(s)`, `PodWorkload(Ops)`, `PodSuccessRate(%)`, `NodeCpuUsageRate(%)`, `NodeMemoryUsageRate(%)`, `NodeNetworkReceiveBytes` | Captures absolute container cgroup resource utilization, kernel system call volume, network socket traffic, service mesh RPC latencies (P90, P95, P99), and physical node resource pressures. |
-| **2. Baseline-Relative Z-Scores** | 19 | `z_CpuUsage(m)`, `z_CpuUsageRate(%)`, `z_MemoryUsage(Mi)`, `z_MemoryUsageRate(%)`, `z_SyscallRead`, `z_SyscallWrite`, `z_NetworkReceiveBytes`, `z_NetworkTransmitBytes`, `z_PodClientLatencyP90(s)`, `z_PodServerLatencyP90(s)`, `z_PodClientLatencyP95(s)`, `z_PodServerLatencyP95(s)`, `z_PodClientLatencyP99(s)`, `z_PodServerLatencyP99(s)`, `z_PodWorkload(Ops)`, `z_PodSuccessRate(%)`, `z_NodeCpuUsageRate(%)`, `z_NodeMemoryUsageRate(%)`, `z_NodeNetworkReceiveBytes` | Standardizes raw metrics against healthy Day 1 training baselines ($\mu_{\text{train}, s}, \sigma_{\text{train}, s}$) with zero-variance safety clamp ($\epsilon = 10^{-6}$):<br>$$Z_{s, m}(t) = \frac{x_{s, m}(t) - \mu_{\text{train}, s, m}}{\max(\sigma_{\text{train}, s, m}, \epsilon)}$$<br>Prevents high-footprint services (e.g. `frontend`) from dominating low-footprint services (e.g. `currencyservice`). |
-| **3. Lag-1 Deltas ($\Delta_1$)** | 9 | `delta1_CpuUsageRate(%)`, `delta1_MemoryUsageRate(%)`, `delta1_SyscallWrite`, `delta1_NetworkReceiveBytes`, `delta1_NetworkTransmitBytes`, `delta1_PodClientLatencyP90(s)`, `delta1_PodServerLatencyP90(s)`, `delta1_PodServerLatencyP99(s)`, `delta1_PodWorkload(Ops)` | Captures instantaneous 1-minute step velocity:<br>$$\Delta_1 x(t) = x(t) - x(t-1)$$ |
-| **4. 1st-Order Trajectory Slopes** | 9 | `slope2_CpuUsageRate(%)`, `slope2_MemoryUsageRate(%)`, `slope2_SyscallWrite`, `slope2_NetworkReceiveBytes`, `slope2_NetworkTransmitBytes`, `slope2_PodClientLatencyP90(s)`, `slope2_PodServerLatencyP90(s)`, `slope2_PodServerLatencyP99(s)`, `slope2_PodWorkload(Ops)` | Linear trajectory slope over $W=3$ window capturing acceleration toward saturation limits:<br>$$\text{Slope}_2 x(t) = \frac{x(t) - x(t-2)}{2}$$ |
-| **5. Rolling Window Means** | 9 | `roll3_mean_CpuUsageRate(%)`, `roll3_mean_MemoryUsageRate(%)`, `roll3_mean_SyscallWrite`, `roll3_mean_NetworkReceiveBytes`, `roll3_mean_NetworkTransmitBytes`, `roll3_mean_PodClientLatencyP90(s)`, `roll3_mean_PodServerLatencyP90(s)`, `roll3_mean_PodServerLatencyP99(s)`, `roll3_mean_PodWorkload(Ops)` | Trend-smoothing expectation over a 3-minute sliding window:<br>$$\mu_3(t) = \frac{1}{3} \sum_{i=0}^2 x(t-i)$$ |
+| **2. Baseline-Relative Z-Scores** | 19 | `z_CpuUsage(m)`, `z_CpuUsageRate(%)`, `z_MemoryUsage(Mi)`, `z_MemoryUsageRate(%)`, `z_SyscallRead`, `z_SyscallWrite`, `z_NetworkReceiveBytes`, `z_NetworkTransmitBytes`, `z_PodClientLatencyP90(s)`, `z_PodServerLatencyP90(s)`, `z_PodClientLatencyP95(s)`, `z_PodServerLatencyP95(s)`, `z_PodClientLatencyP99(s)`, `z_PodServerLatencyP99(s)`, `z_PodWorkload(Ops)`, `z_PodSuccessRate(%)`, `z_NodeCpuUsageRate(%)`, `z_NodeMemoryUsageRate(%)`, `z_NodeNetworkReceiveBytes` | Standardizes raw metrics against healthy Day 1 training baselines ($\mu_{\text{train}, s}, \sigma_{\text{train}, s}$) with zero-variance safety clamp ($\epsilon = 10^{-6}$). Prevents high-footprint services (e.g. `frontend`) from dominating low-footprint services (e.g. `currencyservice`). |
+| **3. Lag-1 Deltas ($\Delta_1$)** | 9 | `delta1_CpuUsageRate(%)`, `delta1_MemoryUsageRate(%)`, `delta1_SyscallWrite`, `delta1_NetworkReceiveBytes`, `delta1_NetworkTransmitBytes`, `delta1_PodClientLatencyP90(s)`, `delta1_PodServerLatencyP90(s)`, `delta1_PodServerLatencyP99(s)`, `delta1_PodWorkload(Ops)` | Captures instantaneous 1-minute step velocity: $\Delta_1 x(t) = x(t) - x(t-1)$. |
+| **4. 1st-Order Trajectory Slopes** | 9 | `slope2_CpuUsageRate(%)`, `slope2_MemoryUsageRate(%)`, `slope2_SyscallWrite`, `slope2_NetworkReceiveBytes`, `slope2_NetworkTransmitBytes`, `slope2_PodClientLatencyP90(s)`, `slope2_PodServerLatencyP90(s)`, `slope2_PodServerLatencyP99(s)`, `slope2_PodWorkload(Ops)` | Linear trajectory slope over $W=3$ window capturing acceleration toward saturation limits: $\text{Slope}_2 x(t) = \frac{x(t) - x(t-2)}{2}$. |
+| **5. Rolling Window Means** | 9 | `roll3_mean_CpuUsageRate(%)`, `roll3_mean_MemoryUsageRate(%)`, `roll3_mean_SyscallWrite`, `roll3_mean_NetworkReceiveBytes`, `roll3_mean_NetworkTransmitBytes`, `roll3_mean_PodClientLatencyP90(s)`, `roll3_mean_PodServerLatencyP90(s)`, `roll3_mean_PodServerLatencyP99(s)`, `roll3_mean_PodWorkload(Ops)` | Trend-smoothing expectation over a 3-minute sliding window: $\mu_3(t) = \frac{1}{3} \sum_{i=0}^2 x(t-i)$. |
 | **6. Rolling Window Std Deviations** | 9 | `roll3_std_CpuUsageRate(%)`, `roll3_std_MemoryUsageRate(%)`, `roll3_std_SyscallWrite`, `roll3_std_NetworkReceiveBytes`, `roll3_std_NetworkTransmitBytes`, `roll3_std_PodClientLatencyP90(s)`, `roll3_std_PodServerLatencyP90(s)`, `roll3_std_PodServerLatencyP99(s)`, `roll3_std_PodWorkload(Ops)` | Local variance capturing metric jitter, micro-bursts, and scheduling instability over $W=3$. |
-| **7. Cross-Metric Workload Ratios** | 2 | `latency_server_to_client_ratio`, `network_tx_rx_ratio` | Identifies internal bottleneck shifts:<br>• $\frac{\text{ServerLatencyP90}}{\text{ClientLatencyP90}}$ distinguishes internal processing stalls from client connection delays.<br>• $\frac{\text{NetTxBytes}}{\text{NetRxBytes}}$ detects egress amplification and unconsumed ingest backlogs. |
-| **8. Drain3 Multi-Modal Log Signals** | 13 | `log_total_count`, `log_error_count`, `log_http_err_count`, `log_took_ms_mean`, `log_took_ms_max`, `log_rc_template_hits`, `roll3_sum_log_error_count`, `delta1_log_error_count`, `roll3_sum_log_rc_template_hits`, `delta1_log_rc_template_hits`, `roll3_sum_log_took_ms_max`, `delta1_log_took_ms_max`, `log_error_rate` | Online log mining via Drain3 parsing tree:<br>• Counts error/warning occurrences and HTTP 5xx responses.<br>• Monitors execution duration stats (`took_ms_mean`, `took_ms_max`).<br>• Detects root-cause template hits (`OOM`, `timeout`, `panic`, `refused`).<br>• Tracks rolling sums and lag deltas of log bursts to detect cascading application failures before cgroup limits trip. |
+| **7. Cross-Metric Workload Ratios** | 2 | `latency_server_to_client_ratio`, `network_tx_rx_ratio` | Identifies internal bottleneck shifts: Server-to-Client latency ratio distinguishes internal stalls from upstream network transit; TX-to-RX bytes detects egress amplification. |
+| **8. Drain3 Multi-Modal Log Signals** | 13 | `log_total_count`, `log_error_count`, `log_http_err_count`, `log_took_ms_mean`, `log_took_ms_max`, `log_rc_template_hits`, `roll3_sum_log_error_count`, `delta1_log_error_count`, `roll3_sum_log_rc_template_hits`, `delta1_log_rc_template_hits`, `roll3_sum_log_took_ms_max`, `delta1_log_took_ms_max`, `log_error_rate` | Online log mining via Drain3 parsing tree: Tracks total/error counts, HTTP 5xx responses, execution latency spikes (`took_ms_max`), and root-cause template regex hits (`OOM`, `timeout`, `panic`, `refused`). |
 | **✦ Total Vector Space** | **89** | **76 Continuous Telemetry + 13 Discrete Log Signals** | **Full Multi-Modal Feature Vector ($\mathbb{R}^{89}$)** |
 
-### 3. 6-Class Operational Fault Taxonomy
+---
+
+### 4. 6-Class Operational Fault Taxonomy
 
 | Class ID | Fault Category | Operational Signature & Root Cause | Evaluation Regime |
 | :---: | :--- | :--- | :--- |
@@ -140,7 +182,9 @@ $$\vec{x}_s(t) = \big[ \mathbf{M}_{\text{raw}} \,(19), \; \mathbf{Z}_{\text{base
 | `4` | `NETWORK_DEGRADATION` | Envoy proxy latency spikes, packet loss, upstream gRPC timeouts | **Regime A** (Onset Latency $\Delta t$) |
 | `5` | `SERVICE_DISRUPTION_LOG` | Application-level HTTP 5xx bursts & unhandled exception cascades | **Regime A** (Onset Latency $\Delta t$) |
 
-### 4. Formal 4-Model Classification Ablation Study
+---
+
+### 5. Formal 4-Model Classification Ablation Study
 Evaluated across Google *OnlineBoutique* (10 microservices) under strict temporal separation:
 
 | Model Configuration | Precision | Recall | Macro-F1 | Anomaly F1 | Regime A Latency | Top-1 Loc | Regime B Lead Time | False Alarms / hr |
@@ -154,18 +198,31 @@ Evaluated across Google *OnlineBoutique* (10 microservices) under strict tempora
 1. **The Multi-Modal Dividend:** Incorporating Drain3 structured log template hit frequencies and HTTP 5xx error ratios increased Macro-F1 by **+25.0% relative** over metrics alone (`0.5706` $\to$ `0.7132`). Microservice exceptions produce immediate log signatures while CPU/memory metrics often lag or remain flat during deadlock/timeout cascades.
 2. **Drastic Alert Fatigue Suppression:** Operating at confidence threshold $p > 0.75$ reduces false alarms from `14.80/hr` (static Prometheus rules) down to **`1.71/hr`**.
 
-### 5. Regime B Horizon Study: Classical SARIMA vs. Multi-Modal XGBRegressor
-For gradual resource depletion (`MEMORY_EXHAUSTION`, `DISK_EXHAUSTION`), Kintsugi-AI forecasts continuous **Time-to-Exhaustion (TTE in minutes)**. In `phase1_prediction/sarima_benchmark.py`, we benchmarked classical univariate $\text{SARIMA}(1,1,1)\times(1,0,1)_{12}$ against our 89-feature `XGBRegressor` across all 40 gradual exhaustion trajectories in `k8s_multimodal_test.csv`:
+---
 
-| Forecasting Architecture | Input Modality | TTE MAE (↓) | TTE RMSE (↓) | $R^2$ Score (↑) | Mean Lead Time | Inference / Tick | 1Hz Loop Viability |
+### 6. Regime B Horizon Study: Classical SARIMA vs. Multi-Modal XGBRegressor
+
+#### Mathematical Foundations
+The classical seasonal autoregressive integrated moving average $\text{SARIMA}(p,d,q)\times(P,D,Q)_s$ model is expressed as:
+$$\Phi_P(B^s)\phi_p(B)(1-B)^d(1-B^s)^D X_t = \Theta_Q(B^s)\theta_q(B)\varepsilon_t$$
+where $B$ denotes the backshift operator ($B^k X_t = X_{t-k}$), $s=12$ represents the seasonal periodicity, $d=1$ is non-seasonal differencing, and $\varepsilon_t \sim \mathcal{N}(0, \sigma^2)$ is Gaussian white noise.
+
+Conversely, the multi-modal gradient boosted decision tree ensemble approximates the continuous time-to-exhaustion $y_s(t) \in \mathbb{R}^+$ via $K$ additive regression trees:
+$$\hat{y}_s(t) = \sum_{k=1}^K f_k(\vec{x}_s(t)), \quad f_k \in \mathcal{F}$$
+trained with regularized objective $\mathcal{L} = \sum_{i} l(y_i, \hat{y}_i) + \sum_k \big(\gamma T_k + \frac{1}{2}\lambda \|w_k\|^2\big)$.
+
+#### Benchmark Evaluation (`phase1_prediction/sarima_benchmark.py`)
+Evaluated across all 40 gradual exhaustion trajectories in `k8s_multimodal_test.csv`:
+
+| Forecasting Architecture | Input Modality | TTE MAE (↓) | TTE RMSE (↓) | $R^2$ Score (↑) | Mean Lead Time | Latency / Tick | 1Hz Loop Viability |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :--- |
-| **Classical $\text{SARIMA}(1,1,1)\times(1,0,1)_{12}$** | Univariate Metric Series (`MemoryUsageRate(%)` / `SyscallWrite`) | 6.50 min | 6.89 min | 0.114 | 10.0 min (Threshold) | 243.80 ms | **Unsuitable** (2.44s for 10 pods $\to$ queue overflow & frame drops) |
-| **✦ Kintsugi Multi-Modal `XGBRegressor`** | **89 Multi-Modal Features + 1st-Order Slopes + Log Signals** | **0.71 min**<br>**(-89.1%)** | **0.90 min**<br>**(-87.0%)** | **0.846** | **4.7 min**<br>*(Continuous)* | **0.67 ms**<br>**(364× faster)** | **Production Ready** (Sub-7ms for all 10 pods $\to$ 993ms headroom) |
+| **Classical $\text{SARIMA}(1,1,1)\times(1,0,1)_{12}$** | Univariate Metric Series (`MemoryUsageRate(%)` / `SyscallWrite`) | 6.50 min | 6.89 min | 0.114 | 10.0 min (Threshold) | 79.30 ms (up to 243.8ms) | **Unsuitable** (~2.44s for 10 pods $\to$ queue overflow & frame drops) |
+| **✦ Kintsugi Multi-Modal `XGBRegressor`** | **89 Multi-Modal Features + 1st-Order Slopes + Log Signals** | **0.71 min**<br>**(-89.1%)** | **0.90 min**<br>**(-87.0%)** | **0.846** | **4.7 min**<br>*(Continuous)* | **0.67 ms – 0.93 ms**<br>**(85×–364× faster)** | **Production Ready** (Sub-7ms for all 10 pods $\to$ >993ms headroom) |
 
 #### Critical Systems Engineering Insights:
 1. **-89.1% Error Reduction via Multi-Modality:** Classical univariate SARIMA only observes a single univariate metric curve in isolation, suffering an MAE of `6.50 min`. In contrast, the Multi-Modal `XGBRegressor` integrates cross-metric workload ratios, 1st-order derivative slopes, and JVM GC warning bursts to achieve an MAE of **`0.71 min`** and trajectory RMSE of **`0.90 min`** ($R^2 = 0.846$).
-2. **364× Inference Speedup & 1Hz Streaming Guarantee:** In a live 10-microservice cluster, fitting iterative SARIMA states at `243.8 ms` per tick consumes **$2,438\text{ ms}$ ($>2.4\text{ seconds}$)** per cycle, causing catastrophic event loop stalling and WebSocket backpressure. At **`0.67 ms` per tick**, `XGBRegressor` evaluates all 10 microservices in under `6.7 ms` total, leaving **99.3% idle headroom** for the 1Hz telemetry loop.
-3. **Continuous Horizon vs. Coarse Thresholds:** SARIMA triggers an early-warning alert at 10.0 minutes based on simple statistical threshold crossing, but its trajectory projections diverge wildly. `XGBRegressor` produces smooth, continuous, calibrated minute-by-minute TTE estimates down to container crash.
+2. **Computational Complexity & 1Hz Streaming Guarantee:** In a live 10-microservice cluster, fitting iterative SARIMA states has polynomial complexity $\mathcal{O}(N \cdot m)$ per time step, taking $>2.4\text{ seconds}$ per cycle across 10 pods. At **`0.67 ms` per tick**, `XGBRegressor` has linear tree-traversal complexity $\mathcal{O}(K \cdot d)$, evaluating all 10 microservices in under `6.7 ms` total, leaving **99.3% idle headroom** for the 1Hz telemetry loop.
+3. **Continuous Horizon vs. Coarse Thresholds:** SARIMA triggers an early-warning alert based on simple statistical threshold crossing, but its trajectory projections diverge wildly. `XGBRegressor` produces smooth, continuous, calibrated minute-by-minute TTE estimates down to container crash.
 
 ---
 
@@ -239,11 +296,14 @@ $$\text{MONITOR} \longrightarrow \text{DIAGNOSE} \longrightarrow \text{PLAN} \lo
 
 Supports seamless toggling between **`AUTONOMOUS`** mode (zero-touch closed-loop execution) and **`HUMAN_IN_THE_LOOP`** mode (pauses at `AWAITING_APPROVAL` so the operator can inspect the LLM reasoning and click Approve or Reject in the UI).
 
-### 2. Dual LLM Reasoning Engine, Pydantic Contract & `<think>` Parser (`phase2_remediation/llm_client.py`)
+### 2. Dual LLM Reasoning Engine & `<think>` Parser (`phase2_remediation/llm_client.py`)
 - **Primary Cloud Reasoner:** Groq Cloud (`qwen/qwen3.8-27b`). Deep reasoning models emit internal `<think>...</think>` thought chains prior to returning JSON. `DualBackendLLMClient._extract_clean_json()` intercepts the response stream, strips chain-of-thought blocks via non-greedy regex (`re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)`), strips markdown syntax fences (````json ... ````), and validates the clean payload against our Pydantic contract.
 - **Secondary Local Reasoner:** LM Studio (`qwen2.5-3b-instruct` at `http://localhost:1234/v1`).
-- **Zero-Unbounded Pydantic Plan Contract (`phase2_remediation/actions.py`):**
-  Every remediation proposal emitted by either LLM or fallback matrix must strictly conform to the typed `RemediationPlan` schema:
+
+---
+
+### 3. Pydantic Action Catalog & Contract (`phase2_remediation/actions.py`)
+Every remediation proposal emitted by either LLM or fallback matrix must strictly conform to the typed `RemediationPlan` schema:
 
 ```python
 class ActionType(str, Enum):
@@ -272,8 +332,10 @@ class RemediationPlan(BaseModel):
     reasoning_summary: str
 ```
 
-- **Deterministic Fallback Matrix (`phase2_remediation/actions.py`):**
-  Guarantees 100% operational continuity even during total cloud WAN partition, Groq API outages, or token rate limits:
+---
+
+### 4. Deterministic SRE Fallback Matrix (`phase2_remediation/actions.py`)
+Guarantees 100% operational continuity even during total cloud WAN partition, Groq API outages, or token rate limits:
 
 | Fault Signature | Diagnosed Root Cause | Deterministic Action | Injected Remediation Parameters | Conf | Operational Justification |
 | :--- | :--- | :--- | :--- | :---: | :--- |
@@ -284,15 +346,28 @@ class RemediationPlan(BaseModel):
 | `SERVICE_DISRUPTION_LOG` | Unhandled runtime exception burst | `RESTART_POD` | `{}` (Rolling zero-downtime restart) | 0.89 | Re-spins pods with clean memory space and fresh TCP socket connections. |
 | `NORMAL` | Metrics within healthy $\pm 1.5\sigma$ | `NO_ACTION` | `{}` | 0.99 | Healthy baseline confirmed; zero disruptive mutations permitted. |
 
-### 3. 5 Deterministic SRE Safety Guardrails (Zero Unbounded Execution)
-Before any LLM-proposed remediation mutates cluster state, it must pass 5 deterministic Python gates (`phase2_remediation/guardrails.py`):
-1. **Namespace Isolation Lock:** Target namespace locked strictly to `["hipster", "kintsugi-lab"]`. `kube-system`, `monitoring`, and cluster-wide system resources are hard-blocked.
-2. **Strict 6-Action Allowlist:** Constrained to `["SCALE_DEPLOYMENT", "PATCH_RESOURCES", "RESTART_POD", "CORDON_AND_RELOCATE", "APPLY_TRAFFIC_SHAPING", "NO_OP"]`.
-3. **Parameter Clamping:** Replicas clamped strictly to $[1, 5]$; Memory limits clamped to $\le 1024\text{Mi}$.
-4. **Anti-Thrashing Cooldown:** 120-second per-service cooldown timer prevents flapping and scaling oscillation loops.
-5. **Pre-Flight Kubernetes API Dry-Run:** Every mutation is evaluated against `kube-apiserver` with `dry_run="All"` prior to commit.
+---
 
-### 4. Closed-Loop Remediation Benchmark (MTTR)
+### 5. 5 Deterministic SRE Safety Guardrails (Zero Unbounded Execution)
+Before any LLM-proposed remediation mutates cluster state, it must pass 5 deterministic Python gates (`phase2_remediation/guardrails.py`):
+
+1. **Gate 1: Namespace Isolation Lock ($\mathcal{G}_1$):**
+   $$N_{\text{target}} \in \mathcal{S}_{\text{allowed}} = \{\text{"hipster"}, \; \text{"kintsugi-lab"}\}$$
+   Submissions targeting `kube-system`, `monitoring`, or default system namespaces trigger immediate `NamespaceLockViolation`.
+2. **Gate 2: Action Allowlist Constraint ($\mathcal{G}_2$):**
+   $$A_{\text{selected}} \in \mathcal{A}_{\text{valid}} = \{\text{SCALE\_DEPLOYMENT}, \text{PATCH\_RESOURCES}, \text{RESTART\_POD}, \text{CORDON\_AND\_RELOCATE}, \text{APPLY\_TRAFFIC\_SHAPING}, \text{NO\_OP}\}$$
+   Arbitrary bash commands, script invocations, or destructive resource deletions are strictly rejected.
+3. **Gate 3: Parameter Clamping & Bounding ($\mathcal{G}_3$):**
+   $$r \in [1, 5], \quad \text{memory\_limit\_mi} \in [64, 1024], \quad \text{cpu\_limit\_m} \in [100, 2000], \quad \text{timeout\_ms} \in [100, 5000]$$
+4. **Gate 4: Anti-Thrashing Token-Bucket Cooldown ($\mathcal{G}_4$):**
+   $$\Delta t_{\text{last\_mutation}}(s) = t_{\text{current}} - t_{\text{last\_mutation}}(s) \ge 120\text{ seconds}$$
+   Prevents flapping, cascading re-triggers, and scaling oscillations.
+5. **Gate 5: Pre-Flight Kubernetes API Spec Dry-Run ($\mathcal{G}_5$):**
+   Every mutation payload is transmitted to `kube-apiserver` with `dry_run="All"` query parameter. The mutation is committed to cluster etcd only if the API server returns HTTP 200 without admission controller or schema rejection.
+
+---
+
+### 6. Closed-Loop Remediation Benchmark (MTTR)
 Evaluated across all 5 operational fault classes (`phase2_remediation/remediation_benchmark.py` & `docs/REMEDIATION_BENCHMARK.md`):
 
 | Fault Scenario | Target Service | Fault Class | Action Executed | Pre-Fault Stress | Post-Fix State | MTTR |
@@ -394,20 +469,24 @@ python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
 
 Kintsugi-AI includes production-ready Kubernetes manifests in `k8s_manifests/` to run the entire prediction and remediation engine natively inside a Kubernetes cluster:
 
-1. **Least-Privilege RBAC (`k8s_manifests/rbac.yaml`):**
-   - `ServiceAccount`: `kintsugi-sre-agent`
-   - `ClusterRole`: `kintsugi-remediation-role` scoped strictly to `pods`, `pods/log`, `nodes`, `deployments`, `deployments/scale`, and `networkpolicies` (`get`, `list`, `watch`, `patch`, `update`).
-2. **Unified Agent Deployment (`k8s_manifests/kintsugi_agent.yaml`):**
-   - Packages the FastAPI + WebSocket backend, React 19 UI, Phase 1 XGBoost inference engine, and Phase 2 LangGraph Ambient Agent into a single deployment.
-3. **Deploy or Verify with One Command:**
-   ```bash
-   # Apply least-privilege RBAC
-   kubectl apply -f k8s_manifests/rbac.yaml
+### 1. Least-Privilege RBAC Specification (`k8s_manifests/rbac.yaml`)
 
-   # Pre-flight dry-run verification & deployment
-   kubectl apply --dry-run=client -f k8s_manifests/kintsugi_agent.yaml
-   kubectl apply -f k8s_manifests/kintsugi_agent.yaml
-   ```
+| API Group | Resources | Verbs | Security Justification |
+| :--- | :--- | :--- | :--- |
+| `""` (Core) | `pods`, `pods/log` | `get`, `list`, `watch`, `delete` | Inspecting container stdout logs and executing zero-downtime rolling restarts. |
+| `""` (Core) | `nodes` | `get`, `list`, `patch` | Cordoning degraded worker nodes during disk pressure incidents (`spec.unschedulable = true`). |
+| `apps` | `deployments`, `deployments/scale` | `get`, `list`, `watch`, `patch`, `update` | Horizontal replica scaling ($1 \to 3$ pods) and container cgroup memory/CPU patching. |
+| `networking.k8s.io` | `networkpolicies` | `get`, `list`, `create`, `patch`, `delete` | Traffic shaping and circuit breaking isolation during cascading network degradation. |
+
+### 2. Deploy or Verify with One Command
+```bash
+# Apply least-privilege RBAC
+kubectl apply -f k8s_manifests/rbac.yaml
+
+# Pre-flight dry-run verification & deployment
+kubectl apply --dry-run=client -f k8s_manifests/kintsugi_agent.yaml
+kubectl apply -f k8s_manifests/kintsugi_agent.yaml
+```
 
 ---
 
@@ -420,13 +499,13 @@ Kintsugi-AI is deployed live on Render.com at **[https://kintsugi-ai.onrender.co
 - **Environment Secrets:**
   - `GROQ_API_KEY`: `<your_free_groq_api_key>`
   - `GROQ_MODEL`: `qwen/qwen3.8-27b`
-  - `CLUSTER_MODE`: `REPLAY_HOLDOUT`
+  - `CLUSTER_MODE`: `LIVE_K8S`
 
 ### Option B: Multi-Stage Docker Container (`Dockerfile`)
 Kintsugi-AI also includes a multi-stage Dockerfile (Node 20 Vite build stage + Python 3.11 runtime stage) that runs anywhere Docker is supported:
 ```bash
 docker build -t kintsugi-ai:latest .
-docker run -p 7860:7860 -e GROQ_API_KEY="your_key" -e CLUSTER_MODE="REPLAY_HOLDOUT" kintsugi-ai:latest
+docker run -p 7860:7860 -e GROQ_API_KEY="your_key" -e CLUSTER_MODE="LIVE_K8S" kintsugi-ai:latest
 ```
 
 ---
@@ -437,7 +516,7 @@ The codebase is continuously validated by a hardened 3-tier test suite (`tests/`
 
 ```bash
 python -m pytest tests/ -v
-# ======================= 23 passed in ~57s ========================
+# ======================= 23 passed in ~86s ========================
 ```
 
 #### Exhaustive Breakdown of All 23 Automated Test Cases
@@ -471,20 +550,148 @@ python -m pytest tests/ -v
 
 ---
 
-## 🔌 REST & WebSocket API Reference
+## 🔌 Complete REST & WebSocket API Specification
 
-| Method | Endpoint | Description |
-| :---: | :--- | :--- |
-| `GET` | `/api/status` | Returns active cluster mode (`LIVE_K8S`), LLM backend, agent mode, and model readiness. |
-| `GET` | `/api/topology` | Returns the 10-service OnlineBoutique graph nodes, dependency edges, replica counts, and Kintsugi repair states. |
-| `GET` | `/api/cluster/snapshot` | Returns current per-service telemetry metrics, Phase 1 predictions, and 3-node hardware capacity status. |
-| `GET` | `/api/benchmark` | Returns Phase 1 4-model ablation metrics, SARIMA vs. XGBRegressor horizon metrics, and Phase 2 MTTR benchmarks. |
-| `POST` | `/api/chaos/inject` | Injects targeted fault scenarios (`cpu_contention`, `memory_leak`, `exception_burst`, `disk_pressure`, `network_latency`). |
-| `POST` | `/api/agent/mode` | Toggles LangGraph operating mode between `AUTONOMOUS` and `HUMAN_IN_THE_LOOP`. |
-| `POST` | `/api/agent/approve` | Approves or rejects a pending `AWAITING_APPROVAL` remediation plan in Human-in-the-Loop mode. |
-| `POST` | `/api/cluster/source` | Confirms telemetry pipeline is locked to `LIVE_K8S` cluster stream. |
-| `POST` | `/api/agent/backend` | Hot-swaps LLM engine between `GROQ_CLOUD` (`qwen/qwen3.8-27b`) and `LOCAL_LM_STUDIO`. |
-| `WS` | `/ws/telemetry` | Streams 1Hz real-time multi-modal telemetry ticks, Phase 1 anomaly predictions, and LangGraph state transitions. |
+### REST Endpoints Specification
+
+#### 1. System Health & Status: `GET /health` / `GET /api/status`
+Returns live connectivity indicators across the Kubernetes cluster, Prometheus scrapper, active LLM reasoner, and autonomous agent mode:
+```powershell
+Invoke-RestMethod -Uri "http://localhost:8000/api/status" | ConvertTo-Json -Depth 3
+```
+```json
+{
+  "status": "healthy",
+  "cluster_mode": "LIVE_K8S",
+  "raw_mode": "live",
+  "is_k8s_connected": true,
+  "cluster_source": "live",
+  "prometheus_reachable": true,
+  "llm_backend": "groq",
+  "groq_configured": true,
+  "dataset_rows": 0,
+  "autonomous_mode": true
+}
+```
+
+#### 2. Microservice Topology Graph: `GET /api/topology`
+Returns the 10 Google OnlineBoutique nodes and inter-service call dependency directed edges:
+```powershell
+Invoke-RestMethod -Uri "http://localhost:8000/api/topology" | ConvertTo-Json -Depth 3
+```
+
+#### 3. Real-Time Cluster Hardware Snapshot: `GET /api/cluster/snapshot`
+Returns the real-time node hardware resource metrics (CPU, RAM, scheduling status) and per-service container cgroup states:
+```powershell
+Invoke-RestMethod -Uri "http://localhost:8000/api/cluster/snapshot" | ConvertTo-Json -Depth 4
+```
+
+#### 4. Model Benchmarks & Ablation: `GET /api/benchmark`
+Serves the 4-model Phase 1 classification metrics, SARIMA vs. XGBoost horizon benchmarks, and Phase 2 MTTR evaluations:
+```powershell
+Invoke-RestMethod -Uri "http://localhost:8000/api/benchmark" | ConvertTo-Json -Depth 4
+```
+
+#### 5. Live Chaos Injection: `POST /api/chaos/inject`
+Injects real synthetic or cgroup faults into any of the 10 microservices:
+```powershell
+Invoke-RestMethod -Method Post -Uri "http://localhost:8000/api/chaos/inject" `
+  -ContentType "application/json" `
+  -Body '{"service": "checkoutservice", "scenario": "cpu_contention"}' | ConvertTo-Json -Depth 5
+```
+
+#### 6. Autonomous Mode Toggle: `POST /api/agent/mode`
+Toggles between `AUTONOMOUS` (zero-touch auto-healing) and `HUMAN_IN_THE_LOOP` (pauses for approval):
+```powershell
+Invoke-RestMethod -Method Post -Uri "http://localhost:8000/api/agent/mode" `
+  -ContentType "application/json" `
+  -Body '{"mode": "AUTONOMOUS"}' | ConvertTo-Json
+```
+
+#### 7. Operator Approval / Rejection: `POST /api/agent/approve` / `POST /api/agent/reject`
+Commits or rejects a pending `AWAITING_APPROVAL` remediation plan:
+```powershell
+Invoke-RestMethod -Method Post -Uri "http://localhost:8000/api/agent/approve" -ContentType "application/json" -Body '{"approved": true}'
+```
+
+#### 8. LLM Reasoner Hot-Swap: `POST /api/agent/backend`
+Hot-swaps LLM client at runtime between Groq Cloud (`groq`) and Local LM Studio (`lmstudio`):
+```powershell
+Invoke-RestMethod -Method Post -Uri "http://localhost:8000/api/agent/backend" `
+  -ContentType "application/json" `
+  -Body '{"backend": "groq"}' | ConvertTo-Json
+```
+
+---
+
+### 1Hz WebSocket Telemetry Protocol Specification (`/ws/telemetry`)
+Clients establish a persistent WebSocket connection to `ws://localhost:8000/ws/telemetry`. The server central broadcaster emits a synchronized JSON telemetry tick every 1000ms:
+
+```json
+{
+  "tick_index": 482,
+  "timestamp": 1732103450,
+  "service": "checkoutservice",
+  "ground_truth_class": "NORMAL",
+  "prediction": {
+    "fault_class": "CPU_EXHAUSTION",
+    "confidence": 0.942,
+    "is_anomaly": true,
+    "time_to_exhaustion_min": null
+  },
+  "metrics": {
+    "CpuUsageRate(%)": 92.4,
+    "MemoryUsageRate(%)": 34.1,
+    "PodServerLatencyP95(s)": 0.45,
+    "PodWorkload(Ops)": 15.0,
+    "PodSuccessRate(%)": 95.0,
+    "log_error_count": 5.0
+  },
+  "agent_event": {
+    "state": "VERIFIED",
+    "current_node": "VERIFY",
+    "planned_action": "SCALE_DEPLOYMENT",
+    "reasoning": "High CPU saturation (92.4%) detected. Scaling checkoutservice from 1 to 3 replicas.",
+    "history": [
+      "MONITOR: Fault CPU_EXHAUSTION detected on checkoutservice.",
+      "DIAGNOSE: Analyzed cgroup utilization and 30 container stdout logs.",
+      "PLAN: Selected SCALE_DEPLOYMENT (replicas=3).",
+      "GUARDRAILS: Passed 5 safety gates including dry_run='All'.",
+      "EXECUTE: Patched deployment.apps/checkoutservice scale to 3.",
+      "VERIFY: Pods 3/3 ready. Z-scores stabilized. Gold Seam sealed."
+    ],
+    "execution_status": "SUCCESS",
+    "remediation_plan": {
+      "diagnosed_root_cause": "High CPU contention on checkoutservice",
+      "target_service": "checkoutservice",
+      "target_namespace": "hipster",
+      "selected_action": "SCALE_DEPLOYMENT",
+      "parameters": {"replicas": 3},
+      "confidence": 0.94,
+      "reasoning_summary": "Scale deployment to 3 replicas to relieve CPU contention."
+    },
+    "guardrail_result": {"passed": true, "violations": []},
+    "verification_result": {"status": "RECOVERED", "action_executed": "SCALE_DEPLOYMENT"}
+  },
+  "cluster_state": {
+    "checkoutservice": {
+      "cpu": 31.4,
+      "memory": 34.1,
+      "replicas": 3,
+      "status": "Running",
+      "assigned_node": "desktop-worker",
+      "is_verified_repaired": true
+    }
+  },
+  "pending_hitl": false,
+  "pending_plan": null,
+  "autonomous_mode": true,
+  "is_k8s_connected": true,
+  "cluster_mode": "LIVE_K8S",
+  "cluster_source": "live",
+  "prometheus_reachable": true
+}
+```
 
 ---
 
@@ -682,13 +889,57 @@ docker stop desktop-control-plane desktop-worker desktop-worker2
 
 ---
 
+## 🔧 Production Troubleshooting, Failure Recovery & Operational FAQ
+
+### 1. Docker WSL2 Inotify Exhaustion / TLS Timeouts
+- **Symptom:** `kubectl get nodes` hangs or returns `Unable to connect to the server: net/http: TLS handshake timeout`.
+- **Root Cause:** WSL2 Linux kernel default `fs.inotify.max_user_watches` (8192) exhausted by `kube-apiserver` and `etcd`.
+- **Resolution:**
+  ```powershell
+  docker exec desktop-control-plane sysctl -w fs.inotify.max_user_instances=8192 fs.inotify.max_user_watches=524288
+  docker exec desktop-worker sysctl -w fs.inotify.max_user_instances=8192 fs.inotify.max_user_watches=524288
+  docker exec desktop-worker2 sysctl -w fs.inotify.max_user_instances=8192 fs.inotify.max_user_watches=524288
+  ```
+
+### 2. Dropped or Stale `kubectl port-forward` Processes
+- **Symptom:** UI Live Connection Gate reports `Prometheus Unreachable` or `Kubernetes API Stalled`.
+- **Root Cause:** Background port-forwards dropped during sleep/wake or WSL2 network bridge refresh.
+- **Resolution:**
+  ```powershell
+  Get-Process kubectl -ErrorAction SilentlyContinue | Stop-Process -Force
+  Start-Process kubectl -ArgumentList "port-forward -n monitoring svc/monitoring-kube-prometheus-prometheus 9090:9090" -WindowStyle Minimized
+  Start-Process kubectl -ArgumentList "port-forward -n monitoring svc/monitoring-grafana 3000:80" -WindowStyle Minimized
+  Start-Process kubectl -ArgumentList "port-forward -n kubernetes-dashboard svc/kubernetes-dashboard 8443:443" -WindowStyle Minimized
+  ```
+
+### 3. Groq Cloud Rate Limits (HTTP 429) & Automatic Rule Fallback
+- **Symptom:** Backend terminal logs `Groq API Rate Limit Exceeded (HTTP 429)`.
+- **Autonomous Recovery:** The LangGraph agent intercepts the HTTP 429 exception without crashing and triggers `FaultToActionMatrix.get_fallback_plan()`. The deterministic SRE safety rule provides a valid Pydantic remediation plan instantly with zero operator intervention.
+
+### 4. Kubernetes Web Dashboard Token Expiration
+- **Symptom:** `https://localhost:8443` prompts for login token.
+- **Resolution:**
+  ```powershell
+  kubectl -n kubernetes-dashboard create token admin-user
+  ```
+
+### 5. Node Cordon State Not Clearing
+- **Symptom:** Microservices cannot schedule pods; pods stay in `Pending` state.
+- **Resolution:**
+  ```powershell
+  kubectl uncordon desktop-worker
+  kubectl uncordon desktop-worker2
+  ```
+
+---
+
 ## 🎬 End-to-End Technical Walkthrough Guide
 
 ### Part 1: Phase 1 — Prediction Engine & ML Architecture
 - **The Problem:** Static Prometheus threshold rules create alert fatigue (`14.80 FA/hr`) and detect failures too late ($\Delta t = 148.0\text{s}$).
 - **The Nezha Timestamp Fix:** Show how we identified and resolved the $+200\text{M}$-second offset bug in the raw benchmark CSVs and partitioned Day 2 into leak-free test and validation holdout splits.
 - **The 4-Model Ablation Jump:** Walk through the progression from Prometheus Rules (`0.2816` Macro-F1) $\to$ IsolationForest (`0.2782`) $\to$ Metrics-Only XGBoost (`0.5706`) $\to$ Multi-Modal XGBoost (**`0.7132` Macro-F1**).
-- **SARIMA vs. Multi-Modal XGBRegressor:** Open the in-app ML & SARIMA Benchmark Modal to show how XGBRegressor achieves **$0.71\text{ min}$ MAE** ($4.7\text{ min}$ lead time) at $1.15\text{ ms/tick}$ vs. $42.50\text{ ms/tick}$ for seasonal SARIMA.
+- **SARIMA vs. Multi-Modal XGBRegressor:** Open the in-app ML & SARIMA Benchmark Modal to show how XGBRegressor achieves **$0.71\text{ min}$ MAE** ($4.7\text{ min}$ lead time) at $0.93\text{ ms/tick}$ vs. $79.30\text{ ms/tick}$ for seasonal SARIMA.
 
 ### Part 2: Phase 2 — Ambient LangGraph Agent & Live Command Center
 - **The Command Center:** Showcase the 10-service OnlineBoutique topology map, 3-node hardware capacity HUD, and live 1Hz WebSocket telemetry.
@@ -753,7 +1004,8 @@ kintsugi-sre/
 │   ├── langgraph_agent.py          # 6-Node LangGraph StateGraph Architecture & Ambient Agent
 │   └── remediation_benchmark.py    # Pre/Post recovery & MTTR evaluation across 5 chaos scenarios
 ├── scripts/
-│   └── test_remediation_agent.py   # Standalone CLI agent & guardrail test runner
+│   ├── test_remediation_agent.py   # Standalone CLI agent & guardrail test runner
+│   └── inspect_nezha.py            # Nezha dataset sanity checking & timestamp validation
 └── tests/
     ├── test_01_unit.py             # Tier 1: Feature schema, SARIMA, Qwen parser & guardrail unit tests
     ├── test_02_integration.py      # Tier 2: LangGraph autonomous & HITL workflow integration tests
@@ -765,7 +1017,7 @@ kintsugi-sre/
 ## 🏆 Technical Milestone Checklist
 
 - [x] **Milestone 1 — Multi-Modal Data Engineering:** Empirical Nezha dataset inspection, $+200\text{M}$-second timestamp offset resolution, per-service Z-score baseline normalization, Drain3 log template extraction, strict chronological episode split (Train: Day 1 `24,180` rows, Test: Day 2 First 64% `4,340` rows, Validation Holdout: Day 2 Final 36% `2,480` rows).
-- [x] **Milestone 2 — 4-Model Classification Ablation & SARIMA Benchmark:** Evaluated B0 Prometheus Static Rules vs. M1 IsolationForest vs. M2 Temporal XGBoost vs. M3 Multi-Modal XGBoost (`0.7132` Macro-F1, `87.6s` Regime A latency, `1.71` FA/hr), plus Regime B Time-to-Exhaustion horizon benchmarking comparing classical $\text{SARIMA}(1,1,1)\times(1,0,1)_{12}$ against Multi-Modal XGBRegressor (`0.71 min` MAE, `4.7 min` lead time, $37\times$ faster inference).
+- [x] **Milestone 2 — 4-Model Classification Ablation & SARIMA Benchmark:** Evaluated B0 Prometheus Static Rules vs. M1 IsolationForest vs. M2 Temporal XGBoost vs. M3 Multi-Modal XGBoost (`0.7132` Macro-F1, `87.6s` Regime A latency, `1.71` FA/hr), plus Regime B Time-to-Exhaustion horizon benchmarking comparing classical $\text{SARIMA}(1,1,1)\times(1,0,1)_{12}$ against Multi-Modal XGBRegressor (`0.71 min` MAE, `4.7 min` lead time, $85\times$ faster inference).
 - [x] **Milestone 3 — Diagnostic Visualizations & Reporting:** Automated generation of `ablation_comparison.png`, `confusion_matrix.png`, `feature_importance.png`, `lead_time_distribution.png`, and `docs/PHASE1_REPORT.md`.
 - [x] **Milestone 4 — Guardrailed LangGraph Ambient Agent:** 6-node StateGraph (`MONITOR` -> `DIAGNOSE` -> `PLAN` -> `GUARDRAILS` -> `EXECUTE` -> `VERIFY`), Groq Cloud `qwen/qwen3.8-27b` integration with `<think>` tag stripping, Local LM Studio hot-swap, Pydantic action catalog, deterministic fallback matrix, and 5 SRE safety guardrails including Kubernetes API `dry_run="All"`.
 - [x] **Milestone 5 — Live 3-Node Kubernetes Cluster & MTTR Benchmark:** Provisioned 3-node Kubernetes v1.36.1 cluster (`desktop-control-plane`, `desktop-worker`, `desktop-worker2`), 10 active `hipster` microservices, Prometheus, Grafana, and Kubernetes Dashboard v2.7.0; verified `27.6s` mean MTTR across 5 chaos scenarios (`docs/REMEDIATION_BENCHMARK.md`).
