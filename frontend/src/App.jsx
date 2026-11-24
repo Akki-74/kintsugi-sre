@@ -535,8 +535,8 @@ export default function App() {
         <Lightfall
           colors={['#9324fd']}
           cycleColors={['#9324fd', '#0545ae']}
-          cycleInterval={30}
-          cycleTransition={6}
+          cycleInterval={10}
+          cycleTransition={4}
           syncBackgroundGlow
           backgroundColor="#050811"
           speed={0.38}
