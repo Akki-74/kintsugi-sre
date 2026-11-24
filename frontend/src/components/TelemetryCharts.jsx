@@ -26,6 +26,8 @@ import {
   Radio,
   CheckCircle2
 } from 'lucide-react';
+import { Button } from './ui/button';
+import { Badge } from './ui/badge';
 
 export const EXPANDED_CHAOS_OPTIONS = [
   {
@@ -189,7 +191,7 @@ export default function TelemetryCharts({
   return (
     <div className="kintsugi-panel flex flex-col h-full rounded-2xl overflow-hidden min-w-0 max-w-full">
       {/* Header Bar with Service Selector & Workstation Tabs */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 bg-slate-950/80 px-3.5 py-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 bg-slate-950/20 backdrop-blur-xs px-3.5 py-2">
         <div className="flex items-center gap-2 min-w-0">
           <Activity className="h-4 w-4 text-cyan-400 flex-shrink-0" />
           <span className="font-display text-xs font-bold uppercase tracking-wider text-slate-200 truncate">
@@ -198,10 +200,10 @@ export default function TelemetryCharts({
           <select
             value={selectedService}
             onChange={(e) => onSelectService && onSelectService(e.target.value)}
-            className="rounded-lg bg-slate-900 border border-slate-700 px-2.5 py-1 font-mono-code text-xs text-amber-300 focus:outline-none focus:border-amber-400"
+            className="rounded-lg bg-slate-900/30 backdrop-blur-xs border border-slate-700/60 px-2.5 py-1 font-mono-code text-xs text-amber-300 focus:outline-none focus:border-amber-400"
           >
             {ALL_SERVICES.map((svc) => (
-              <option key={svc} value={svc}>
+              <option key={svc} value={svc} className="bg-slate-900 text-slate-200">
                 {svc} (hipster)
               </option>
             ))}
@@ -209,7 +211,7 @@ export default function TelemetryCharts({
         </div>
 
         {/* Workstation Tab Switcher */}
-        <div className="flex items-center gap-1 rounded-lg bg-slate-900/90 border border-slate-800 p-0.5 text-xs">
+        <div className="flex items-center gap-1 rounded-lg bg-slate-900/30 backdrop-blur-xs border border-slate-800/60 p-0.5 text-xs">
           <button
             onClick={() => setActiveTab('telemetry')}
             className={`px-3 py-1 rounded-md font-medium transition-all ${
@@ -245,18 +247,15 @@ export default function TelemetryCharts({
       </div>
 
       {/* Model Anomaly Readout & TTE Horizon Strip */}
-      <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-900/60 border-b border-slate-800/60 px-3.5 py-1.5 font-mono-code text-[11px] min-w-0">
+      <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-900/20 backdrop-blur-xs border-b border-slate-800/60 px-3.5 py-1.5 font-mono-code text-[11px] min-w-0">
         <div className="flex items-center gap-2 min-w-0 truncate">
           <span className="text-slate-400">Status:</span>
-          <span
-            className={`rounded px-2 py-0.5 font-bold truncate ${
-              predClass === 'NORMAL'
-                ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
-                : 'bg-rose-500/25 text-rose-200 border border-rose-500/50 animate-pulse'
-            }`}
+          <Badge
+            variant={predClass === 'NORMAL' ? 'emerald' : 'destructive'}
+            className={predClass !== 'NORMAL' ? 'animate-pulse' : ''}
           >
             {predClass} ({predConf.toFixed(0)}%)
-          </span>
+          </Badge>
         </div>
 
         <div className="flex items-center gap-2 min-w-0 truncate">
@@ -275,7 +274,7 @@ export default function TelemetryCharts({
         <div className="flex-1 flex flex-col p-3 gap-2 min-h-0 overflow-hidden">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 flex-1 min-h-0 overflow-hidden">
             {/* CPU Chart */}
-            <div className="rounded-xl bg-slate-950/70 border border-slate-800/80 p-2.5 flex flex-col min-w-0 min-h-0 overflow-hidden relative shadow-sm">
+            <div className="rounded-xl bg-slate-950/20 backdrop-blur-xs border border-slate-800/40 p-2.5 flex flex-col min-w-0 min-h-0 overflow-hidden relative shadow-sm">
               <div className="flex justify-between items-center text-[11px] font-mono-code mb-1 flex-shrink-0">
                 <span className="text-slate-400">CPU USAGE (%)</span>
                 <span className="text-cyan-300 font-bold">{Number(latestPoint.cpu || 0).toFixed(1)}%</span>
@@ -293,10 +292,11 @@ export default function TelemetryCharts({
                     <YAxis domain={[0, 100]} hide />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: '#0f172a',
+                        backgroundColor: 'rgba(15, 23, 42, 0.85)',
                         borderColor: '#334155',
                         fontSize: '11px',
-                        fontFamily: 'JetBrains Mono, monospace'
+                        fontFamily: 'JetBrains Mono, monospace',
+                        backdropFilter: 'blur(8px)'
                       }}
                     />
                     <ReferenceLine y={80} stroke="#f43f5e" strokeDasharray="3 3" />
@@ -314,7 +314,7 @@ export default function TelemetryCharts({
             </div>
 
             {/* Memory Chart */}
-            <div className="rounded-xl bg-slate-950/70 border border-slate-800/80 p-2.5 flex flex-col min-w-0 min-h-0 overflow-hidden relative shadow-sm">
+            <div className="rounded-xl bg-slate-950/20 backdrop-blur-xs border border-slate-800/40 p-2.5 flex flex-col min-w-0 min-h-0 overflow-hidden relative shadow-sm">
               <div className="flex justify-between items-center text-[11px] font-mono-code mb-1 flex-shrink-0">
                 <span className="text-slate-400">MEMORY &amp; OOM (%)</span>
                 <span className="text-amber-300 font-bold">{Number(latestPoint.memory || 0).toFixed(1)}%</span>
@@ -332,10 +332,11 @@ export default function TelemetryCharts({
                     <YAxis domain={[0, 100]} hide />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: '#0f172a',
+                        backgroundColor: 'rgba(15, 23, 42, 0.85)',
                         borderColor: '#334155',
                         fontSize: '11px',
-                        fontFamily: 'JetBrains Mono, monospace'
+                        fontFamily: 'JetBrains Mono, monospace',
+                        backdropFilter: 'blur(8px)'
                       }}
                     />
                     <ReferenceLine y={85} stroke="#f59e0b" strokeDasharray="3 3" />
@@ -353,7 +354,7 @@ export default function TelemetryCharts({
             </div>
 
             {/* P90 Latency Chart */}
-            <div className="rounded-xl bg-slate-950/70 border border-slate-800/80 p-2.5 flex flex-col min-w-0 min-h-0 overflow-hidden relative shadow-sm">
+            <div className="rounded-xl bg-slate-950/20 backdrop-blur-xs border border-slate-800/40 p-2.5 flex flex-col min-w-0 min-h-0 overflow-hidden relative shadow-sm">
               <div className="flex justify-between items-center text-[11px] font-mono-code mb-1 flex-shrink-0">
                 <span className="text-slate-400">P90 RPC LATENCY (ms)</span>
                 <span className="text-emerald-300 font-bold">{Number(latestPoint.latency || 0).toFixed(0)} ms</span>
@@ -392,7 +393,7 @@ export default function TelemetryCharts({
           </div>
 
           {/* Quick Chaos Bar at Bottom of Charts */}
-          <div className="relative z-20 flex-shrink-0 pt-2 pb-1 px-3 border-t border-slate-800/80 bg-slate-950/90 backdrop-blur-md rounded-xl flex flex-wrap items-center justify-between gap-1.5 shadow-lg">
+          <div className="relative z-20 flex-shrink-0 pt-2 pb-1 px-3 border-t border-slate-800/80 bg-slate-950/25 backdrop-blur-sm rounded-xl flex flex-wrap items-center justify-between gap-1.5 shadow-lg">
             <span className="flex items-center gap-1.5 font-mono-code text-[11px] text-slate-300 font-medium">
               <Flame className="h-3.5 w-3.5 text-rose-400 flex-shrink-0" />
               <span>Quick Chaos ({selectedService}):</span>
@@ -459,7 +460,7 @@ export default function TelemetryCharts({
 
               <div className="flex items-center gap-1.5 font-mono-code text-xs">
                 <span className="text-slate-400">Intensity:</span>
-                <div className="flex rounded-lg bg-slate-900 border border-slate-700 p-0.5 text-[10px]">
+                <div className="flex rounded-lg bg-slate-900/50 backdrop-blur-sm border border-slate-700/60 p-0.5 text-[10px]">
                   {['MODERATE', 'HIGH', 'CRITICAL'].map((lvl) => (
                     <button
                       key={lvl}
@@ -523,7 +524,7 @@ export default function TelemetryCharts({
       {/* TAB 3: 89-FEATURE Z-SCORE ATTRIBUTION & DRAIN3 LOGS */}
       {activeTab === 'attribution' && (
         <div className="flex-1 p-3.5 grid grid-cols-1 md:grid-cols-2 gap-3 overflow-y-auto min-h-0">
-          <div className="rounded-xl bg-slate-950/75 border border-slate-800 p-3 space-y-2.5 min-w-0">
+          <div className="rounded-xl bg-slate-950/20 backdrop-blur-xs border border-slate-800/40 p-3 space-y-2.5 min-w-0">
             <div className="flex items-center justify-between">
               <span className="font-display text-xs font-bold text-amber-300 flex items-center gap-1.5">
                 <Sliders className="h-3.5 w-3.5" /> Top Z-Score Deviations ({selectedService})
@@ -548,7 +549,7 @@ export default function TelemetryCharts({
             </div>
           </div>
 
-          <div className="rounded-xl bg-slate-950/75 border border-slate-800 p-3 flex flex-col justify-between font-mono-code text-[10px] min-w-0">
+          <div className="rounded-xl bg-slate-950/20 backdrop-blur-xs border border-slate-800/40 p-3 flex flex-col justify-between font-mono-code text-[10px] min-w-0">
             <div className="flex items-center justify-between border-b border-slate-800 pb-1.5 mb-2">
               <span className="text-cyan-300 font-bold flex items-center gap-1.5 truncate">
                 <TerminalSquare className="h-3.5 w-3.5 flex-shrink-0" /> Drain3 Structured Container Log Stream
@@ -556,15 +557,15 @@ export default function TelemetryCharts({
               <span className="text-emerald-400 flex-shrink-0">stdout JSON</span>
             </div>
             <div className="space-y-1.5 text-slate-300 overflow-y-auto max-h-[140px] break-words">
-              <div className="rounded bg-slate-900/90 p-1.5 border-l-2 border-emerald-400">
+              <div className="rounded bg-slate-900/50 backdrop-blur-sm p-1.5 border-l-2 border-emerald-400">
                 <span className="text-slate-500">[INFO]</span> svc={selectedService} http.resp.status=200 took_ms={Number(latestPoint.latency || 18).toFixed(0)}ms
               </div>
               {predClass !== 'NORMAL' ? (
-                <div className="rounded bg-rose-950/60 p-1.5 border-l-2 border-rose-500 text-rose-200">
+                <div className="rounded bg-rose-950/45 backdrop-blur-sm p-1.5 border-l-2 border-rose-500 text-rose-200">
                   <span className="font-bold">[ERROR]</span> template_hit={predClass} z_score=+4.62σ anomaly_detected=true
                 </div>
               ) : (
-                <div className="rounded bg-slate-900/90 p-1.5 border-l-2 border-cyan-400">
+                <div className="rounded bg-slate-900/50 backdrop-blur-sm p-1.5 border-l-2 border-cyan-400">
                   <span className="text-cyan-400">[TEMPLATE]</span> Drain3 entropy H(t)=0.42 normal baseline window
                 </div>
               )}

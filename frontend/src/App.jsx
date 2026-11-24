@@ -3,6 +3,12 @@ import TopBar from './components/TopBar';
 import ClusterTopology from './components/ClusterTopology';
 import TelemetryCharts, { EXPANDED_CHAOS_OPTIONS, ALL_SERVICES } from './components/TelemetryCharts';
 import AgentConsole from './components/AgentConsole';
+import Lightfall from './components/Lightfall';
+import { Button } from './components/ui/button';
+import { Badge } from './components/ui/badge';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from './components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './components/ui/dialog';
+import { Input } from './components/ui/input';
 import {
   X,
   BarChart3,
@@ -413,20 +419,6 @@ export default function App() {
     }
   };
 
-  const handleToggleBackend = async () => {
-    const nextBackend = status.llm_backend?.includes('GROQ') ? 'LOCAL_LM_STUDIO' : 'GROQ_CLOUD';
-    try {
-      const res = await fetch('/api/agent/backend', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ backend: nextBackend })
-      });
-      if (res.ok) setStatus((prev) => ({ ...prev, llm_backend: nextBackend }));
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
   const handleApprove = async () => {
     try {
       const res = await fetch('/api/agent/approve', {
@@ -512,12 +504,6 @@ export default function App() {
         action: () => setShowClusterGate(true)
       },
       {
-        category: 'Control Plane',
-        label: 'Hot-Swap LLM Reasoner (Groq Qwen3.8-27B ↔ Local LM Studio)',
-        icon: Cpu,
-        action: handleToggleBackend
-      },
-      {
         category: 'Analytics & Deck',
         label: 'Open ML Ablation & SARIMA vs. XGBRegressor Benchmark Modal',
         icon: BarChart3,
@@ -543,82 +529,111 @@ export default function App() {
   }, [cmdQuery, commandItems]);
 
   return (
-    <div className="relative z-10 flex min-h-screen w-full flex-col select-none bg-obsidian text-slate-100">
-      {/* Top Command & Executive KPI Ribbon */}
-      <TopBar
-        status={status}
-        wsConnected={wsConnected}
-        onToggleMode={handleToggleMode}
-        onOpenClusterGate={() => setShowClusterGate(true)}
-        onToggleBackend={handleToggleBackend}
-        onOpenBenchmark={handleOpenBenchmark}
-        onOpenCommandPalette={() => setShowCommandPalette(true)}
-        streamPaused={streamPaused}
-        onToggleStreamPause={() => setStreamPaused((p) => !p)}
-        soundEnabled={soundEnabled}
-        onToggleSound={() => setSoundEnabled((s) => !s)}
-        kintsugiStats={kintsugiStats}
-      />
+    <div className="relative min-h-screen w-full flex flex-col select-none text-slate-100 bg-transparent">
+      {/* Lightfall Ambient Celestial SRE Background */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <Lightfall
+          colors={['#9324fd']}
+          cycleColors={['#9324fd', '#0545ae']}
+          cycleInterval={30}
+          cycleTransition={6}
+          syncBackgroundGlow
+          backgroundColor="#050811"
+          speed={0.38}
+          streakCount={5}
+          streakWidth={1.15}
+          streakLength={1.6}
+          density={0.75}
+          twinkle={0.35}
+          backgroundGlow={0.25}
+          headGlow={0.75}
+          bloom={0.5}
+          glow={1.4}
+          depth={0.4}
+          fade={0.05}
+          mouseInteraction
+          holdToWarp
+          intro
+        />
+      </div>
 
-      {/* Main 12-Column Responsive SRE Grid with Adaptive Zoom Scaling */}
-      <main className="flex-1 grid grid-cols-12 gap-3 p-3 min-h-0 w-full max-w-full">
-        {/* Left 8 Columns: Interactive Topology Mesh + Multi-Modal Telemetry & Chaos Workstation */}
-        <section className="col-span-12 lg:col-span-8 flex flex-col gap-3 min-h-0 min-w-0">
-          <div className="min-h-[380px] lg:h-[48%] flex flex-col min-w-0">
-            <ClusterTopology
-              topology={topology}
-              selectedService={selectedService}
-              onSelectService={setSelectedService}
-              clusterNodes={clusterNodes}
-              onQuickChaos={handleInjectChaos}
-            />
-          </div>
-          <div className="min-h-[360px] lg:h-[50%] flex flex-col min-w-0">
-            <TelemetryCharts
-              telemetryHistory={telemetryHistory}
-              selectedService={selectedService}
-              onSelectService={setSelectedService}
-              latestPrediction={latestPrediction}
-              onInjectChaos={handleInjectChaos}
-              chaosLoading={chaosLoading}
-            />
-          </div>
-        </section>
+      {/* Foreground SRE Workspace Layer */}
+      <div className="relative z-10 flex min-h-screen w-full flex-col">
+        {/* Top Command & Executive KPI Ribbon */}
+        <TopBar
+          status={status}
+          wsConnected={wsConnected}
+          onToggleMode={handleToggleMode}
+          onOpenClusterGate={() => setShowClusterGate(true)}
+          onOpenBenchmark={handleOpenBenchmark}
+          onOpenCommandPalette={() => setShowCommandPalette(true)}
+          streamPaused={streamPaused}
+          onToggleStreamPause={() => setStreamPaused((p) => !p)}
+          soundEnabled={soundEnabled}
+          onToggleSound={() => setSoundEnabled((s) => !s)}
+          kintsugiStats={kintsugiStats}
+        />
 
-        {/* Right 4 Columns: LangGraph Slow-Brain & 5-Guardrail Console */}
-        <section className="col-span-12 lg:col-span-4 min-h-[520px] lg:h-full flex flex-col min-w-0">
-          <AgentConsole
-            agentState={agentState}
-            logs={agentLogs}
-            onApprove={handleApprove}
-            onReject={handleReject}
-            agentMode={status.agent_mode}
-            onToggleMode={handleToggleMode}
-          />
-        </section>
-      </main>
+        {/* Main 12-Column Responsive SRE Grid with Adaptive Zoom Scaling */}
+        <main className="flex-1 grid grid-cols-12 gap-3 p-3 min-h-0 w-full max-w-full">
+          {/* Left 8 Columns: Interactive Topology Mesh + Multi-Modal Telemetry & Chaos Workstation */}
+          <section className="col-span-12 lg:col-span-8 flex flex-col gap-3 min-h-0 min-w-0">
+            <div className="min-h-[380px] lg:h-[48%] flex flex-col min-w-0">
+              <ClusterTopology
+                topology={topology}
+                selectedService={selectedService}
+                onSelectService={setSelectedService}
+                clusterNodes={clusterNodes}
+                onQuickChaos={handleInjectChaos}
+              />
+            </div>
+            <div className="min-h-[360px] lg:h-[50%] flex flex-col min-w-0">
+              <TelemetryCharts
+                telemetryHistory={telemetryHistory}
+                selectedService={selectedService}
+                onSelectService={setSelectedService}
+                latestPrediction={latestPrediction}
+                onInjectChaos={handleInjectChaos}
+                chaosLoading={chaosLoading}
+              />
+            </div>
+          </section>
+
+          {/* Right 4 Columns: LangGraph Slow-Brain & 5-Guardrail Console */}
+          <section className="col-span-12 lg:col-span-4 min-h-[520px] lg:h-full flex flex-col min-w-0">
+            <AgentConsole
+              agentState={agentState}
+              logs={agentLogs}
+              onApprove={handleApprove}
+              onReject={handleReject}
+              agentMode={status.agent_mode}
+              onToggleMode={handleToggleMode}
+            />
+          </section>
+        </main>
+      </div>
 
       {/* CTRL+K SRE COMMAND PALETTE OMNIBAR */}
       {showCommandPalette && (
         <div
-          className="fixed inset-0 z-50 flex items-start justify-center bg-black/75 pt-20 backdrop-blur-md"
+          className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 pt-20 backdrop-blur-md animate-fade-in"
           onClick={() => setShowCommandPalette(false)}
         >
           <div
             className="kintsugi-panel-gold w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center gap-3 border-b border-slate-800 px-4 py-3">
+            <div className="flex items-center gap-3 border-b border-slate-800/80 px-4 py-3 bg-slate-950/40">
               <Search className="h-4 w-4 text-amber-400" />
-              <input
+              <Input
                 type="text"
                 autoFocus
                 value={cmdQuery}
                 onChange={(e) => setCmdQuery(e.target.value)}
                 placeholder="Type an SRE command, chaos scenario, or microservice..."
-                className="w-full bg-transparent text-sm text-white placeholder-slate-400 focus:outline-none"
+                className="w-full bg-transparent border-0 text-sm text-white placeholder-slate-400 focus-visible:ring-0 px-0 h-auto"
               />
-              <kbd className="rounded bg-slate-800 px-2 py-0.5 font-mono-code text-[10px] text-slate-400">
+              <kbd className="rounded bg-slate-800 px-2 py-0.5 font-mono-code text-[10px] text-slate-400 border border-slate-700">
                 ESC
               </kbd>
             </div>
@@ -654,272 +669,266 @@ export default function App() {
       )}
 
       {/* ML ABLATION & SARIMA BENCHMARK MODAL */}
-      {showBenchmarkModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md"
-          onClick={() => setShowBenchmarkModal(false)}
-        >
-          <div
-            className="kintsugi-panel-gold max-h-[88vh] w-full max-w-4xl overflow-y-auto rounded-2xl p-6 shadow-2xl min-w-0"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
-              <div className="flex items-center gap-2.5">
-                <BarChart3 className="h-5 w-5 text-amber-400 flex-shrink-0" />
-                <div>
-                  <h2 className="font-display text-lg font-bold text-white">
-                    Phase 1 &amp; Phase 2 Empirical Benchmark Verification
-                  </h2>
-                  <p className="text-xs text-slate-400">
-                    Zero-Leakage Day 2 Evaluation (4,340 Test Rows) • Classical SARIMA vs. Multi-Modal XGBoost
-                  </p>
-                </div>
+      <Dialog open={showBenchmarkModal} onOpenChange={setShowBenchmarkModal}>
+        <DialogContent className="max-h-[88vh] max-w-4xl overflow-y-auto p-6 border-amber-500/40 shadow-[0_0_40px_rgba(245,158,11,0.2)]">
+          <DialogHeader className="p-0 pb-3 mb-4 border-b border-slate-800">
+            <div className="flex items-center gap-2.5">
+              <div className="rounded-xl bg-amber-500/20 border border-amber-400/50 p-2 text-amber-300">
+                <BarChart3 className="h-5 w-5 flex-shrink-0" />
               </div>
-              <button
-                onClick={() => setShowBenchmarkModal(false)}
-                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Table 1: 4-Model Classification Ablation */}
-            <div className="mb-5">
-              <h3 className="font-mono-code text-xs font-bold uppercase tracking-wider text-amber-300 mb-2">
-                1. 4-Model Classification Ablation Study (6 Operational Classes)
-              </h3>
-              <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/80">
-                <table className="w-full text-left font-mono-code text-xs">
-                  <thead className="border-b border-slate-800 bg-slate-900/80 text-[10px] uppercase text-slate-400">
-                    <tr>
-                      <th className="p-2.5">Model Architecture</th>
-                      <th className="p-2.5">Precision</th>
-                      <th className="p-2.5">Recall</th>
-                      <th className="p-2.5">Macro-F1</th>
-                      <th className="p-2.5">Anomaly F1</th>
-                      <th className="p-2.5">Regime A Δt</th>
-                      <th className="p-2.5">False Alarms/hr</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/60 text-slate-300">
-                    <tr>
-                      <td className="p-2.5">Baseline 0: Prometheus Static Rules</td>
-                      <td className="p-2.5">0.2700</td>
-                      <td className="p-2.5">0.3495</td>
-                      <td className="p-2.5">0.2816</td>
-                      <td className="p-2.5">0.1683</td>
-                      <td className="p-2.5">148.0s</td>
-                      <td className="p-2.5 text-rose-400">14.80 / hr</td>
-                    </tr>
-                    <tr>
-                      <td className="p-2.5">Model 1: Unsupervised IsolationForest</td>
-                      <td className="p-2.5">0.2794</td>
-                      <td className="p-2.5">0.3643</td>
-                      <td className="p-2.5">0.2782</td>
-                      <td className="p-2.5">0.1889</td>
-                      <td className="p-2.5">132.5s</td>
-                      <td className="p-2.5">9.42 / hr</td>
-                    </tr>
-                    <tr>
-                      <td className="p-2.5">Model 2: Temporal XGBoost (Metrics Only)</td>
-                      <td className="p-2.5">0.5414</td>
-                      <td className="p-2.5">0.6141</td>
-                      <td className="p-2.5">0.5706</td>
-                      <td className="p-2.5">0.5789</td>
-                      <td className="p-2.5">108.4s</td>
-                      <td className="p-2.5">3.14 / hr</td>
-                    </tr>
-                    <tr className="bg-amber-500/15 font-bold text-amber-200">
-                      <td className="p-2.5">✦ Model 3: Multi-Modal XGBoost (Metrics + Logs)</td>
-                      <td className="p-2.5">0.7088</td>
-                      <td className="p-2.5">0.7189</td>
-                      <td className="p-2.5 text-amber-300">0.7132</td>
-                      <td className="p-2.5">0.7225</td>
-                      <td className="p-2.5 text-emerald-300">87.6s</td>
-                      <td className="p-2.5 text-emerald-300">1.71 / hr</td>
-                    </tr>
-                  </tbody>
-                </table>
+              <div>
+                <DialogTitle className="text-lg font-bold text-white">
+                  Phase 1 &amp; Phase 2 Empirical Benchmark Verification
+                </DialogTitle>
+                <DialogDescription className="text-xs text-slate-400">
+                  Zero-Leakage Day 2 Evaluation (4,340 Test Rows) • Classical SARIMA vs. Multi-Modal XGBoost
+                </DialogDescription>
               </div>
             </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowBenchmarkModal(false)}
+              className="h-8 w-8 text-slate-400 hover:text-white"
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          </DialogHeader>
 
-            {/* Table 2: Classical SARIMA vs Multi-Modal XGBRegressor */}
-            <div className="mb-4">
-              <h3 className="font-mono-code text-xs font-bold uppercase tracking-wider text-cyan-300 mb-2">
-                2. Regime B Time-to-Exhaustion (TTE) Forecasting: Classical SARIMA vs. Multi-Modal XGBRegressor
-              </h3>
-              <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/80">
-                <table className="w-full text-left font-mono-code text-xs">
-                  <thead className="border-b border-slate-800 bg-slate-900/80 text-[10px] uppercase text-slate-400">
-                    <tr>
-                      <th className="p-2.5">Forecasting Engine</th>
-                      <th className="p-2.5">Modality</th>
-                      <th className="p-2.5">TTE MAE (↓)</th>
-                      <th className="p-2.5">TTE RMSE (↓)</th>
-                      <th className="p-2.5">Lead Time</th>
-                      <th className="p-2.5">Inference Latency</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/60 text-slate-300">
-                    <tr>
-                      <td className="p-2.5">Classical SARIMA(1,1,1)×(1,0,1)₁₂</td>
-                      <td className="p-2.5">Univariate Memory/Disk Curve</td>
-                      <td className="p-2.5">6.50 min</td>
-                      <td className="p-2.5">6.89 min</td>
-                      <td className="p-2.5">10.0 min (Static)</td>
-                      <td className="p-2.5 text-rose-300">243.8 ms / tick</td>
-                    </tr>
-                    <tr className="bg-amber-500/15 font-bold text-amber-200">
-                      <td className="p-2.5">✦ Kintsugi Multi-Modal XGBRegressor</td>
-                      <td className="p-2.5">89 Multi-Modal Features + Slopes</td>
-                      <td className="p-2.5 text-emerald-300">0.71 min (-89%)</td>
-                      <td className="p-2.5 text-emerald-300">0.90 min (R²=0.846)</td>
-                      <td className="p-2.5 text-amber-300">4.7 min</td>
-                      <td className="p-2.5 text-emerald-300">0.67 ms (364× faster)</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between pt-2 text-xs text-slate-400">
-              <span className="flex items-center gap-1.5 text-emerald-300 font-mono-code">
-                <CheckCircle2 className="h-4 w-4" /> Phase 2 Mean Closed-Loop MTTR: 27.6 seconds (100% Recovery)
-              </span>
-              <button
-                onClick={() => setShowBenchmarkModal(false)}
-                className="rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/50 px-4 py-1.5 font-mono-code text-xs font-bold text-amber-200"
-              >
-                Close Verification View
-              </button>
+          {/* Table 1: 4-Model Classification Ablation */}
+          <div className="mb-5">
+            <h3 className="font-mono-code text-xs font-bold uppercase tracking-wider text-amber-300 mb-2">
+              1. 4-Model Classification Ablation Study (6 Operational Classes)
+            </h3>
+            <div className="overflow-x-auto rounded-xl border border-slate-800/80 bg-slate-950/45 backdrop-blur-sm">
+              <table className="w-full text-left font-mono-code text-xs">
+                <thead className="border-b border-slate-800/80 bg-slate-900/50 text-[10px] uppercase text-slate-400">
+                  <tr>
+                    <th className="p-2.5">Model Architecture</th>
+                    <th className="p-2.5">Precision</th>
+                    <th className="p-2.5">Recall</th>
+                    <th className="p-2.5">Macro-F1</th>
+                    <th className="p-2.5">Anomaly F1</th>
+                    <th className="p-2.5">Regime A Δt</th>
+                    <th className="p-2.5">False Alarms/hr</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60 text-slate-300">
+                  <tr>
+                    <td className="p-2.5">Baseline 0: Prometheus Static Rules</td>
+                    <td className="p-2.5">0.2700</td>
+                    <td className="p-2.5">0.3495</td>
+                    <td className="p-2.5">0.2816</td>
+                    <td className="p-2.5">0.1683</td>
+                    <td className="p-2.5">148.0s</td>
+                    <td className="p-2.5 text-rose-400">14.80 / hr</td>
+                  </tr>
+                  <tr>
+                    <td className="p-2.5">Model 1: Unsupervised IsolationForest</td>
+                    <td className="p-2.5">0.2794</td>
+                    <td className="p-2.5">0.3643</td>
+                    <td className="p-2.5">0.2782</td>
+                    <td className="p-2.5">0.1889</td>
+                    <td className="p-2.5">132.5s</td>
+                    <td className="p-2.5">9.42 / hr</td>
+                  </tr>
+                  <tr>
+                    <td className="p-2.5">Model 2: Temporal XGBoost (Metrics Only)</td>
+                    <td className="p-2.5">0.5414</td>
+                    <td className="p-2.5">0.6141</td>
+                    <td className="p-2.5">0.5706</td>
+                    <td className="p-2.5">0.5789</td>
+                    <td className="p-2.5">108.4s</td>
+                    <td className="p-2.5">3.14 / hr</td>
+                  </tr>
+                  <tr className="bg-amber-500/15 font-bold text-amber-200">
+                    <td className="p-2.5">✦ Model 3: Multi-Modal XGBoost (Metrics + Logs)</td>
+                    <td className="p-2.5">0.7088</td>
+                    <td className="p-2.5">0.7189</td>
+                    <td className="p-2.5 text-amber-300">0.7132</td>
+                    <td className="p-2.5">0.7225</td>
+                    <td className="p-2.5 text-emerald-300">87.6s</td>
+                    <td className="p-2.5 text-emerald-300">1.71 / hr</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
-        </div>
-      )}
+
+          {/* Table 2: Classical SARIMA vs Multi-Modal XGBRegressor */}
+          <div className="mb-4">
+            <h3 className="font-mono-code text-xs font-bold uppercase tracking-wider text-cyan-300 mb-2">
+              2. Regime B Time-to-Exhaustion (TTE) Forecasting: Classical SARIMA vs. Multi-Modal XGBRegressor
+            </h3>
+            <div className="overflow-x-auto rounded-xl border border-slate-800/80 bg-slate-950/45 backdrop-blur-sm">
+              <table className="w-full text-left font-mono-code text-xs">
+                <thead className="border-b border-slate-800/80 bg-slate-900/50 text-[10px] uppercase text-slate-400">
+                  <tr>
+                    <th className="p-2.5">Forecasting Engine</th>
+                    <th className="p-2.5">Modality</th>
+                    <th className="p-2.5">TTE MAE (↓)</th>
+                    <th className="p-2.5">TTE RMSE (↓)</th>
+                    <th className="p-2.5">Lead Time</th>
+                    <th className="p-2.5">Inference Latency</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60 text-slate-300">
+                  <tr>
+                    <td className="p-2.5">Classical SARIMA(1,1,1)×(1,0,1)₁₂</td>
+                    <td className="p-2.5">Univariate Memory/Disk Curve</td>
+                    <td className="p-2.5">6.50 min</td>
+                    <td className="p-2.5">6.89 min</td>
+                    <td className="p-2.5">10.0 min (Static)</td>
+                    <td className="p-2.5 text-rose-300">243.8 ms / tick</td>
+                  </tr>
+                  <tr className="bg-amber-500/15 font-bold text-amber-200">
+                    <td className="p-2.5">✦ Kintsugi Multi-Modal XGBRegressor</td>
+                    <td className="p-2.5">89 Multi-Modal Features + Slopes</td>
+                    <td className="p-2.5 text-emerald-300">0.71 min (-89%)</td>
+                    <td className="p-2.5 text-emerald-300">0.90 min (R²=0.846)</td>
+                    <td className="p-2.5 text-amber-300">4.7 min</td>
+                    <td className="p-2.5 text-emerald-300">0.67 ms (364× faster)</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between pt-2 text-xs text-slate-400">
+            <span className="flex items-center gap-1.5 text-emerald-300 font-mono-code">
+              <CheckCircle2 className="h-4 w-4" /> Phase 2 Mean Closed-Loop MTTR: 27.6 seconds (100% Recovery)
+            </span>
+            <Button
+              variant="gold"
+              size="sm"
+              onClick={() => setShowBenchmarkModal(false)}
+              className="font-mono-code font-bold"
+            >
+              Close Verification View
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* GLASSMORPHIC LIVE CLUSTER CONNECTION GATE MODAL */}
-      {showClusterGate && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md animate-fade-in"
-          onClick={() => setShowClusterGate(false)}
-        >
-          <div
-            className="kintsugi-panel border border-amber-500/40 w-full max-w-2xl rounded-2xl shadow-[0_0_50px_rgba(251,191,36,0.2)] overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-amber-500/20 px-6 py-4 bg-gradient-to-r from-amber-500/10 via-slate-900 to-slate-900">
-              <div className="flex items-center gap-3">
-                <div className="rounded-xl bg-amber-500/20 border border-amber-400/50 p-2 text-amber-300 shadow-[0_0_15px_rgba(251,191,36,0.3)]">
-                  <Server className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="font-space font-bold text-base text-amber-200 flex items-center gap-2">
-                    ⚡ Live Cluster Connection Gate
-                  </h3>
-                  <p className="text-xs text-slate-400">
-                    Kintsugi-AI Autonomous SRE Control Plane Status
-                  </p>
-                </div>
+      <Dialog open={showClusterGate} onOpenChange={setShowClusterGate}>
+        <DialogContent className="border border-amber-500/40 max-w-2xl shadow-[0_0_50px_rgba(251,191,36,0.2)]">
+          {/* Header */}
+          <DialogHeader className="border-b border-amber-500/20 bg-gradient-to-r from-amber-500/10 via-slate-900 to-slate-900">
+            <div className="flex items-center gap-3">
+              <div className="rounded-xl bg-amber-500/20 border border-amber-400/50 p-2 text-amber-300 shadow-[0_0_15px_rgba(251,191,36,0.3)]">
+                <Server className="h-5 w-5" />
               </div>
-              <button
-                onClick={() => setShowClusterGate(false)}
-                className="rounded-lg p-1 text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
+              <div>
+                <DialogTitle className="text-base text-amber-200 flex items-center gap-2">
+                  ⚡ Live Cluster Connection Gate
+                </DialogTitle>
+                <DialogDescription className="text-xs text-slate-400">
+                  Kintsugi-AI Autonomous SRE Control Plane Status
+                </DialogDescription>
+              </div>
             </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowClusterGate(false)}
+              className="h-8 w-8 text-slate-400 hover:text-slate-200"
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          </DialogHeader>
 
-            {/* Content Body */}
-            <div className="p-6 space-y-4 text-xs">
-              {/* Status Alert Banner */}
-              <div
-                className={`p-4 rounded-xl border flex items-start gap-3 ${
-                  status?.is_k8s_connected
-                    ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200'
-                    : 'bg-rose-950/40 border-rose-500/40 text-rose-200'
-                }`}
-              >
-                {status?.is_k8s_connected ? (
-                  <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
-                ) : (
-                  <AlertTriangle className="h-5 w-5 text-rose-400 shrink-0 mt-0.5" />
-                )}
-                <div className="space-y-1">
-                  <div className="font-bold text-sm">
-                    {status?.is_k8s_connected
-                      ? '● Live Kubernetes Cluster Active & Connected'
-                      : '⚡ Live Cluster Offline: Connect your Kubernetes Cluster (kubectl / kind / kubeconfig) & Prometheus to activate real-time SRE automation.'}
-                  </div>
-                  <div className="text-slate-300 text-[11px] leading-relaxed">
-                    {status?.is_k8s_connected
-                      ? 'The SRE engine is actively polling live Prometheus metrics (port 9090) and has full read/write mutation authority across the 10 microservices in the hipster namespace.'
-                      : 'Kintsugi-AI is designed to directly protect live production clusters. To execute autonomous healing, scale replica sets, and patch container limits in real-time, connect your local or cloud Kubernetes cluster.'}
-                  </div>
+          {/* Content Body */}
+          <div className="p-6 space-y-4 text-xs">
+            {/* Status Alert Banner */}
+            <div
+              className={`p-4 rounded-xl border flex items-start gap-3 ${
+                status?.is_k8s_connected
+                  ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200'
+                  : 'bg-rose-950/40 border-rose-500/40 text-rose-200'
+              }`}
+            >
+              {status?.is_k8s_connected ? (
+                <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
+              ) : (
+                <AlertTriangle className="h-5 w-5 text-rose-400 shrink-0 mt-0.5" />
+              )}
+              <div className="space-y-1">
+                <div className="font-bold text-sm">
+                  {status?.is_k8s_connected
+                    ? '● Live Kubernetes Cluster Active & Connected'
+                    : '⚡ Live Cluster Offline: Connect your Kubernetes Cluster (kubectl / kind / kubeconfig) & Prometheus to activate real-time SRE automation.'}
                 </div>
-              </div>
-
-              {/* Cluster Diagnostics Grid */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-xl bg-slate-900/90 border border-slate-800 p-3.5 space-y-1.5">
-                  <div className="text-[10px] font-mono-code uppercase tracking-wider text-slate-400">
-                    Kubernetes Control Plane API
-                  </div>
-                  <div className="flex items-center gap-2 font-mono-code font-bold">
-                    <span
-                      className={`h-2 w-2 rounded-full ${
-                        status?.is_k8s_connected ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'
-                      }`}
-                    />
-                    <span className={status?.is_k8s_connected ? 'text-emerald-300' : 'text-rose-400'}>
-                      {status?.is_k8s_connected ? 'ONLINE (3-Node kind-kintsugi)' : 'DISCONNECTED'}
-                    </span>
-                  </div>
-                  <div className="text-[10px] text-slate-500 font-mono-code">
-                    Mode: {status?.cluster_mode || 'LIVE_K8S'}
-                  </div>
-                </div>
-
-                <div className="rounded-xl bg-slate-900/90 border border-slate-800 p-3.5 space-y-1.5">
-                  <div className="text-[10px] font-mono-code uppercase tracking-wider text-slate-400">
-                    Prometheus Telemetry Scraper
-                  </div>
-                  <div className="flex items-center gap-2 font-mono-code font-bold">
-                    <span
-                      className={`h-2 w-2 rounded-full ${
-                        status?.prometheus_reachable ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'
-                      }`}
-                    />
-                    <span className={status?.prometheus_reachable ? 'text-emerald-300' : 'text-rose-400'}>
-                      {status?.prometheus_reachable ? 'ONLINE (:9090 PromQL)' : 'UNREACHABLE'}
-                    </span>
-                  </div>
-                  <div className="text-[10px] text-slate-500 font-mono-code">
-                    Port: 9090 PromQL API
-                  </div>
+                <div className="text-slate-300 text-[11px] leading-relaxed">
+                  {status?.is_k8s_connected
+                    ? 'The SRE engine is actively polling live Prometheus metrics (port 9090) and has full read/write mutation authority across the 10 microservices in the hipster namespace.'
+                    : 'Kintsugi-AI is designed to directly protect live production clusters. To execute autonomous healing, scale replica sets, and patch container limits in real-time, connect your local or cloud Kubernetes cluster.'}
                 </div>
               </div>
             </div>
 
-            {/* Modal Actions Footer */}
-            <div className="flex items-center justify-between border-t border-slate-800 px-6 py-3.5 bg-slate-950/60">
-              <button
-                onClick={fetchInitialData}
-                className="flex items-center gap-2 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/50 px-3.5 py-1.5 font-mono-code text-xs font-bold text-emerald-300 transition-colors"
-              >
-                <RefreshCw className="h-3.5 w-3.5" />
-                Re-scan Cluster Connection
-              </button>
-              <button
-                onClick={() => setShowClusterGate(false)}
-                className="rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 px-4 py-1.5 font-mono-code text-xs font-semibold text-slate-300 transition-colors"
-              >
-                Continue to Dashboard
-              </button>
+            {/* Cluster Diagnostics Grid */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-xl bg-slate-900/50 backdrop-blur-sm border border-slate-800/80 p-3.5 space-y-1.5">
+                <div className="text-[10px] font-mono-code uppercase tracking-wider text-slate-400">
+                  Kubernetes Control Plane API
+                </div>
+                <div className="flex items-center gap-2 font-mono-code font-bold">
+                  <span
+                    className={`h-2 w-2 rounded-full ${
+                      status?.is_k8s_connected ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'
+                    }`}
+                  />
+                  <span className={status?.is_k8s_connected ? 'text-emerald-300' : 'text-rose-400'}>
+                    {status?.is_k8s_connected ? 'ONLINE (3-Node kind-kintsugi)' : 'DISCONNECTED'}
+                  </span>
+                </div>
+                <div className="text-[10px] text-slate-500 font-mono-code">
+                  Mode: {status?.cluster_mode || 'LIVE_K8S'}
+                </div>
+              </div>
+
+              <div className="rounded-xl bg-slate-900/50 backdrop-blur-sm border border-slate-800/80 p-3.5 space-y-1.5">
+                <div className="text-[10px] font-mono-code uppercase tracking-wider text-slate-400">
+                  Prometheus Telemetry Scraper
+                </div>
+                <div className="flex items-center gap-2 font-mono-code font-bold">
+                  <span
+                    className={`h-2 w-2 rounded-full ${
+                      status?.prometheus_reachable ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'
+                    }`}
+                  />
+                  <span className={status?.prometheus_reachable ? 'text-emerald-300' : 'text-rose-400'}>
+                    {status?.prometheus_reachable ? 'ONLINE (:9090 PromQL)' : 'UNREACHABLE'}
+                  </span>
+                </div>
+                <div className="text-[10px] text-slate-500 font-mono-code">
+                  Port: 9090 PromQL API
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+
+          {/* Modal Actions Footer */}
+          <DialogFooter>
+            <Button
+              onClick={fetchInitialData}
+              variant="emerald"
+              className="gap-2 font-mono-code font-bold"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              Re-scan Cluster Connection
+            </Button>
+            <Button
+              onClick={() => setShowClusterGate(false)}
+              variant="secondary"
+              className="font-mono-code font-semibold"
+            >
+              Continue to Dashboard
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

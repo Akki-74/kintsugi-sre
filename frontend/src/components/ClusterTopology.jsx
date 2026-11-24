@@ -54,7 +54,7 @@ function ServiceCustomNode({ data }) {
   const isHealing = status === 'remediating';
 
   let cardStyle =
-    'bg-slate-900/90 border-slate-700/80 hover:border-slate-500 text-slate-100';
+    'bg-slate-900/35 backdrop-blur-sm border-slate-700/50 hover:border-slate-300 text-slate-100 shadow-md';
   let statusBadge = (
     <span className="flex items-center gap-1 rounded-full bg-emerald-500/15 border border-emerald-500/40 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-300">
       <CheckCircle2 className="h-2.5 w-2.5" /> HEALTHY
@@ -77,7 +77,7 @@ function ServiceCustomNode({ data }) {
     );
   } else if (isHealing) {
     cardStyle =
-      'bg-cyan-950/90 border-2 border-cyan-400 shadow-[0_0_20px_rgba(56,189,248,0.4)] text-cyan-50';
+      'bg-cyan-950/35 backdrop-blur-sm border-2 border-cyan-400/80 shadow-[0_0_20px_rgba(56,189,248,0.3)] text-cyan-50';
     statusBadge = (
       <span className="flex items-center gap-1 rounded-full bg-cyan-500/25 border border-cyan-300 px-1.5 py-0.5 text-[9px] font-bold text-cyan-200 animate-pulse">
         <Activity className="h-2.5 w-2.5" /> HEALING
@@ -85,7 +85,7 @@ function ServiceCustomNode({ data }) {
     );
   } else if (isPredicted) {
     cardStyle =
-      'bg-amber-950/85 border-2 border-amber-500/80 shadow-[0_0_18px_rgba(245,158,11,0.3)] text-amber-50';
+      'bg-amber-950/35 backdrop-blur-sm border-2 border-amber-500/80 shadow-[0_0_18px_rgba(245,158,11,0.25)] text-amber-50';
     statusBadge = (
       <span className="flex items-center gap-1 rounded-full bg-amber-500/25 border border-amber-400 px-1.5 py-0.5 text-[9px] font-bold text-amber-200">
         <AlertTriangle className="h-2.5 w-2.5" /> HORIZON
@@ -289,13 +289,13 @@ export default function ClusterTopology({
   return (
     <div className="kintsugi-panel relative flex flex-col h-full rounded-2xl overflow-hidden">
       {/* Top Overlay Header + 3-Node Physical Cluster HUD */}
-      <div className="z-10 flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 bg-slate-950/75 px-3.5 py-2">
+      <div className="z-10 flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 bg-slate-950/20 backdrop-blur-xs px-3.5 py-2">
         <div className="flex items-center gap-2">
           <Server className="h-4 w-4 text-amber-400" />
           <h2 className="font-display text-xs font-bold uppercase tracking-wider text-slate-200">
             OnlineBoutique 10-Service Mesh
           </h2>
-          <span className="rounded bg-slate-800/90 border border-slate-700 px-1.5 py-0.5 font-mono-code text-[10px] text-amber-300">
+          <span className="rounded bg-slate-800/50 border border-slate-700/60 px-1.5 py-0.5 font-mono-code text-[10px] text-amber-300">
             Click node to inspect
           </span>
         </div>
@@ -307,10 +307,10 @@ export default function ClusterTopology({
             return (
               <div
                 key={hn.name}
-                className={`flex items-center gap-1.5 rounded-lg border px-2 py-0.5 font-mono-code text-[10px] ${
+                className={`flex items-center gap-1.5 rounded-lg border px-2 py-0.5 font-mono-code text-[10px] backdrop-blur-xs ${
                   unschedulable
-                    ? 'bg-rose-950/60 border-rose-500/50 text-rose-200'
-                    : 'bg-slate-900/90 border-slate-700/70 text-slate-300'
+                    ? 'bg-rose-950/40 border-rose-500/50 text-rose-200'
+                    : 'bg-slate-900/30 border-slate-700/50 text-slate-300'
                 }`}
                 title={`K8s Node: ${hn.name} (${hn.status})`}
               >
@@ -347,7 +347,7 @@ export default function ClusterTopology({
 
         {/* Floating Deep-Inspector HUD Drawer for Selected Microservice */}
         {inspectedNode && showInspector && (
-          <div className="absolute top-3 right-3 z-20 w-64 rounded-xl bg-slate-950/92 border border-amber-500/40 p-3 shadow-2xl backdrop-blur-xl">
+          <div className="absolute top-3 right-3 z-20 w-64 rounded-xl bg-slate-950/40 border border-amber-500/40 p-3 shadow-2xl backdrop-blur-md">
             <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-2">
               <div>
                 <div className="flex items-center gap-1.5">
@@ -417,7 +417,7 @@ export default function ClusterTopology({
         )}
 
         {/* Legend Footer Overlay */}
-        <div className="pointer-events-none absolute bottom-2.5 right-3 z-10 hidden sm:flex items-center gap-3 rounded-lg bg-slate-950/85 border border-slate-800 px-3 py-1 text-[10px] font-mono-code text-slate-300">
+        <div className="pointer-events-none absolute bottom-2.5 right-3 z-10 hidden sm:flex items-center gap-3 rounded-lg bg-slate-950/30 backdrop-blur-xs border border-slate-800/60 px-3 py-1 text-[10px] font-mono-code text-slate-300">
           <span className="flex items-center gap-1">
             <span className="h-2 w-2 rounded-full bg-emerald-400" /> Healthy
           </span>

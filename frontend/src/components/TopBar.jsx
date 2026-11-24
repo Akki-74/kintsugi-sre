@@ -14,13 +14,14 @@ import {
   Activity,
   Layers
 } from 'lucide-react';
+import { Button } from './ui/button';
+import { Badge } from './ui/badge';
 
 export default function TopBar({
   status,
   wsConnected,
   onToggleMode,
   onOpenClusterGate,
-  onToggleBackend,
   onOpenBenchmark,
   onOpenCommandPalette,
   streamPaused,
@@ -32,10 +33,9 @@ export default function TopBar({
   const agentMode = status?.agent_mode || 'AUTONOMOUS';
   const isK8sConnected = Boolean(status?.is_k8s_connected);
   const clusterMode = status?.cluster_mode || (isK8sConnected ? 'LIVE_K8S' : 'DISCONNECTED');
-  const llmBackend = status?.llm_backend || 'GROQ_CLOUD';
 
   return (
-    <header className="kintsugi-panel z-30 border-b border-slate-800/80 px-4 py-2 flex flex-col gap-1.5">
+    <header className="kintsugi-panel z-30 border-b border-slate-800/80 px-4 py-2 flex flex-col gap-1.5 backdrop-blur-xl">
       {/* Primary Navigation Row */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         {/* Brand Identity */}
@@ -53,9 +53,9 @@ export default function TopBar({
               <h1 className="font-display text-lg font-bold tracking-wider text-white">
                 KINTSUGI<span className="kintsugi-gold-text">-AI</span>
               </h1>
-              <span className="rounded-full bg-amber-500/15 border border-amber-400/40 px-2 py-0.5 font-mono-code text-[10px] font-semibold text-amber-300">
+              <Badge variant="gold">
                 金継ぎ v2.4
-              </span>
+              </Badge>
             </div>
             <p className="text-[11px] text-slate-400 hidden sm:block">
               Multi-Modal K8s Prediction (XGBoost + SARIMA) &amp; Closed-Loop LangGraph SRE
@@ -66,14 +66,14 @@ export default function TopBar({
         {/* Center Command Palette Trigger */}
         <button
           onClick={onOpenCommandPalette}
-          className="hidden lg:flex items-center gap-3 rounded-lg bg-slate-900/90 hover:bg-slate-800/90 border border-slate-700/70 hover:border-amber-500/50 px-3.5 py-1.5 text-xs text-slate-300 transition-all shadow-inner group"
+          className="hidden lg:flex items-center gap-3 rounded-lg bg-slate-900/25 hover:bg-slate-800/40 border border-slate-700/40 hover:border-amber-500/50 px-3.5 py-1.5 text-xs text-slate-300 transition-all shadow-inner backdrop-blur-xs group"
           title="Open SRE Command Palette (Ctrl+K)"
         >
           <Search className="h-3.5 w-3.5 text-slate-400 group-hover:text-amber-400 transition-colors" />
           <span className="text-slate-400 group-hover:text-slate-200">
             Search services, inject chaos, or run SRE commands...
           </span>
-          <kbd className="rounded bg-slate-800 border border-slate-700 px-1.5 py-0.5 font-mono-code text-[10px] text-amber-300">
+          <kbd className="rounded bg-slate-800/60 border border-slate-700/70 px-1.5 py-0.5 font-mono-code text-[10px] text-amber-300">
             Ctrl K
           </kbd>
         </button>
@@ -81,13 +81,10 @@ export default function TopBar({
         {/* Right Controls & Runtime Hot-Swaps */}
         <div className="flex flex-wrap items-center gap-2">
           {/* Live Cluster Status & Connection Gate */}
-          <button
+          <Button
             onClick={onOpenClusterGate}
-            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium border transition-all ${
-              isK8sConnected
-                ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-300 hover:bg-emerald-900/60 shadow-[0_0_12px_rgba(16,185,129,0.25)]'
-                : 'bg-rose-950/60 border-rose-500/50 text-rose-300 hover:bg-rose-900/60 shadow-[0_0_12px_rgba(244,63,94,0.2)]'
-            }`}
+            variant={isK8sConnected ? "emerald" : "destructive"}
+            size="sm"
             title={
               isK8sConnected
                 ? 'Live Kubernetes Cluster Connected (3-Node Control Plane). Click to inspect connection.'
@@ -102,22 +99,21 @@ export default function TopBar({
             <span className="font-mono-code text-[11px] font-bold">
               {isK8sConnected ? 'LIVE K8S (3-NODE ONLINE)' : 'K8S OFFLINE'}
             </span>
-          </button>
+          </Button>
 
-          {/* LLM Reasoner Switcher */}
-          <button
-            onClick={onToggleBackend}
-            className="flex items-center gap-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-purple-500/40 px-2.5 py-1.5 text-xs font-medium text-purple-200 transition-all"
-            title="Hot-swap between Groq Cloud Qwen3.8-27B and Local LM Studio"
+          {/* Active LLM Reasoner (Groq Cloud) */}
+          <div
+            className="flex items-center gap-1.5 rounded-lg border border-purple-500/40 bg-purple-950/30 px-2.5 py-1 text-purple-200 shadow-sm backdrop-blur-xs select-none"
+            title="Cloud Fast LLM Reasoner: Groq Cloud (Qwen 3.8-27B)"
           >
             <Cpu className="h-3.5 w-3.5 text-purple-400" />
-            <span className="font-mono-code text-[11px]">
-              {llmBackend.includes('GROQ') ? 'QWEN 3.8-27B (GROQ)' : 'LOCAL QWEN-3B'}
+            <span className="font-mono-code text-[11px] font-bold tracking-wide">
+              QWEN 3.8-27B (GROQ)
             </span>
-          </button>
+          </div>
 
           {/* Auto Remedy vs Manual Approve Segmented Switch */}
-          <div className="flex items-center rounded-lg bg-slate-950/90 border border-slate-700/80 p-0.5 shadow-inner" title="Toggle Auto-Remedy (Autonomous) vs Manual Approval (Human-in-the-Loop)">
+          <div className="flex items-center rounded-lg bg-slate-950/25 border border-slate-700/50 p-0.5 shadow-inner backdrop-blur-xs" title="Toggle Auto-Remedy (Autonomous) vs Manual Approval (Human-in-the-Loop)">
             <button
               onClick={() => agentMode !== 'AUTONOMOUS' && onToggleMode()}
               className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold transition-all ${
@@ -143,46 +139,53 @@ export default function TopBar({
           </div>
 
           {/* ML & SARIMA Benchmark Modal Button */}
-          <button
+          <Button
             onClick={onOpenBenchmark}
-            className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-amber-500/25 to-yellow-500/15 hover:from-amber-500/35 hover:to-yellow-500/25 border border-amber-400/60 px-2.5 py-1.5 text-xs font-semibold text-amber-200 transition-all shadow-[0_0_12px_rgba(245,158,11,0.18)]"
+            variant="gold"
+            size="sm"
+            className="font-semibold"
           >
             <BarChart3 className="h-3.5 w-3.5 text-amber-300" />
             <span className="hidden md:inline">ML &amp; SARIMA</span>
-          </button>
+          </Button>
 
           {/* Technical Slides Link */}
           <a
             href="/app/slides.html"
             target="_blank"
             rel="noreferrer"
-            className="flex items-center gap-1 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-700 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:text-amber-300 transition-all"
             title="Open Systems Architecture Slide Deck"
           >
-            <Presentation className="h-3.5 w-3.5 text-amber-400" />
-            <span className="hidden xl:inline">Deck</span>
+            <Button variant="outline" size="sm" className="gap-1 text-slate-300 hover:text-amber-300">
+              <Presentation className="h-3.5 w-3.5 text-amber-400" />
+              <span className="hidden xl:inline">Deck</span>
+            </Button>
           </a>
 
           {/* Stream Pause/Play & Audio SFX Controls */}
-          <div className="flex items-center rounded-lg bg-slate-900/90 border border-slate-800 p-0.5">
-            <button
+          <div className="flex items-center rounded-lg bg-slate-900/25 border border-slate-700/40 p-0.5 backdrop-blur-xs">
+            <Button
               onClick={onToggleStreamPause}
-              className={`p-1.5 rounded-md text-xs transition-colors ${
+              variant="ghost"
+              size="icon"
+              className={`h-7 w-7 rounded-md ${
                 streamPaused ? 'bg-amber-500/25 text-amber-300' : 'text-slate-400 hover:text-white'
               }`}
               title={streamPaused ? 'Resume 1Hz Telemetry Stream' : 'Freeze Telemetry Stream for Inspection'}
             >
               {streamPaused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={onToggleSound}
-              className={`p-1.5 rounded-md text-xs transition-colors ${
+              variant="ghost"
+              size="icon"
+              className={`h-7 w-7 rounded-md ${
                 soundEnabled ? 'text-amber-300 bg-amber-500/15' : 'text-slate-500 hover:text-slate-300'
               }`}
               title={soundEnabled ? 'Mute Cyber-SRE Audio Chimes' : 'Enable Cyber-SRE Audio Chimes'}
             >
               {soundEnabled ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -201,32 +204,32 @@ export default function TopBar({
 
           <div className="flex items-center gap-1.5">
             <span className="text-slate-400">Active Fractures:</span>
-            <span className={`font-mono-code font-bold px-1.5 py-0.2 rounded ${
-              kintsugiStats.activeIncidents > 0
-                ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 animate-pulse'
-                : 'text-slate-300'
-            }`}>
-              {kintsugiStats.activeIncidents}
-            </span>
+            {kintsugiStats.activeIncidents > 0 ? (
+              <Badge variant="destructive" className="animate-pulse">
+                {kintsugiStats.activeIncidents} Active
+              </Badge>
+            ) : (
+              <Badge variant="secondary">0</Badge>
+            )}
           </div>
 
           <div className="flex items-center gap-1.5">
             <span className="text-amber-300/90 font-medium">✦ Kintsugi Gold Seams:</span>
-            <span className="font-mono-code font-bold px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-400/40">
+            <Badge variant="gold">
               {kintsugiStats.repairedCount} Verified
-            </span>
+            </Badge>
           </div>
 
           <div className="hidden md:flex items-center gap-1.5">
             <Activity className="h-3 w-3 text-cyan-400" />
             <span className="text-slate-400">Fast-Brain Latency:</span>
-            <span className="font-mono-code text-cyan-300 font-semibold">0.67 ms/tick</span>
+            <Badge variant="cyan">0.67 ms/tick</Badge>
           </div>
 
           <div className="hidden xl:flex items-center gap-1.5">
             <Layers className="h-3 w-3 text-emerald-400" />
             <span className="text-slate-400">Closed-Loop Mean MTTR:</span>
-            <span className="font-mono-code text-emerald-300 font-semibold">27.6s</span>
+            <Badge variant="emerald">27.6s</Badge>
           </div>
         </div>
 

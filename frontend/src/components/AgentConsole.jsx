@@ -20,6 +20,8 @@ import {
   RefreshCw,
   GitCommit
 } from 'lucide-react';
+import { Button } from './ui/button';
+import { Badge } from './ui/badge';
 
 const LANGGRAPH_STAGES = [
   'MONITOR',
@@ -183,7 +185,7 @@ export default function AgentConsole({
   return (
     <aside className="kintsugi-panel flex flex-col h-full rounded-2xl overflow-hidden min-w-0 max-w-full">
       {/* Console Header */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 bg-slate-950/80 px-3.5 py-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 bg-slate-950/20 backdrop-blur-xs px-3.5 py-2.5">
         <div className="flex items-center gap-2 min-w-0">
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/20 border border-amber-400/50 flex-shrink-0">
             <Bot className="h-4 w-4 text-amber-300" />
@@ -203,7 +205,7 @@ export default function AgentConsole({
 
         <button
           onClick={handleExportReport}
-          className="flex items-center gap-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 px-2.5 py-1 font-mono-code text-[10px] text-amber-300 transition-all flex-shrink-0"
+          className="flex items-center gap-1 rounded-lg bg-slate-900/30 hover:bg-slate-800/50 border border-slate-700/60 px-2.5 py-1 font-mono-code text-[10px] text-amber-300 transition-all backdrop-blur-xs flex-shrink-0"
           title="Download JSON Incident & Remediation Post-Mortem"
         >
           <Download className="h-3 w-3" />
@@ -212,7 +214,7 @@ export default function AgentConsole({
       </div>
 
       {/* Mode Control Banner: Auto-Remedy vs Manual Approve */}
-      <div className="flex items-center justify-between border-b border-slate-800/80 bg-slate-900/70 px-3.5 py-1.5 text-xs">
+      <div className="flex items-center justify-between border-b border-slate-800/80 bg-slate-900/20 backdrop-blur-xs px-3.5 py-1.5 text-xs">
         <div className="flex items-center gap-1.5 min-w-0">
           {agentMode === 'AUTONOMOUS' ? (
             <>
@@ -232,23 +234,21 @@ export default function AgentConsole({
         </div>
 
         {onToggleMode && (
-          <button
+          <Button
             onClick={onToggleMode}
-            className={`flex items-center gap-1 rounded-lg px-2 py-0.5 font-mono-code text-[10px] font-bold border transition-all flex-shrink-0 ${
-              agentMode === 'AUTONOMOUS'
-                ? 'bg-amber-500/20 border-amber-400/50 text-amber-200 hover:bg-amber-500/30'
-                : 'bg-sky-500/20 border-sky-400/50 text-sky-200 hover:bg-sky-500/30'
-            }`}
+            variant={agentMode === 'AUTONOMOUS' ? 'gold' : 'cyan'}
+            size="sm"
+            className="h-6 px-2 py-0.5 text-[10px] font-bold"
             title="Toggle between Auto-Remedy and Manual Approval"
           >
             <ArrowRightLeft className="h-3 w-3" />
             <span>Switch to {agentMode === 'AUTONOMOUS' ? 'Manual Approve' : 'Auto-Remedy'}</span>
-          </button>
+          </Button>
         )}
       </div>
 
       {/* VISUAL LANGGRAPH STATEGRAPH PIPELINE */}
-      <div className="border-b border-slate-800/80 bg-slate-950/70 p-2.5">
+      <div className="border-b border-slate-800/80 bg-slate-950/20 backdrop-blur-xs p-2.5">
         <div className="flex items-center justify-between mb-1.5">
           <span className="font-mono-code text-[10px] font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1">
             <GitCommit className="h-3 w-3 text-amber-400" />
@@ -276,8 +276,8 @@ export default function AgentConsole({
                   isCurrent
                     ? 'bg-amber-500/25 border-amber-400 text-amber-200 shadow-[0_0_15px_rgba(245,158,11,0.4)] animate-pulse'
                     : isDone
-                    ? 'bg-emerald-950/70 border-emerald-500/50 text-emerald-300'
-                    : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:border-slate-700'
+                    ? 'bg-emerald-950/50 border-emerald-500/50 text-emerald-300 backdrop-blur-xs'
+                    : 'bg-slate-900/25 border-slate-800/70 text-slate-400 hover:border-slate-700 backdrop-blur-xs'
                 } ${isInspecting ? 'ring-2 ring-amber-400' : ''}`}
                 title={`Click to inspect LangGraph ${stage} node specification`}
               >
@@ -298,7 +298,7 @@ export default function AgentConsole({
 
         {/* Interactive Deep Node Inspector Drawer */}
         {selectedStageInspect && (
-          <div className="mt-2 p-2.5 rounded-xl bg-slate-900/90 border border-amber-500/40 text-[10px] font-mono-code space-y-1 animate-fade-in">
+          <div className="mt-2 p-2.5 rounded-xl bg-slate-900/40 backdrop-blur-xs border border-amber-500/40 text-[10px] font-mono-code space-y-1 animate-fade-in">
             <div className="flex items-center justify-between text-amber-300 font-bold border-b border-slate-800 pb-1">
               <span>{STAGE_DETAILS[selectedStageInspect].title}</span>
               <button
@@ -345,25 +345,27 @@ export default function AgentConsole({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <button
+            <Button
               onClick={onApprove}
-              className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs py-2 transition-all shadow-lg active:scale-95"
+              variant="emerald"
+              className="flex-1 py-2 font-bold text-xs shadow-lg active:scale-95"
             >
               <CheckCircle2 className="h-4 w-4" /> Approve &amp; Seal in Gold
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={onReject}
-              className="flex items-center justify-center gap-1 rounded-lg bg-rose-950/90 hover:bg-rose-900 border border-rose-500/60 text-rose-200 font-semibold text-xs px-3.5 py-2 transition-all active:scale-95"
+              variant="destructive"
+              className="px-3.5 py-2 font-semibold text-xs active:scale-95"
             >
               <XCircle className="h-4 w-4" /> Reject
-            </button>
+            </Button>
           </div>
         </div>
       )}
 
       {/* Active LLM Reasoning & Pydantic Plan Card */}
       <div className="p-3 space-y-2.5 border-b border-slate-800/80 min-w-0">
-        <div className="rounded-xl bg-slate-950/85 border border-slate-800 p-3 space-y-2 min-w-0">
+        <div className="rounded-xl bg-slate-950/20 backdrop-blur-xs border border-slate-800/60 p-3 space-y-2 min-w-0">
           <div className="flex items-center justify-between gap-1">
             <span className="flex items-center gap-1.5 font-display text-xs font-bold text-amber-300 truncate">
               <Sparkles className="h-3.5 w-3.5 flex-shrink-0" />
@@ -384,7 +386,7 @@ export default function AgentConsole({
           </p>
 
           {/* Syntax-Highlighted kubectl Dry-Run Command Preview */}
-          <div className="rounded-lg bg-black/70 border border-slate-800 p-2 font-mono-code text-[10px] min-w-0">
+          <div className="rounded-lg bg-black/30 backdrop-blur-xs border border-slate-800/60 p-2 font-mono-code text-[10px] min-w-0">
             <div className="flex items-center justify-between text-slate-400 mb-1 gap-1">
               <span className="flex items-center gap-1 text-[9px] uppercase tracking-wider text-cyan-400 truncate">
                 <Terminal className="h-3 w-3 flex-shrink-0" /> Verified K8s API Mutation (dry_run="All")
@@ -412,20 +414,21 @@ export default function AgentConsole({
           </div>
           <div className="flex flex-wrap gap-1">
             {GUARDRAIL_GATES.map((g) => (
-              <span
+              <Badge
                 key={g.id}
-                className="flex items-center gap-1 rounded-md bg-emerald-950/50 border border-emerald-500/35 px-2 py-0.5 font-mono-code text-[9px] text-emerald-300 truncate"
+                variant="emerald"
+                className="bg-emerald-950/40 backdrop-blur-xs border-emerald-500/35 text-[9px] truncate"
               >
                 <ShieldCheck className="h-2.5 w-2.5 text-emerald-400 flex-shrink-0" />
                 <span>{g.label}</span>
-              </span>
+              </Badge>
             ))}
           </div>
         </div>
       </div>
 
       {/* Live Streaming LangGraph Audit Log Terminal */}
-      <div className="flex-1 flex flex-col min-h-[140px] max-h-[300px] bg-slate-950/60 p-3 min-w-0">
+      <div className="flex-1 flex flex-col min-h-[140px] max-h-[300px] bg-slate-950/20 backdrop-blur-xs p-3 min-w-0">
         <div className="flex items-center justify-between mb-1.5">
           <span className="font-mono-code text-[10px] font-semibold uppercase tracking-wider text-slate-400">
             LangGraph Real-Time Execution Trace
@@ -446,12 +449,12 @@ export default function AgentConsole({
               return (
                 <div
                   key={i}
-                  className={`rounded-lg border px-2.5 py-1.5 leading-snug kintsugi-message-fit ${
+                  className={`rounded-lg border px-2.5 py-1.5 leading-snug kintsugi-message-fit backdrop-blur-xs ${
                     isGold
                       ? 'bg-amber-500/15 border-amber-400/50 text-amber-200'
                       : isErr
-                      ? 'bg-rose-950/50 border-rose-500/40 text-rose-200'
-                      : 'bg-slate-900/80 border-slate-800/80 text-slate-300'
+                      ? 'bg-rose-950/40 border-rose-500/40 text-rose-200'
+                      : 'bg-slate-900/30 border-slate-800/70 text-slate-300'
                   }`}
                 >
                   {text}
