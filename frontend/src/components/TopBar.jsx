@@ -16,6 +16,14 @@ import {
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
+import ElectricLogo from './ElectricLogo';
+import k8sLogoUrl from '../assets/k8s-logo.svg';
+
+const K8S_ELECTRIC_PALETTE = [
+  { color: '#c2fff1', glowColor: '#22a6ff' },
+  { color: '#fef9c3', glowColor: '#f59e0b' },
+  { color: '#f3d9ff', glowColor: '#9324fd' },
+];
 
 export default function TopBar({
   status,
@@ -39,12 +47,36 @@ export default function TopBar({
       {/* Primary Navigation Row */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         {/* Brand Identity */}
-        <div className="flex items-center gap-3">
-          <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500/25 via-amber-500/10 to-slate-900 border border-amber-400/50 shadow-[0_0_20px_rgba(245,158,11,0.25)]">
-            <Sparkles className="h-5 w-5 text-amber-300" />
-            <span className="absolute -bottom-0.5 -right-0.5 flex h-2.5 w-2.5">
+        <div className="flex items-center gap-2.5">
+          <div
+            className="relative flex h-12 w-12 items-center justify-center shrink-0"
+            title="Kubernetes Electric Emblem • Hover or click for sparks"
+          >
+            <ElectricLogo
+              src={k8sLogoUrl}
+              color="#c2fff1"
+              glowColor="#22a6ff"
+              cyclePalette={K8S_ELECTRIC_PALETTE}
+              cycleInterval={5}
+              cycleTransition={2}
+              scale={0.72}
+              intensity={1.15}
+              glow={0.95}
+              thickness={0.75}
+              strands={2}
+              bend={0.25}
+              crackle={0.6}
+              arcs={0.85}
+              flicker={0.45}
+              fill={0.22}
+              speed={2.2}
+              interactive
+              cursorIntensity={0.8}
+              cursorRadius={24}
+            />
+            <span className="pointer-events-none z-10 absolute bottom-0.5 right-0.5 flex h-2.5 w-2.5">
               <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${wsConnected ? 'bg-emerald-400' : 'bg-rose-400'}`} />
-              <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${wsConnected ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+              <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ring-2 ring-[#050811] ${wsConnected ? 'bg-emerald-500' : 'bg-rose-500'}`} />
             </span>
           </div>
 
