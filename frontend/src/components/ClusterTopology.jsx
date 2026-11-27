@@ -21,18 +21,18 @@ import {
   X
 } from 'lucide-react';
 
-// Deterministic 10-Microservice OnlineBoutique Layout
+// Deterministic 3-Tier Topological 10-Microservice OnlineBoutique Layout
 const NODE_POSITIONS = {
-  frontend: { x: 340, y: 20 },
-  checkoutservice: { x: 140, y: 150 },
-  productcatalogservice: { x: 340, y: 150 },
-  cartservice: { x: 550, y: 150 },
-  recommendationservice: { x: 740, y: 150 },
-  paymentservice: { x: 20, y: 300 },
-  shippingservice: { x: 195, y: 300 },
-  currencyservice: { x: 375, y: 300 },
-  emailservice: { x: 555, y: 300 },
-  adservice: { x: 735, y: 300 }
+  frontend: { x: 515, y: 0 },
+  adservice: { x: 0, y: 190 },
+  checkoutservice: { x: 220, y: 190 },
+  recommendationservice: { x: 960, y: 190 },
+  paymentservice: { x: 0, y: 385 },
+  emailservice: { x: 205, y: 385 },
+  shippingservice: { x: 410, y: 385 },
+  cartservice: { x: 615, y: 385 },
+  currencyservice: { x: 820, y: 385 },
+  productcatalogservice: { x: 1025, y: 385 }
 };
 
 function ServiceCustomNode({ data }) {
@@ -97,7 +97,7 @@ function ServiceCustomNode({ data }) {
 
   return (
     <div
-      className={`relative w-[166px] rounded-xl border p-2.5 transition-all duration-300 cursor-pointer ${cardStyle} ${
+      className={`relative w-[152px] rounded-xl border p-2 transition-all duration-300 cursor-pointer ${cardStyle} ${
         selected ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-slate-950 scale-[1.03]' : ''
       }`}
     >
@@ -254,24 +254,28 @@ export default function ClusterTopology({
 
   const rfEdges = useMemo(() => {
     const rawEdges = topology?.edges || [];
-    return rawEdges.map((e, idx) => ({
-      id: e.id || `e-${e.source}-${e.target}-${idx}`,
-      source: e.source,
-      target: e.target,
-      animated: true,
-      style: {
-        stroke: '#f59e0b',
-        strokeWidth: 1.5,
-        opacity: 0.55
-      },
-      markerEnd: {
-        type: MarkerType.ArrowClosed,
-        color: '#f59e0b',
-        width: 14,
-        height: 14
-      }
-    }));
-  }, [topology]);
+    return rawEdges.map((e, idx) => {
+      const isSelectedLink = e.source === selectedService || e.target === selectedService;
+      const strokeColor = isSelectedLink ? '#fbbf24' : '#f59e0b';
+      return {
+        id: e.id || `e-${e.source}-${e.target}-${idx}`,
+        source: e.source,
+        target: e.target,
+        animated: true,
+        style: {
+          stroke: strokeColor,
+          strokeWidth: isSelectedLink ? 2.2 : 1.7,
+          opacity: isSelectedLink ? 0.92 : 0.68
+        },
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          color: strokeColor,
+          width: 15,
+          height: 15
+        }
+      };
+    });
+  }, [topology, selectedService]);
 
   const inspectedNode = useMemo(() => {
     return rfNodes.find((n) => n.id === selectedService)?.data || rfNodes[0]?.data;
@@ -338,7 +342,7 @@ export default function ClusterTopology({
           }}
           fitView
           fitViewOptions={{ padding: 0.14 }}
-          minZoom={0.45}
+          minZoom={0.38}
           maxZoom={1.6}
         >
           <Background color="#334155" gap={24} size={1} />

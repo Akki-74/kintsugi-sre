@@ -259,41 +259,54 @@ export default function AgentConsole({
           </span>
         </div>
 
-        {/* 6-Node Visual Flowchart */}
-        <div className="grid grid-cols-6 gap-1 relative">
-          {LANGGRAPH_STAGES.map((stage, idx) => {
-            const meta = STAGE_DETAILS[stage];
-            const Icon = meta.icon;
-            const isDone = idx < activeStageIdx || currentStage === 'VERIFY';
-            const isCurrent = idx === activeStageIdx;
-            const isInspecting = selectedStageInspect === stage;
+        {/* 6-Node Connected Visual Flowchart (2x3 Directed Rows with Clear Connectors) */}
+        <div className="space-y-1.5">
+          {[LANGGRAPH_STAGES.slice(0, 3), LANGGRAPH_STAGES.slice(3, 6)].map((rowStages, rowIdx) => (
+            <div key={rowIdx} className="flex items-center gap-1.5">
+              {rowStages.map((stage, colIdx) => {
+                const idx = rowIdx * 3 + colIdx;
+                const meta = STAGE_DETAILS[stage];
+                const Icon = meta.icon;
+                const isDone = idx < activeStageIdx || currentStage === 'VERIFY';
+                const isCurrent = idx === activeStageIdx;
+                const isInspecting = selectedStageInspect === stage;
 
-            return (
-              <button
-                key={stage}
-                onClick={() => setSelectedStageInspect((prev) => (prev === stage ? null : stage))}
-                className={`flex flex-col items-center justify-center rounded-xl p-1.5 border text-center transition-all cursor-pointer relative group ${
-                  isCurrent
-                    ? 'bg-amber-500/25 border-amber-400 text-amber-200 shadow-[0_0_15px_rgba(245,158,11,0.4)] animate-pulse'
-                    : isDone
-                    ? 'bg-emerald-950/50 border-emerald-500/50 text-emerald-300 backdrop-blur-xs'
-                    : 'bg-slate-900/25 border-slate-800/70 text-slate-400 hover:border-slate-700 backdrop-blur-xs'
-                } ${isInspecting ? 'ring-2 ring-amber-400' : ''}`}
-                title={`Click to inspect LangGraph ${stage} node specification`}
-              >
-                <div className="flex items-center gap-1 mb-0.5">
-                  <Icon className={`h-3 w-3 ${isCurrent ? 'text-amber-300' : isDone ? 'text-emerald-400' : 'text-slate-500'}`} />
-                  {isDone && <CheckCircle2 className="h-2.5 w-2.5 text-emerald-400" />}
-                </div>
-                <span className="font-mono-code text-[9px] font-bold leading-none truncate w-full">
-                  {meta.name}
-                </span>
-                <span className="text-[8px] text-slate-400 font-mono-code leading-none mt-0.5 opacity-80 group-hover:opacity-100">
-                  {meta.short}
-                </span>
-              </button>
-            );
-          })}
+                return (
+                  <React.Fragment key={stage}>
+                    <button
+                      onClick={() => setSelectedStageInspect((prev) => (prev === stage ? null : stage))}
+                      className={`flex-1 min-w-0 flex flex-col items-center justify-center rounded-xl px-2 py-1.5 border text-center transition-all cursor-pointer relative group ${
+                        isCurrent
+                          ? 'bg-amber-500/25 border-amber-400 text-amber-200 shadow-[0_0_15px_rgba(245,158,11,0.4)] animate-pulse'
+                          : isDone
+                          ? 'bg-emerald-950/50 border-emerald-500/50 text-emerald-300 backdrop-blur-xs'
+                          : 'bg-slate-900/25 border-slate-800/70 text-slate-400 hover:border-slate-700 backdrop-blur-xs'
+                      } ${isInspecting ? 'ring-2 ring-amber-400' : ''}`}
+                      title={`Click to inspect LangGraph ${stage} node specification`}
+                    >
+                      <div className="flex items-center gap-1 mb-0.5">
+                        <Icon className={`h-3 w-3 ${isCurrent ? 'text-amber-300' : isDone ? 'text-emerald-400' : 'text-slate-500'}`} />
+                        {isDone && <CheckCircle2 className="h-2.5 w-2.5 text-emerald-400" />}
+                      </div>
+                      <span className="font-mono-code text-[9px] font-bold leading-none whitespace-nowrap">
+                        {meta.name}
+                      </span>
+                      <span className="text-[8px] text-slate-400 font-mono-code leading-none mt-0.5 opacity-80 group-hover:opacity-100">
+                        {meta.short}
+                      </span>
+                    </button>
+                    {colIdx < 2 && (
+                      <ChevronRight
+                        className={`h-3.5 w-3.5 flex-shrink-0 ${
+                          isDone ? 'text-emerald-400' : isCurrent ? 'text-amber-400 animate-pulse' : 'text-amber-500/50'
+                        }`}
+                      />
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </div>
+          ))}
         </div>
 
         {/* Interactive Deep Node Inspector Drawer */}
