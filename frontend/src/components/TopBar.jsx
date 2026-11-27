@@ -16,13 +16,12 @@ import {
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import ElectricLogo from './ElectricLogo';
-import k8sLogoUrl from '../assets/k8s-logo.svg';
+import Strands from './Strands';
 
-const K8S_ELECTRIC_PALETTE = [
-  { color: '#c2fff1', glowColor: '#22a6ff' },
-  { color: '#fef9c3', glowColor: '#f59e0b' },
-  { color: '#f3d9ff', glowColor: '#9324fd' },
+const STRANDS_CYCLE_PALETTES = [
+  ['#d95b56', '#ba5046', '#ffa24c', '#ffe0b3', '#93f1ff', '#3569fa', '#193d9b'],
+  ['#ff2a1f', '#ff5a2e', '#ff7a1a', '#ffe2a8', '#ffb37a', '#ff3d2e', '#c42a6a'],
+  ['#00e08a', '#3dffb0', '#00c2a8', '#c8fff0', '#7fe3ff', '#2f6bff', '#6a4dff'],
 ];
 
 export default function TopBar({
@@ -50,29 +49,21 @@ export default function TopBar({
         <div className="flex items-center gap-2.5">
           <div
             className="relative flex h-12 w-12 items-center justify-center shrink-0"
-            title="Kubernetes Electric Emblem • Hover or click for sparks"
+            title="Kintsugi-AI Ambient Orb • Hover or click to pulse"
           >
-            <ElectricLogo
-              src={k8sLogoUrl}
-              color="#c2fff1"
-              glowColor="#22a6ff"
-              cyclePalette={K8S_ELECTRIC_PALETTE}
+            <Strands
+              cyclePalettes={STRANDS_CYCLE_PALETTES}
               cycleInterval={5}
               cycleTransition={2}
-              scale={0.72}
+              glass
+              glassSize={1.08}
+              energy={0.72}
               intensity={1.15}
-              glow={0.95}
-              thickness={0.75}
-              strands={2}
-              bend={0.25}
-              crackle={0.6}
-              arcs={0.85}
-              flicker={0.45}
-              fill={0.22}
-              speed={2.2}
+              glow={1.1}
+              rim={1.15}
+              speed={1.15}
               interactive
-              cursorIntensity={0.8}
-              cursorRadius={24}
+              clickPulse
             />
             <span className="pointer-events-none z-10 absolute bottom-0.5 right-0.5 flex h-2.5 w-2.5">
               <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${wsConnected ? 'bg-emerald-400' : 'bg-rose-400'}`} />
