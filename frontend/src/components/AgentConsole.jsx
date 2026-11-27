@@ -13,11 +13,9 @@ import {
   Lock,
   ArrowRightLeft,
   ChevronRight,
-  Info,
   Activity,
   Layers,
   Cpu,
-  RefreshCw,
   GitCommit
 } from 'lucide-react';
 import { Button } from './ui/button';

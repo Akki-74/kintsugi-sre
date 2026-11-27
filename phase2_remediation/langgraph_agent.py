@@ -23,7 +23,7 @@ from phase2_remediation.actions import (
     ActionType
 )
 from phase2_remediation.guardrails import SREGuardrailEngine
-from phase2_remediation.llm_client import DualBackendLLMClient, LLMRemediationClient
+from phase2_remediation.llm_client import DualBackendLLMClient
 from phase2_remediation.k8s_adapter import KubernetesClusterAdapter
 
 logger = logging.getLogger("Kintsugi.Agent")
@@ -318,7 +318,7 @@ class AmbientRemediationAgent:
         hist.append(f"VERIFY: Pod recovery confirmed. MTTR: {recovery_time_sec}s. {status_note}")
 
         # Update service node state to VERIFIED_REPAIRED (Kintsugi Gold Seam)
-        dt_state = getattr(self.k8s, "_digital_twin_state", getattr(self.k8s, "_mock_cluster_state", None))
+        dt_state = getattr(self.k8s, "_digital_twin_state", None)
         if dt_state and "services" in dt_state:
             svc_dict = dt_state["services"].setdefault(plan.target_service, {})
             svc_dict["is_verified_repaired"] = True

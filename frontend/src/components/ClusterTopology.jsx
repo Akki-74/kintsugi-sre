@@ -14,7 +14,6 @@ import {
   AlertTriangle,
   Activity,
   CheckCircle2,
-  Cpu,
   HardDrive,
   Flame,
   Terminal,

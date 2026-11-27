@@ -4,16 +4,14 @@ Tier 3: System & Web E2E Test Suite
 Tests:
   1. Full REST API Contract: All endpoints (/health, /api/status, /api/topology,
      /api/benchmark, /api/chaos/inject, /api/agent/mode, /api/agent/backend,
-     /api/cluster/source, /api/cluster/snapshot).
+     /api/cluster/snapshot).
   2. Live WebSocket Telemetry Contract: Connects to /ws/telemetry and validates
      the tick payload schema.
-  3. Webpage & Static Asset Integrity: Verifies /app/ and /assets/*.js / .css serve
-     with 200 OK and proper content headers.
+  3. Webpage & Static Asset Integrity: Verifies /app/, /assets/*.js / .css,
+     and single-source Phase 1 diagnostic plots resolve with 200 OK.
 """
 
-import os
 import sys
-import pytest
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -89,12 +87,6 @@ class TestRestApiContract:
         assert res.status_code == 200
         assert res.json()["preferred_backend"] == "groq"
 
-    def test_cluster_source_hot_swap(self):
-        # Telemetry is strictly locked to live cluster
-        res = client.post("/api/cluster/source", json={"source": "live"})
-        assert res.status_code == 200
-        assert res.json()["cluster_source"] == "live"
-
     def test_chaos_injection_endpoint(self):
         res = client.post("/api/chaos/inject", json={"service": "checkoutservice", "fault_type": "cpu_contention"})
         assert res.status_code == 200
@@ -162,3 +154,9 @@ class TestWebpageAndStaticAssets:
         res_css = client.get(f"/assets/{css_name}")
         assert res_css.status_code == 200
         assert "css" in res_css.headers.get("content-type", "").lower()
+
+    def test_diagnostic_plots_served_from_single_source(self):
+        for route in ("/app/plots/ablation_comparison.png", "/plots/confusion_matrix.png"):
+            res = client.get(route)
+            assert res.status_code == 200
+            assert "image/png" in res.headers.get("content-type", "").lower()

@@ -5,7 +5,6 @@ Bridges Phase 1 Multi-Modal Predictions, Phase 2 LangGraph Agent,
 and the React SRE Command Center UI.
 """
 
-import os
 import sys
 import json
 import asyncio
@@ -102,6 +101,12 @@ async def shutdown_broadcaster():
         except asyncio.CancelledError:
             pass
 
+# Mount Phase 1 diagnostic plots directly from phase1_prediction/plots (single source of truth)
+plots_dir = PROJECT_ROOT / "phase1_prediction" / "plots"
+if plots_dir.exists():
+    app.mount("/app/plots", StaticFiles(directory=str(plots_dir)), name="app-plots")
+    app.mount("/plots", StaticFiles(directory=str(plots_dir)), name="plots")
+
 # Mount static frontend build if present
 frontend_dist = PROJECT_ROOT / "frontend" / "dist"
 if frontend_dist.exists():
@@ -127,10 +132,6 @@ class ModeRequest(BaseModel):
 
 class BackendRequest(BaseModel):
     backend: str  # 'groq' or 'lmstudio'
-
-
-class SourceRequest(BaseModel):
-    source: str   # 'live' or 'replay'
 
 
 @app.get("/")
@@ -162,11 +163,9 @@ def health():
         "cluster_mode": "LIVE_K8S" if is_connected else "STANDALONE",
         "raw_mode": engine.agent.k8s.mode,
         "is_k8s_connected": is_connected,
-        "cluster_source": "live",
         "prometheus_reachable": prom_reachable,
         "llm_backend": llm_info.get("preferred_backend", "groq"),
         "groq_configured": llm_info.get("groq_configured", False),
-        "dataset_rows": 0,
         "autonomous_mode": engine.autonomous_mode,
     }
 
@@ -176,13 +175,6 @@ def set_agent_backend(req: BackendRequest):
     """Switch LLM backend between Groq and LM Studio."""
     active = engine.set_llm_backend(req.backend)
     return {"preferred_backend": active}
-
-
-@app.post("/api/cluster/source")
-def set_cluster_source(req: SourceRequest):
-    """Telemetry pipeline is locked to live Kubernetes cluster."""
-    active = engine.set_cluster_source(req.source)
-    return {"cluster_source": "live"}
 
 
 @app.get("/api/topology")

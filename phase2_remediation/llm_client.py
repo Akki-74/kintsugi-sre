@@ -12,7 +12,7 @@ except ImportError:
     pass
 
 from openai import OpenAI
-from phase2_remediation.actions import RemediationPlan, FaultToActionMatrix, ActionType
+from phase2_remediation.actions import RemediationPlan, FaultToActionMatrix
 
 logger = logging.getLogger("Kintsugi.LLMClient")
 
@@ -112,16 +112,17 @@ class DualBackendLLMClient:
 
         return RemediationPlan(**parsed_dict)
 
-    def generate_remediation_plan(self,
-                                   service: str,
-                                   fault_class: str,
-                                   confidence: float,
-                                   metrics_summary: Dict[str, Any],
-                                   recent_logs: Optional[List[str]] = None,
-                                   current_replicas: int = 1,
-                                   namespace: str = "hipster") -> Tuple[RemediationPlan, str]:
+    def plan_remediation(self,
+                          fault_class: str,
+                          predicted_service: str,
+                          confidence: float,
+                          telemetry_summary: Dict[str, Any],
+                          recent_logs: Optional[List[str]] = None,
+                          current_replicas: int = 1,
+                          namespace: str = "hipster") -> Tuple[RemediationPlan, str]:
+        """Generates or retrieves cached remediation plan using preferred LLM backend or deterministic fallback."""
         # Deduplication cache: if the exact same service & fault was planned within 15s, re-use it!
-        cache_key = f"{service}:{fault_class}"
+        cache_key = f"{predicted_service}:{fault_class}"
         now = time.time()
         if cache_key in self._plan_cache:
             ts, cached_plan = self._plan_cache[cache_key]
@@ -130,12 +131,12 @@ class DualBackendLLMClient:
                 return cached_plan, self.last_backend_used or f"GROQ_CLOUD ({self.groq_model})"
 
         user_prompt = json.dumps({
-            "target_service": service,
+            "target_service": predicted_service,
             "target_namespace": namespace,
             "phase1_predicted_fault": fault_class,
             "phase1_confidence": round(float(confidence), 4),
             "current_replicas": current_replicas,
-            "telemetry_metrics": metrics_summary,
+            "telemetry_metrics": telemetry_summary,
             "recent_pod_logs": (recent_logs or [])[-10:],
         }, indent=2)
 
@@ -175,7 +176,7 @@ class DualBackendLLMClient:
         self.last_error = " | ".join(errors)
         logger.warning(f"LLM backends failed ({self.last_error}) -> using deterministic SRE matrix.")
         fallback_plan = FaultToActionMatrix.get_fallback_plan(
-            service=service,
+            service=predicted_service,
             fault_class=fault_class,
             confidence=confidence,
             current_replicas=current_replicas,
@@ -184,25 +185,6 @@ class DualBackendLLMClient:
         self.last_backend_used = "DETERMINISTIC_FALLBACK_MATRIX"
         self._plan_cache[cache_key] = (now, fallback_plan)
         return fallback_plan, self.last_backend_used
-
-    def plan_remediation(self,
-                          fault_class: str,
-                          predicted_service: str,
-                          confidence: float,
-                          telemetry_summary: Dict[str, Any],
-                          recent_logs: Optional[List[str]] = None,
-                          current_replicas: int = 1,
-                          namespace: str = "hipster") -> Tuple[RemediationPlan, str]:
-        """LangGraph agent compatibility wrapper."""
-        return self.generate_remediation_plan(
-            service=predicted_service,
-            fault_class=fault_class,
-            confidence=confidence,
-            metrics_summary=telemetry_summary,
-            recent_logs=recent_logs,
-            current_replicas=current_replicas,
-            namespace=namespace
-        )
 
     def get_status(self) -> Dict[str, Any]:
         """Returns status of current LLM configuration for health checks."""
@@ -215,7 +197,3 @@ class DualBackendLLMClient:
             "last_backend_used": self.last_backend_used,
             "last_error": self.last_error,
         }
-
-
-# Backward-compatible alias
-LLMRemediationClient = DualBackendLLMClient

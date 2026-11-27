@@ -9,7 +9,6 @@ Tests:
 """
 
 import sys
-import json
 import pytest
 import pandas as pd
 from pathlib import Path
@@ -18,7 +17,6 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from backend.replay_engine import DigitalTwinReplayEngine
-from phase2_remediation.langgraph_agent import AmbientRemediationAgent
 from phase2_remediation.actions import ActionType
 
 
@@ -122,7 +120,7 @@ class TestHumanInTheLoopFlow:
         assert approval_result["service"] == service
 
         # 4. Confirm Kintsugi Gold Seam state is activated in Digital Twin
-        dt_svc = getattr(engine.agent.k8s, "_digital_twin_state", engine.agent.k8s._mock_cluster_state)["services"][service]
+        dt_svc = engine.agent.k8s._digital_twin_state["services"][service]
         assert dt_svc["is_verified_repaired"] is True
         assert dt_svc["status"] == "VerifiedRepaired"
         assert dt_svc["is_incident"] is False

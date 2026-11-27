@@ -5,22 +5,17 @@ Streams held-out telemetry ticks from k8s_multimodal_replay_holdout.csv,
 runs live Phase 1 inference, and triggers Phase 2 LangGraph ambient remediation.
 """
 
-import os
 import json
 import time
-import asyncio
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, Optional
 
-import numpy as np
-import pandas as pd
 import xgboost as xgb
 
 from phase2_remediation.langgraph_agent import AmbientRemediationAgent
-from phase2_remediation.actions import ActionType
+from phase2_remediation.actions import ONLINE_BOUTIQUE_SERVICES
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DATASET_DIR = PROJECT_ROOT / "phase1_prediction" / "dataset"
 SAVED_MODELS_DIR = PROJECT_ROOT / "phase1_prediction" / "saved_models"
 
 CLASS_NAMES = [
@@ -37,18 +32,12 @@ class DigitalTwinReplayEngine:
         self.tick_speed_sec = 1.0  # Telemetry emitted every 1 second
         self.autonomous_mode = True
         self.pending_hitl_plan = None
-        self.cluster_source = "live"
-        
+
         # Load trained Phase 1 Multi-Modal Model
         self.classifier = None
         self.regressor = None
         self.meta = {}
-        self.holdout_df = pd.DataFrame()
         self._load_artifacts()
-
-    def set_cluster_source(self, source: str) -> str:
-        self.cluster_source = "live"
-        return "live"
 
     def set_llm_backend(self, backend: str) -> str:
         if hasattr(self.agent, "llm_client"):
@@ -86,7 +75,7 @@ class DigitalTwinReplayEngine:
         self.agent.guardrails.record_remediation(plan.target_service, timestamp=exec_res.executed_at)
         
         # Mark node as verified repaired (Kintsugi Gold Seam)
-        dt_state = getattr(self.agent.k8s, "_digital_twin_state", getattr(self.agent.k8s, "_mock_cluster_state", None))
+        dt_state = getattr(self.agent.k8s, "_digital_twin_state", None)
         if dt_state and "services" in dt_state:
             svc_dict = dt_state["services"].setdefault(plan.target_service, {})
             svc_dict["is_verified_repaired"] = True
@@ -159,7 +148,7 @@ class DigitalTwinReplayEngine:
             cls_name = fault_map.get(normalized, "CPU_EXHAUSTION")
         
         # Mark node as active incident
-        dt_state = getattr(self.agent.k8s, "_digital_twin_state", getattr(self.agent.k8s, "_mock_cluster_state", None))
+        dt_state = getattr(self.agent.k8s, "_digital_twin_state", None)
         if dt_state and "services" in dt_state:
             svc_dict = dt_state["services"].setdefault(service, {})
             svc_dict["is_verified_repaired"] = False
@@ -208,12 +197,8 @@ class DigitalTwinReplayEngine:
 
     def get_next_tick(self) -> Dict[str, Any]:
         """Emits next real telemetry tick directly from the Live Kubernetes Cluster & Prometheus."""
-        dt_state = getattr(self.agent.k8s, "_digital_twin_state", getattr(self.agent.k8s, "_mock_cluster_state", {}))
-        services = list(dt_state.get("services", {}).keys()) or [
-            "frontend", "checkoutservice", "cartservice", "paymentservice",
-            "productcatalogservice", "currencyservice", "shippingservice",
-            "recommendationservice", "adservice", "emailservice"
-        ]
+        dt_state = getattr(self.agent.k8s, "_digital_twin_state", {}) or {}
+        services = list(dt_state.get("services", {}).keys()) or list(ONLINE_BOUTIQUE_SERVICES)
         idx = self.current_tick_idx
         self.current_tick_idx += 1
         service = services[idx % len(services)]
@@ -315,7 +300,7 @@ class DigitalTwinReplayEngine:
                     "verification_result": None,
                 }
             # Check 3: If service was already verified repaired in this incident cycle
-            elif getattr(self.agent.k8s, "_digital_twin_state", getattr(self.agent.k8s, "_mock_cluster_state", {})).get("services", {}).get(service, {}).get("is_verified_repaired", False):
+            elif dt_state.get("services", {}).get(service, {}).get("is_verified_repaired", False):
                 agent_event = {
                     "state": "VERIFIED",
                     "current_node": "VERIFY",
@@ -394,7 +379,6 @@ class DigitalTwinReplayEngine:
             "autonomous_mode": self.autonomous_mode,
             "is_k8s_connected": is_conn,
             "cluster_mode": "LIVE_K8S" if is_conn else "STANDALONE",
-            "cluster_source": self.cluster_source,
             "prometheus_reachable": prom_ok,
         }
         return tick_payload

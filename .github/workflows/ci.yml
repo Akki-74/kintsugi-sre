@@ -26,7 +26,6 @@ jobs:
 
       - name: Run 3-Tier Test Suite (Unit, Integration & System/Web E2E)
         env:
-          CLUSTER_MODE: REPLAY_HOLDOUT
           LLM_PROVIDER: groq
         run: |
           python -m pytest tests/ -v

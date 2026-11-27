@@ -9,6 +9,20 @@ from typing import Dict, Any, Optional
 from pydantic import BaseModel, Field, field_validator
 
 
+ONLINE_BOUTIQUE_SERVICES = (
+    "frontend",
+    "checkoutservice",
+    "cartservice",
+    "paymentservice",
+    "productcatalogservice",
+    "currencyservice",
+    "shippingservice",
+    "recommendationservice",
+    "adservice",
+    "emailservice",
+)
+
+
 class ActionType(str, Enum):
     SCALE_DEPLOYMENT = "SCALE_DEPLOYMENT"
     PATCH_RESOURCES = "PATCH_RESOURCES"
@@ -16,7 +30,6 @@ class ActionType(str, Enum):
     CORDON_AND_RELOCATE = "CORDON_AND_RELOCATE"
     APPLY_TRAFFIC_SHAPING = "APPLY_TRAFFIC_SHAPING"
     NO_ACTION = "NO_ACTION"
-    NO_OP = "NO_OP"
 
 
 class RemediationParameters(BaseModel):
@@ -39,14 +52,9 @@ class RemediationPlan(BaseModel):
 
     @field_validator("target_service")
     def validate_service(cls, v):
-        valid = [
-            "frontend", "checkoutservice", "cartservice", "paymentservice",
-            "productcatalogservice", "currencyservice", "shippingservice",
-            "recommendationservice", "adservice", "emailservice"
-        ]
         v_clean = v.lower().strip()
-        if v_clean not in valid:
-            raise ValueError(f"Service '{v}' not recognized among OnlineBoutique services: {valid}")
+        if v_clean not in ONLINE_BOUTIQUE_SERVICES:
+            raise ValueError(f"Service '{v}' not recognized among OnlineBoutique services: {list(ONLINE_BOUTIQUE_SERVICES)}")
         return v_clean
 
 
@@ -76,86 +84,72 @@ class FaultToActionMatrix:
     when the LLM is offline, times out, or fails schema validation.
     """
     @staticmethod
-    def resolve_action(fault_class: str, target_service: str, telemetry: Dict[str, Any]) -> RemediationPlan:
-        ns = "hipster"
-        
+    def get_fallback_plan(service: str, fault_class: str, confidence: float = 0.95,
+                          current_replicas: int = 1, namespace: str = "hipster",
+                          telemetry: Optional[Dict[str, Any]] = None) -> RemediationPlan:
+        """Selects a deterministic, guardrail-compliant remediation plan for a fault class."""
         if fault_class == "CPU_EXHAUSTION":
-            # Scale deployment to distribute load across replicas
             return RemediationPlan(
-                diagnosed_root_cause=f"High CPU saturation on {target_service} detected by Phase 1 Fast Brain",
-                target_service=target_service,
-                target_namespace=ns,
+                diagnosed_root_cause=f"High CPU saturation on {service} detected by Phase 1 Fast Brain",
+                target_service=service,
+                target_namespace=namespace,
                 selected_action=ActionType.SCALE_DEPLOYMENT,
                 parameters=RemediationParameters(replicas=3),
-                confidence=0.92,
+                confidence=confidence,
                 reasoning_summary="Rule Fallback: Scaling replicas to 3 to distribute saturated CPU load."
             )
-            
+
         elif fault_class == "MEMORY_EXHAUSTION":
-            # Proactively patch memory limit before container hits OOMKilled
             return RemediationPlan(
-                diagnosed_root_cause=f"Monotonic memory climb / leak detected on {target_service}",
-                target_service=target_service,
-                target_namespace=ns,
+                diagnosed_root_cause=f"Monotonic memory climb / leak detected on {service}",
+                target_service=service,
+                target_namespace=namespace,
                 selected_action=ActionType.PATCH_RESOURCES,
                 parameters=RemediationParameters(memory_limit_mi=512),
-                confidence=0.94,
+                confidence=confidence,
                 reasoning_summary="Rule Fallback: Raising container memory limit to 512Mi to prevent OOM crash."
             )
 
         elif fault_class == "DISK_EXHAUSTION":
-            # Cordon degraded node and relocate pod to healthy node
             return RemediationPlan(
-                diagnosed_root_cause=f"Disk saturation / Syscall write pressure impacting {target_service}",
-                target_service=target_service,
-                target_namespace=ns,
+                diagnosed_root_cause=f"Disk saturation / Syscall write pressure impacting {service}",
+                target_service=service,
+                target_namespace=namespace,
                 selected_action=ActionType.CORDON_AND_RELOCATE,
                 parameters=RemediationParameters(target_node="kind-worker"),
-                confidence=0.88,
+                confidence=confidence,
                 reasoning_summary="Rule Fallback: Cordoning saturated worker node and evicting pod to healthy node."
             )
 
         elif fault_class == "NETWORK_DEGRADATION":
-            # Apply traffic shaping (circuit breaker timeout reduction)
             return RemediationPlan(
-                diagnosed_root_cause=f"Upstream inter-service RPC latency degradation on {target_service}",
-                target_service=target_service,
-                target_namespace=ns,
+                diagnosed_root_cause=f"Upstream inter-service RPC latency degradation on {service}",
+                target_service=service,
+                target_namespace=namespace,
                 selected_action=ActionType.APPLY_TRAFFIC_SHAPING,
                 parameters=RemediationParameters(timeout_ms=1000),
-                confidence=0.85,
+                confidence=confidence,
                 reasoning_summary="Rule Fallback: Adjusting client call timeout to 1000ms to break cascade latency."
             )
 
         elif fault_class == "SERVICE_DISRUPTION_LOG":
-            # Rolling restart pod to clear corrupted application state or leaked sockets
             return RemediationPlan(
-                diagnosed_root_cause=f"Application exception / unhandled error logs in {target_service}",
-                target_service=target_service,
-                target_namespace=ns,
+                diagnosed_root_cause=f"Application exception / unhandled error logs in {service}",
+                target_service=service,
+                target_namespace=namespace,
                 selected_action=ActionType.RESTART_POD,
                 parameters=RemediationParameters(),
-                confidence=0.89,
+                confidence=confidence,
                 reasoning_summary="Rule Fallback: Initiating zero-downtime rolling restart to clear corrupted memory/sockets."
             )
 
         else:
             return RemediationPlan(
-                diagnosed_root_cause=f"Cluster state normal on {target_service}",
-                target_service=target_service,
-                target_namespace=ns,
+                diagnosed_root_cause=f"Cluster state normal on {service}",
+                target_service=service,
+                target_namespace=namespace,
                 selected_action=ActionType.NO_ACTION,
                 parameters=RemediationParameters(),
-                confidence=0.99,
+                confidence=confidence,
                 reasoning_summary="Rule Fallback: Cluster metrics within healthy baseline bounds. No action taken."
             )
-
-    @staticmethod
-    def get_fallback_plan(service: str, fault_class: str, confidence: float = 0.95,
-                          current_replicas: int = 1, namespace: str = "hipster",
-                          telemetry: Optional[Dict[str, Any]] = None) -> RemediationPlan:
-        """Alias for fallback plan resolution matching llm_client caller."""
-        plan = FaultToActionMatrix.resolve_action(fault_class, service, telemetry or {})
-        plan.target_namespace = namespace
-        plan.confidence = confidence
-        return plan

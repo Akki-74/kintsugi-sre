@@ -8,7 +8,6 @@ Tests:
   4. SRE Guardrails Adversarial Checks (kube-system, bounds, cooldown lock)
 """
 
-import os
 import sys
 import json
 import pytest

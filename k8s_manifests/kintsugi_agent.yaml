@@ -6,40 +6,6 @@ metadata:
   labels:
     app.kubernetes.io/part-of: online-boutique
 ---
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: kintsugi-sre-agent
-  namespace: hipster
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: kintsugi-sre-agent-role
-rules:
-  - apiGroups: [""]
-    resources: ["pods", "pods/log", "services", "nodes"]
-    verbs: ["get", "list", "watch", "patch", "delete"]
-  - apiGroups: ["apps"]
-    resources: ["deployments", "deployments/scale"]
-    verbs: ["get", "list", "watch", "patch", "update"]
-  - apiGroups: ["networking.k8s.io"]
-    resources: ["networkpolicies"]
-    verbs: ["get", "list", "watch", "create", "patch", "delete"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: kintsugi-sre-agent-binding
-subjects:
-  - kind: ServiceAccount
-    name: kintsugi-sre-agent
-    namespace: hipster
-roleRef:
-  kind: ClusterRole
-  name: kintsugi-sre-agent-role
-  apiGroup: rbac.authorization.k8s.io
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -65,8 +31,8 @@ spec:
           ports:
             - containerPort: 8000
           env:
-            - name: LM_STUDIO_URL
-              value: "http://host.docker.internal:1234/v1/chat/completions"
+            - name: LM_STUDIO_BASE_URL
+              value: "http://host.docker.internal:1234/v1"
             - name: GROQ_API_KEY
               value: ""
           resources:

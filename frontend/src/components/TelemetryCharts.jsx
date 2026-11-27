@@ -6,8 +6,7 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  ReferenceLine,
-  CartesianGrid
+  ReferenceLine
 } from 'recharts';
 import {
   Activity,
@@ -22,11 +21,8 @@ import {
   Sliders,
   AlertTriangle,
   Zap,
-  Repeat,
-  Radio,
-  CheckCircle2
+  Radio
 } from 'lucide-react';
-import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 
 export const EXPANDED_CHAOS_OPTIONS = [
@@ -143,7 +139,6 @@ export default function TelemetryCharts({
 }) {
   const [activeTab, setActiveTab] = useState('telemetry'); // 'telemetry' | 'chaos' | 'attribution'
   const [customTarget, setCustomTarget] = useState('AUTO');
-  const [intensity, setIntensity] = useState('HIGH');
   const [firingId, setFiringId] = useState(null);
 
   const tteMinutes = latestPrediction?.tte_minutes ?? latestPrediction?.time_to_exhaustion_min;
@@ -456,25 +451,6 @@ export default function TelemetryCharts({
                     </option>
                   ))}
                 </select>
-              </div>
-
-              <div className="flex items-center gap-1.5 font-mono-code text-xs">
-                <span className="text-slate-400">Intensity:</span>
-                <div className="flex rounded-lg bg-slate-900/50 backdrop-blur-sm border border-slate-700/60 p-0.5 text-[10px]">
-                  {['MODERATE', 'HIGH', 'CRITICAL'].map((lvl) => (
-                    <button
-                      key={lvl}
-                      onClick={() => setIntensity(lvl)}
-                      className={`px-2 py-0.5 rounded font-bold transition-all ${
-                        intensity === lvl
-                          ? 'bg-rose-500/30 text-rose-200 border border-rose-500/50'
-                          : 'text-slate-400 hover:text-white'
-                      }`}
-                    >
-                      {lvl}
-                    </button>
-                  ))}
-                </div>
               </div>
             </div>
           </div>

@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import TopBar from './components/TopBar';
 import ClusterTopology from './components/ClusterTopology';
-import TelemetryCharts, { EXPANDED_CHAOS_OPTIONS, ALL_SERVICES } from './components/TelemetryCharts';
+import TelemetryCharts, { EXPANDED_CHAOS_OPTIONS } from './components/TelemetryCharts';
 import AgentConsole from './components/AgentConsole';
 import Lightfall from './components/Lightfall';
 import { Button } from './components/ui/button';
-import { Badge } from './components/ui/badge';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from './components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './components/ui/dialog';
 import { Input } from './components/ui/input';
 import {
@@ -14,15 +12,11 @@ import {
   BarChart3,
   Sparkles,
   Search,
-  Flame,
-  Cpu,
   ShieldCheck,
-  Radio,
   ArrowRight,
   CheckCircle2,
   AlertTriangle,
   Server,
-  Terminal,
   RefreshCw
 } from 'lucide-react';
 
@@ -70,7 +64,6 @@ export default function App() {
 
   // Interactive Modals & UX States
   const [showBenchmarkModal, setShowBenchmarkModal] = useState(false);
-  const [benchmarkData, setBenchmarkData] = useState(null);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [showClusterGate, setShowClusterGate] = useState(false);
   const [cmdQuery, setCmdQuery] = useState('');
@@ -108,7 +101,16 @@ export default function App() {
       if (topRes.ok) setTopology(await topRes.json());
       if (snapRes.ok) {
         const snap = await snapRes.json();
-        if (snap.cluster_nodes) setClusterNodes(snap.cluster_nodes);
+        const nodeMap = snap.state?.nodes;
+        if (nodeMap && typeof nodeMap === 'object') {
+          setClusterNodes(
+            Object.entries(nodeMap).map(([name, info]) => ({
+              name,
+              unschedulable: Boolean(info?.cordoned),
+              status: info?.cordoned ? 'Cordoned' : (info?.ready === false ? 'NotReady' : 'Ready')
+            }))
+          );
+        }
       }
     } catch (err) {
       console.error('Initial fetch error:', err);
@@ -188,9 +190,6 @@ export default function App() {
               prometheus_reachable: payload.prometheus_reachable ?? prev.prometheus_reachable
             }));
           }
-
-          // Update cluster nodes if provided
-          if (payload.cluster_nodes) setClusterNodes(payload.cluster_nodes);
 
           // Update autonomy mode from live tick
           if (payload.autonomous_mode !== undefined) {
@@ -472,14 +471,8 @@ export default function App() {
     }
   };
 
-  const handleOpenBenchmark = async () => {
+  const handleOpenBenchmark = () => {
     setShowBenchmarkModal(true);
-    try {
-      const res = await fetch('/api/benchmark');
-      if (res.ok) setBenchmarkData(await res.json());
-    } catch (e) {
-      console.error(e);
-    }
   };
 
   // Command Palette Items (Expanded with all 8 scenarios)

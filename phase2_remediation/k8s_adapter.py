@@ -11,7 +11,12 @@ Dual-mode executor:
 import time
 import logging
 from typing import Dict, Any, Optional
-from phase2_remediation.actions import RemediationPlan, ActionType, RemediationExecutionResult
+from phase2_remediation.actions import (
+    RemediationPlan,
+    ActionType,
+    RemediationExecutionResult,
+    ONLINE_BOUTIQUE_SERVICES,
+)
 
 logger = logging.getLogger("Kintsugi.K8sAdapter")
 
@@ -57,16 +62,8 @@ class KubernetesClusterAdapter:
         # Initialize In-Memory State for High-Fidelity Digital Twin
         self._digital_twin_state = {
             "services": {
-                "frontend": {"replicas": 1, "cpu_limit": "200m", "mem_limit": "128Mi", "status": "Running"},
-                "checkoutservice": {"replicas": 1, "cpu_limit": "200m", "mem_limit": "128Mi", "status": "Running"},
-                "cartservice": {"replicas": 1, "cpu_limit": "200m", "mem_limit": "128Mi", "status": "Running"},
-                "paymentservice": {"replicas": 1, "cpu_limit": "200m", "mem_limit": "128Mi", "status": "Running"},
-                "productcatalogservice": {"replicas": 1, "cpu_limit": "200m", "mem_limit": "128Mi", "status": "Running"},
-                "currencyservice": {"replicas": 1, "cpu_limit": "200m", "mem_limit": "128Mi", "status": "Running"},
-                "shippingservice": {"replicas": 1, "cpu_limit": "200m", "mem_limit": "128Mi", "status": "Running"},
-                "recommendationservice": {"replicas": 1, "cpu_limit": "200m", "mem_limit": "128Mi", "status": "Running"},
-                "adservice": {"replicas": 1, "cpu_limit": "200m", "mem_limit": "128Mi", "status": "Running"},
-                "emailservice": {"replicas": 1, "cpu_limit": "200m", "mem_limit": "128Mi", "status": "Running"},
+                svc: {"replicas": 1, "cpu_limit": "200m", "mem_limit": "128Mi", "status": "Running"}
+                for svc in ONLINE_BOUTIQUE_SERVICES
             },
             "nodes": {
                 "desktop-control-plane": {"cordoned": False, "ready": True},
@@ -75,15 +72,6 @@ class KubernetesClusterAdapter:
             },
             "recent_actions": []
         }
-
-    @property
-    def _mock_cluster_state(self):
-        """Backward-compatibility alias for Digital Twin state."""
-        return self._digital_twin_state
-
-    @_mock_cluster_state.setter
-    def _mock_cluster_state(self, val):
-        self._digital_twin_state = val
 
     def verify_dry_run(self, plan: RemediationPlan) -> bool:
         """Runs dry_run='All' check against live cluster or sandbox."""

@@ -1,8 +1,6 @@
-import os
 import re
 import json
 import glob
-import time
 import warnings
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
@@ -56,8 +54,6 @@ CLASS_TO_ID = {
     "NETWORK_DEGRADATION": 4,
     "SERVICE_DISRUPTION_LOG": 5,
 }
-
-ID_TO_CLASS = {v: k for k, v in CLASS_TO_ID.items()}
 
 
 def extract_service_name(pod_name: str) -> str:

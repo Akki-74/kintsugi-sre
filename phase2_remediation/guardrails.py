@@ -12,7 +12,7 @@ Enforces deterministic safety policies before any action touches Kubernetes:
 
 import time
 import threading
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional, Tuple
 from phase2_remediation.actions import RemediationPlan, GuardrailValidationResult, ActionType
 
 

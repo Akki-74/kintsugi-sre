@@ -15,13 +15,11 @@ Implements the full Phase 1 ML specification:
   - Artifact exports: multimodal_xgb.joblib, tte_regressor.joblib, feature_columns.json, plots
 """
 
-import os
 import json
 import time
 import warnings
 from pathlib import Path
 from typing import Dict, List, Tuple, Any
-from collections import defaultdict
 
 import numpy as np
 import pandas as pd
@@ -35,7 +33,6 @@ import seaborn as sns
 from sklearn.ensemble import IsolationForest
 from sklearn.utils.class_weight import compute_sample_weight
 from sklearn.metrics import (
-    classification_report,
     confusion_matrix,
     f1_score,
     precision_score,
@@ -70,7 +67,6 @@ CLASS_NAMES = [
     "SERVICE_DISRUPTION_LOG",
 ]
 CLASS_TO_ID = {name: idx for idx, name in enumerate(CLASS_NAMES)}
-ID_TO_CLASS = {idx: name for idx, name in enumerate(CLASS_NAMES)}
 
 NON_FEATURE_COLS = {
     "Time", "TimeStamp", "PodName", "service", "date_str", "source_folder",

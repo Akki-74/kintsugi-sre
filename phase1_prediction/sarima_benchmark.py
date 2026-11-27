@@ -12,11 +12,10 @@ Metrics Evaluated:
   4. Per-Tick Inference Latency (ms) (justifying XGBoost for 1Hz real-time streams)
 """
 
-import sys
 import json
 import time
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any
 
 import numpy as np
 import pandas as pd

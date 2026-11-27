@@ -10,7 +10,6 @@ Records:
   - Mean Time to Remediate (MTTR) across 5 fault injection scenarios.
 """
 
-import os
 import sys
 import json
 import time
@@ -21,7 +20,6 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 import numpy as np
-import pandas as pd
 
 from phase2_remediation.langgraph_agent import AmbientRemediationAgent
 from phase2_remediation.actions import ActionType

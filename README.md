@@ -499,13 +499,12 @@ Kintsugi-AI is deployed live on Render.com at **[https://kintsugi-ai.onrender.co
 - **Environment Secrets:**
   - `GROQ_API_KEY`: `<your_free_groq_api_key>`
   - `GROQ_MODEL`: `qwen/qwen3.8-27b`
-  - `CLUSTER_MODE`: `LIVE_K8S`
 
 ### Option B: Multi-Stage Docker Container (`Dockerfile`)
 Kintsugi-AI also includes a multi-stage Dockerfile (Node 20 Vite build stage + Python 3.11 runtime stage) that runs anywhere Docker is supported:
 ```bash
 docker build -t kintsugi-ai:latest .
-docker run -p 7860:7860 -e GROQ_API_KEY="your_key" -e CLUSTER_MODE="LIVE_K8S" kintsugi-ai:latest
+docker run -p 7860:7860 -e GROQ_API_KEY="your_key" kintsugi-ai:latest
 ```
 
 ---
@@ -540,12 +539,12 @@ python -m pytest tests/ -v
 | **3** | `test_03_system_e2e.py` | `test_benchmark_metadata_endpoint` | REST API (`/api/benchmark`) | Asserts `/api/benchmark` serves Phase 1 4-model ablation results, SARIMA vs. XGBoost horizon comparisons, and Phase 2 MTTR metrics. | `PASSED` |
 | **3** | `test_03_system_e2e.py` | `test_agent_mode_toggle` | REST API (`/api/agent/mode`) | Tests hot-swapping operational modes between `AUTONOMOUS` and `HUMAN_IN_THE_LOOP` via HTTP POST. | `PASSED` |
 | **3** | `test_03_system_e2e.py` | `test_agent_backend_hot_swap` | REST API (`/api/agent/backend`) | Tests hot-swapping LLM reasoning backend between `lmstudio` and `groq` at runtime with zero downtime. | `PASSED` |
-| **3** | `test_03_system_e2e.py` | `test_cluster_source_hot_swap` | REST API (`/api/cluster/source`) | Asserts `/api/cluster/source` maintains strict live Kubernetes cluster stream locking (`live`). | `PASSED` |
 | **3** | `test_03_system_e2e.py` | `test_chaos_injection_endpoint` | REST API (`/api/chaos/inject`) | Injects synthetic CPU contention into `checkoutservice` and asserts HTTP 200 with `CHAOS_INJECTED` and `CPU_EXHAUSTION` diagnosis. | `PASSED` |
 | **3** | `test_03_system_e2e.py` | `test_cluster_snapshot_endpoint` | REST API (`/api/cluster/snapshot`) | Asserts `/api/cluster/snapshot` returns real-time node hardware states, pod statuses, and metric maps. | `PASSED` |
 | **3** | `test_03_system_e2e.py` | `test_websocket_telemetry_streaming` | WebSocket (`/ws/telemetry`) | Connects to `/ws/telemetry` WebSocket, receives live 1Hz JSON payload, and verifies `tick_index`, `service`, `metrics`, `prediction`, and `cluster_state` schema. | `PASSED` |
 | **3** | `test_03_system_e2e.py` | `test_app_spa_delivery` | Frontend Delivery (`/app/`) | Asserts `/app/` serves production HTML single-page app containing `<div id="root">` mount and Kintsugi branding. | `PASSED` |
 | **3** | `test_03_system_e2e.py` | `test_static_assets_resolved_200` | Static Asset Server (`/assets/*`) | Validates compiled Vite production assets exist in `frontend/dist/assets/` and serve with HTTP 200 and proper JavaScript/CSS MIME content headers. | `PASSED` |
+| **3** | `test_03_system_e2e.py` | `test_diagnostic_plots_served_from_single_source` | Static Plots Server (`/app/plots/*`) | Validates Phase 1 diagnostic plots resolve cleanly from the single source in `phase1_prediction/plots/`. | `PASSED` |
 | **✦ Summary** | **3 Tiers** | **23 Test Cases Total** | **End-to-End System Integrity** | **100% Pass Rate (0 Failures, 0 Regressions)** | **`23/23 PASSED`** |
 
 ---
@@ -565,11 +564,9 @@ Invoke-RestMethod -Uri "http://localhost:8000/api/status" | ConvertTo-Json -Dept
   "cluster_mode": "LIVE_K8S",
   "raw_mode": "live",
   "is_k8s_connected": true,
-  "cluster_source": "live",
   "prometheus_reachable": true,
   "llm_backend": "groq",
   "groq_configured": true,
-  "dataset_rows": 0,
   "autonomous_mode": true
 }
 ```
@@ -792,9 +789,8 @@ Write-Host "-----------------------------------------------------------------`n"
 ```powershell
 cd C:\Users\akank\Downloads\k8\Kubepulse-ai
 
-# Force Live Kubernetes Cluster Mode & Groq Cloud Qwen3.8-27B
-$env:CLUSTER_MODE = "LIVE_K8S"
-$env:LLM_BACKEND  = "GROQ_CLOUD"
+# Configure Groq Cloud Qwen3.8-27B
+$env:LLM_PROVIDER = "groq"
 $env:GROQ_MODEL   = "qwen/qwen3.8-27b"
 
 # Start FastAPI server with hot-reload
@@ -969,43 +965,39 @@ kintsugi-sre/
 │   └── SLIDE_DECK_AND_DEMO_GUIDE.md# Technical walkthrough notes
 ├── frontend/                       # React 19 + Tailwind CSS + @xyflow/react + Recharts
 │   ├── public/
-│   │   ├── slides.html             # Interactive Systems Architecture Slide Deck
-│   │   └── plots/                  # Diagnostic evaluation plots served to UI & slide deck
+│   │   └── slides.html             # Interactive Systems Architecture Slide Deck
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── TopBar.jsx          # Mode Switcher, LLM Switcher, Benchmark Modal Trigger
+│   │   │   ├── TopBar.jsx          # Mode Switcher, Strands Orb, Benchmark Modal Trigger
 │   │   │   ├── ClusterTopology.jsx # @xyflow/react 10-Service Mesh, 3-Node HUD & ✦ Gold Seam
-│   │   │   ├── TelemetryCharts.jsx # Recharts Live Area Charts, TTE Horizon & 5-Fault Chaos Deck
+│   │   │   ├── TelemetryCharts.jsx # Recharts Live Area Charts, TTE Horizon & 8-Fault Chaos Deck
 │   │   │   └── AgentConsole.jsx    # 6-Stage LangGraph Trace, 5-Guardrail HUD & HITL Terminal
 │   │   ├── App.jsx                 # Command Center Orchestrator & ML/SARIMA Benchmark Modal
 │   │   ├── index.css               # Obsidian & Liquid Gold Cyber-SRE glassmorphic styling
 │   │   └── main.jsx
 │   └── dist/                       # Production Static Build served by FastAPI
 ├── k8s_manifests/
-│   ├── deployment.yaml             # K8s Deployment Manifest
-│   ├── service.yaml                # K8s Service Manifest
 │   ├── rbac.yaml                   # Least-privilege ServiceAccount, ClusterRole & Binding
-│   ├── kintsugi_agent.yaml         # Unified In-Cluster Agent Deployment Spec
+│   ├── kintsugi_agent.yaml         # In-Cluster Agent Deployment & Service Spec
 │   ├── sample_microservices.yaml   # 10 OnlineBoutique Microservices emitting JSON logs
-│   ├── dashboard-admin.yaml        # Admin ServiceAccount for Kubernetes Dashboard v2.7.0
 │   └── prom-values.yaml            # Tuned kube-prometheus-stack Helm values
 ├── phase1_prediction/
-│   ├── data_pipeline.py            # Leak-free 89-feature Z-score & Drain3 feature pipeline
+│   ├── data_pipeline.py            # Leak-free 89-feature Z-score & log feature pipeline
 │   ├── train_and_evaluate.py       # 4-Model Ablation study, TTE Regressor & diagnostic plots
 │   ├── sarima_benchmark.py         # Classical SARIMA(1,1,1)x(1,0,1)_12 vs. XGBRegressor study
 │   ├── dataset/                    # Chronologically partitioned leak-free CSV datasets
-│   ├── plots/                      # 4 Diagnostic plots (ablation, confusion matrix, SHAP, lead time)
+│   ├── plots/                      # Single-source diagnostic plots (served to README, docs & UI)
 │   └── saved_models/               # Serialized native C++ JSON models & feature metadata
 ├── phase2_remediation/
-│   ├── actions.py                  # Pydantic schemas & Deterministic Rule Fallback Matrix
+│   ├── actions.py                  # Pydantic schemas, service registry & Fallback Matrix
 │   ├── guardrails.py               # 5 mandatory SRE Safety Guardrails + K8s dry_run="All"
 │   ├── llm_client.py               # Groq Cloud (qwen/qwen3.8-27b) + LM Studio + <think> parser
+│   ├── prometheus_collector.py     # Live PromQL per-service metrics collector
 │   ├── k8s_adapter.py              # Official K8s Python SDK + 3-Node live cluster adapter
 │   ├── langgraph_agent.py          # 6-Node LangGraph StateGraph Architecture & Ambient Agent
 │   └── remediation_benchmark.py    # Pre/Post recovery & MTTR evaluation across 5 chaos scenarios
 ├── scripts/
-│   ├── test_remediation_agent.py   # Standalone CLI agent & guardrail test runner
-│   └── inspect_nezha.py            # Nezha dataset sanity checking & timestamp validation
+│   └── test_remediation_agent.py   # Standalone CLI agent & guardrail test runner
 └── tests/
     ├── test_01_unit.py             # Tier 1: Feature schema, SARIMA, Qwen parser & guardrail unit tests
     ├── test_02_integration.py      # Tier 2: LangGraph autonomous & HITL workflow integration tests

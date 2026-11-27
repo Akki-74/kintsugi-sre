@@ -11,52 +11,12 @@ import json
 import time
 import logging
 import urllib.request
-import urllib.error
 from typing import Dict, Any, Optional, List
 from urllib.parse import quote
 
 logger = logging.getLogger("Kintsugi.PrometheusCollector")
 
-# Default PromQL queries for per-pod/container telemetry
-# These match the Nezha dataset metric columns for seamless interoperability
-PROMQL_QUERIES = {
-    # CPU usage rate as percentage of limit (0-100%)
-    "CpuUsageRate(%)": (
-        '100 * sum by (pod) ('
-        '  rate(container_cpu_usage_seconds_total{namespace="hipster", container="server"}[1m])'
-        ') / sum by (pod) ('
-        '  kube_pod_container_resource_limits{namespace="hipster", container="server", resource="cpu"}'
-        ')'
-    ),
-    # Memory usage rate as percentage of limit (0-100%)
-    "MemoryUsageRate(%)": (
-        '100 * sum by (pod) ('
-        '  container_memory_working_set_bytes{namespace="hipster", container="server"}'
-        ') / sum by (pod) ('
-        '  kube_pod_container_resource_limits{namespace="hipster", container="server", resource="memory"}'
-        ')'
-    ),
-    # Network receive bytes per second
-    "PodNetworkReceiveBytesPerSec": (
-        'sum by (pod) ('
-        '  rate(container_network_receive_bytes_total{namespace="hipster"}[1m])'
-        ')'
-    ),
-    # Network transmit bytes per second
-    "PodNetworkTransmitBytesPerSec": (
-        'sum by (pod) ('
-        '  rate(container_network_transmit_bytes_total{namespace="hipster"}[1m])'
-        ')'
-    ),
-    # Container restart count (cumulative)
-    "ContainerRestartCount": (
-        'sum by (pod) ('
-        '  kube_pod_container_status_restarts_total{namespace="hipster", container="server"}'
-        ')'
-    ),
-}
-
-# Simplified per-service queries (aggregated across pods of same deployment)
+# Per-service PromQL queries (aggregated across pods of same deployment)
 SERVICE_QUERIES = {
     "cpu_usage_pct": (
         '100 * sum by (container) ('
@@ -152,72 +112,3 @@ class PrometheusCollector:
                 metrics[metric_name] = 0.0
         self._metrics_cache[service] = (now, metrics)
         return metrics
-
-    def get_all_services_metrics(self) -> Dict[str, Dict[str, float]]:
-        """Returns live metrics for all 10 OnlineBoutique microservices."""
-        services = [
-            "frontend", "checkoutservice", "cartservice", "paymentservice",
-            "productcatalogservice", "currencyservice", "shippingservice",
-            "recommendationservice", "adservice", "emailservice"
-        ]
-        all_metrics = {}
-        for svc in services:
-            all_metrics[svc] = self.get_service_metrics(svc)
-        return all_metrics
-
-    def get_cluster_wide_snapshot(self) -> Dict[str, Any]:
-        """Returns a broad cluster-level telemetry snapshot."""
-        snapshot = {
-            "timestamp": time.time(),
-            "prometheus_url": self.prometheus_url,
-            "is_reachable": self.is_reachable,
-            "services": {},
-        }
-
-        if not self.is_reachable:
-            return snapshot
-
-        # Batch CPU query for all pods
-        cpu_results = self.query_instant(PROMQL_QUERIES["CpuUsageRate(%)"])
-        mem_results = self.query_instant(PROMQL_QUERIES["MemoryUsageRate(%)"])
-        restart_results = self.query_instant(PROMQL_QUERIES["ContainerRestartCount"])
-
-        def _pod_to_service(pod_name: str) -> str:
-            """Extract deployment/service name from pod name."""
-            # e.g., 'checkoutservice-79d5bf9974-bd5b5' -> 'checkoutservice'
-            parts = pod_name.rsplit("-", 2)
-            if len(parts) >= 3:
-                return parts[0]
-            return pod_name
-
-        # Aggregate by service
-        svc_data: Dict[str, Dict[str, Any]] = {}
-        for r in cpu_results:
-            pod = r["metric"].get("pod", "")
-            svc = _pod_to_service(pod)
-            svc_data.setdefault(svc, {})
-            try:
-                svc_data[svc]["cpu_usage_pct"] = round(float(r["value"][1]), 2)
-            except (ValueError, TypeError):
-                pass
-
-        for r in mem_results:
-            pod = r["metric"].get("pod", "")
-            svc = _pod_to_service(pod)
-            svc_data.setdefault(svc, {})
-            try:
-                svc_data[svc]["memory_usage_pct"] = round(float(r["value"][1]), 2)
-            except (ValueError, TypeError):
-                pass
-
-        for r in restart_results:
-            pod = r["metric"].get("pod", "")
-            svc = _pod_to_service(pod)
-            svc_data.setdefault(svc, {})
-            try:
-                svc_data[svc]["restart_count"] = int(float(r["value"][1]))
-            except (ValueError, TypeError):
-                pass
-
-        snapshot["services"] = svc_data
-        return snapshot
