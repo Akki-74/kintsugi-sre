@@ -3,423 +3,1197 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Kintsugi-AI | Systems Architecture & ML Engineering Deck</title>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Plus+Jakarta+Sans:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <title>Kintsugi-AI | Systems Architecture &amp; ML Engineering Deck</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #060911;
-      --card: rgba(13, 19, 34, 0.92);
+      --bg: #050811;
+      --bg-2: #090e1c;
+      --card: rgba(12, 18, 34, 0.78);
+      --card-border: rgba(148, 163, 184, 0.16);
       --gold: #f59e0b;
-      --gold-light: #fcd34d;
+      --gold-light: #fde047;
       --cyan: #38bdf8;
       --emerald: #10b981;
+      --violet: #a855f7;
       --rose: #f43f5e;
       --text: #f8fafc;
       --muted: #94a3b8;
+      --text-soft: #cbd5e1;
     }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'Plus Jakarta Sans', sans-serif;
+
+    html, body {
+      width: 100%;
+      height: 100%;
       background-color: var(--bg);
       color: var(--text);
+      font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
       overflow: hidden;
-      width: 100vw;
-      height: 100vh;
+      -webkit-font-smoothing: antialiased;
     }
+
+    h1, h2, h3, .display { font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif; }
+    .mono, code { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace; }
+
+    /* Ambient Canvas Backdrop */
+    .ambient-bg {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background-color: var(--bg);
+      background-image:
+        radial-gradient(circle at 12% 14%, rgba(147, 36, 253, 0.18), transparent 38%),
+        radial-gradient(circle at 88% 18%, rgba(5, 69, 174, 0.20), transparent 40%),
+        radial-gradient(circle at 50% 88%, rgba(245, 158, 11, 0.10), transparent 44%),
+        linear-gradient(180deg, #050811 0%, #070b17 100%);
+    }
+    .ambient-grid {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.28;
+      background-size: 36px 36px;
+      background-image:
+        linear-gradient(to right, rgba(148, 163, 184, 0.06) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(148, 163, 184, 0.06) 1px, transparent 1px);
+    }
+
+    /* Deck Viewport */
     .deck {
       position: relative;
+      z-index: 1;
       width: 100vw;
-      height: 100vh;
+      height: 100dvh;
+      min-height: 100vh;
       overflow: hidden;
     }
+
+    /* Top Thin Progress Ribbon */
+    .progress-track {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: rgba(148, 163, 184, 0.12);
+      z-index: 50;
+    }
+    .progress-fill {
+      height: 100%;
+      width: 16.66%;
+      background: linear-gradient(90deg, #9324fd 0%, #38bdf8 50%, #f59e0b 100%);
+      transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 0 12px rgba(245, 158, 11, 0.6);
+    }
+
+    /* Slide Wrapper */
     .slide {
       position: absolute;
       inset: 0;
-      width: 100vw;
-      height: 100vh;
-      padding: clamp(1.2rem, 3.2vh, 2.8rem) clamp(1.5rem, 4.5vw, 4.5rem);
+      width: 100%;
+      height: 100%;
+      padding: clamp(0.65rem, 2.2vh, 1.65rem) clamp(0.85rem, 3vw, 2.75rem);
       display: flex;
-      flex-direction: column;
-      justify-content: space-between;
+      align-items: center;
+      justify-content: center;
       opacity: 0;
       pointer-events: none;
-      transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-      transform: scale(0.985);
-      background-color: var(--bg);
-      background-image:
-        radial-gradient(circle at 15% 15%, rgba(245, 158, 11, 0.12), transparent 35%),
-        radial-gradient(circle at 85% 80%, rgba(56, 189, 248, 0.10), transparent 35%);
+      transform: translateY(10px) scale(0.988);
+      transition: opacity 0.34s cubic-bezier(0.16, 1, 0.3, 1), transform 0.34s cubic-bezier(0.16, 1, 0.3, 1);
       z-index: 1;
       overflow: hidden;
     }
     .slide.active {
       opacity: 1;
       pointer-events: auto;
-      transform: scale(1);
+      transform: translateY(0) scale(1);
       z-index: 10;
     }
-    h1, h2, h3 { font-family: 'Space Grotesk', sans-serif; }
-    .mono { font-family: 'JetBrains Mono', monospace; }
-    .badge {
-      display: inline-flex; align-items: center; gap: 0.5rem;
-      padding: 0.35rem 0.9rem; border-radius: 999px;
-      background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.4);
-      color: var(--gold-light); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
-    }
-    .title-xl { font-size: 3.4rem; line-height: 1.1; font-weight: 700; margin-top: 1rem; }
-    .gold-grad {
-      background: linear-gradient(135deg, #fef08a 0%, #f59e0b 50%, #d97706 100%);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    }
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin: auto 0; }
-    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin: auto 0; }
-    .card {
-      background: var(--card); border: 1px solid rgba(148, 163, 184, 0.16);
-      border-radius: 1rem; padding: 1.5rem; backdrop-filter: blur(16px);
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
-    }
-    .card-gold { border-color: rgba(245, 158, 11, 0.45); box-shadow: 0 0 30px rgba(245, 158, 11, 0.12); }
-    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin-top: 0.8rem; }
-    th, td { padding: 0.65rem 0.85rem; text-align: left; border-bottom: 1px solid rgba(148, 163, 184, 0.14); }
-    th { color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; }
-    .highlight-row { background: rgba(245, 158, 11, 0.12); font-weight: 600; color: var(--gold-light); }
-    .metric-big { font-size: 2.5rem; font-weight: 700; font-family: 'Space Grotesk', sans-serif; }
-    .plot-img { width: 100%; max-height: 250px; object-fit: contain; border-radius: 0.6rem; border: 1px solid rgba(255,255,255,0.1); background: #fff; padding: 4px; }
-    .footer-nav {
-      display: flex; justify-content: space-between; align-items: center;
-      border-top: 1px solid rgba(148, 163, 184, 0.14); padding-top: 1rem; color: var(--muted); font-size: 0.8rem;
-    }
-    .btn {
-      background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(245, 158, 11, 0.4);
-      color: var(--gold-light); padding: 0.45rem 1rem; border-radius: 0.5rem; cursor: pointer; font-family: 'JetBrains Mono', monospace;
-      font-size: 0.8rem;
-    }
-    .btn:hover { background: rgba(245, 158, 11, 0.2); }
-    ul { list-style: none; }
-    ul li { margin-bottom: 0.6rem; display: flex; align-items: flex-start; gap: 0.6rem; font-size: 0.95rem; color: #cbd5e1; }
-    ul li::before { content: "✦"; color: var(--gold); font-weight: bold; flex-shrink: 0; }
 
-    /* SLIDE 5: Full Viewport Precision Auto-Fitting for Any Zoom & Screen Size */
-    #slide-5 {
+    /* Centered Stage Shell — Auto-Scaled on Tight Viewports without Breaking Grid */
+    .slide-shell {
+      width: min(100%, 1340px);
+      height: 100%;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
+      gap: clamp(0.45rem, 1.3vh, 1.05rem);
+      transform-origin: center center;
     }
-    #slide-5 .slide-header {
+
+    .slide-head {
       flex-shrink: 0;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 0.75rem;
     }
-    #slide-5 .slide-header h2 {
-      font-size: clamp(1.2rem, 2.2vh + 0.4vw, 2.1rem);
-      margin-top: clamp(0.2rem, 0.6vh, 0.5rem);
+    .slide-head-main { min-width: 0; }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.28rem 0.8rem;
+      border-radius: 999px;
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px solid rgba(245, 158, 11, 0.42);
+      color: var(--gold-light);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: clamp(0.66rem, 0.8vw, 0.76rem);
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .slide-title {
+      font-size: clamp(1.3rem, 2.3vw, 2.15rem);
       line-height: 1.15;
+      font-weight: 700;
+      margin-top: 0.38rem;
+      letter-spacing: -0.015em;
     }
-    #slide-5 .grid-2 {
+
+    .title-hero {
+      font-size: clamp(2.1rem, 4.4vw, 3.6rem);
+      line-height: 1.04;
+      font-weight: 700;
+      margin-top: 0.45rem;
+      letter-spacing: -0.025em;
+    }
+
+    .gold-grad {
+      background: linear-gradient(135deg, #fef08a 0%, #f59e0b 52%, #fb923c 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .cyan-grad {
+      background: linear-gradient(135deg, #a5f3fc 0%, #38bdf8 55%, #818cf8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    /* Body Containers */
+    .slide-body {
       flex: 1;
       min-height: 0;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: clamp(0.75rem, 1.8vw, 1.8rem);
-      align-items: stretch;
-      margin: clamp(0.35rem, 1vh, 0.9rem) 0;
-    }
-    #slide-5 .card {
-      padding: clamp(0.6rem, 1.4vh, 1.25rem);
       display: flex;
       flex-direction: column;
-      justify-content: space-evenly;
-      min-height: 0;
-      overflow: hidden;
+      justify-content: center;
+      gap: clamp(0.6rem, 1.3vh, 1rem);
     }
-    #slide-5 .card h3 {
-      font-size: clamp(0.88rem, 1.6vh, 1.15rem);
-      margin-bottom: clamp(0.25rem, 0.7vh, 0.5rem);
-      flex-shrink: 0;
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: clamp(0.75rem, 1.5vw, 1.35rem);
+      align-items: stretch;
     }
-    #slide-5 ul {
+    .grid-2-asym {
+      display: grid;
+      grid-template-columns: 1.14fr 0.86fr;
+      gap: clamp(0.75rem, 1.5vw, 1.35rem);
+      align-items: stretch;
+    }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: clamp(0.7rem, 1.4vw, 1.25rem);
+      align-items: stretch;
+    }
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: clamp(0.55rem, 1.1vw, 0.95rem);
+      align-items: stretch;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: 0.95rem;
+      padding: clamp(0.75rem, 1.6vh, 1.25rem);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      box-shadow: 0 18px 42px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    .card-gold {
+      border-color: rgba(245, 158, 11, 0.45);
+      background: linear-gradient(155deg, rgba(28, 21, 10, 0.72) 0%, rgba(11, 16, 30, 0.84) 100%);
+      box-shadow: 0 0 32px rgba(245, 158, 11, 0.12), inset 0 1px 0 rgba(253, 224, 71, 0.18);
+    }
+    .card-cyan {
+      border-color: rgba(56, 189, 248, 0.38);
+      background: linear-gradient(155deg, rgba(8, 25, 44, 0.72) 0%, rgba(11, 16, 30, 0.84) 100%);
+    }
+
+    .kpi-tile {
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      border-radius: 0.85rem;
+      padding: clamp(0.55rem, 1.2vh, 0.9rem) clamp(0.7rem, 1.2vw, 1rem);
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      flex: 1;
-      min-height: 0;
-      gap: clamp(0.2rem, 0.5vh, 0.45rem);
+      gap: 0.2rem;
     }
-    #slide-5 ul li {
-      margin-bottom: 0;
-      font-size: clamp(0.68rem, 1.35vh, 0.88rem);
-      line-height: 1.3;
+    .kpi-num {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(1.35rem, 2.2vw, 2.05rem);
+      font-weight: 700;
+      line-height: 1.05;
+    }
+    .kpi-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-soft);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .kpi-sub {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--muted);
+    }
+
+    .section-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 0.45rem;
+    }
+
+    code.inline {
+      font-size: 0.86em;
+      padding: 0.1rem 0.36rem;
+      border-radius: 0.28rem;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      color: #e2e8f0;
+      overflow-wrap: anywhere;
+    }
+
+    ul.clean-list { list-style: none; display: flex; flex-direction: column; gap: clamp(0.35rem, 0.85vh, 0.62rem); min-width: 0; }
+    ul.clean-list li {
+      position: relative;
+      display: block;
+      padding-left: 1.15rem;
+      font-size: clamp(0.76rem, 1.15vw, 0.9rem);
+      line-height: 1.44;
+      color: var(--text-soft);
+      overflow-wrap: anywhere;
+    }
+    ul.clean-list li::before {
+      content: "✦";
+      position: absolute;
+      left: 0;
+      top: 0.02rem;
+      color: var(--gold);
+      font-weight: 700;
+    }
+
+    /* Tables & Inline Data Bars */
+    table { width: 100%; border-collapse: collapse; font-size: clamp(0.72rem, 1vw, 0.84rem); }
+    th, td {
+      padding: clamp(0.32rem, 0.75vh, 0.55rem) clamp(0.42rem, 0.75vw, 0.7rem);
+      text-align: left;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+      vertical-align: middle;
+    }
+    th {
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      font-weight: 600;
+    }
+    .highlight-row {
+      background: linear-gradient(90deg, rgba(245, 158, 11, 0.16), rgba(245, 158, 11, 0.05));
+      font-weight: 700;
+      color: var(--gold-light);
+    }
+    .bar-track {
+      height: 5px;
+      width: 100%;
+      background: rgba(30, 41, 59, 0.9);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 0.2rem;
+    }
+    .bar-fill { height: 100%; border-radius: 999px; }
+
+    /* Interactive Plots */
+    .plot-card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      border-radius: 0.75rem;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      padding: 0.48rem;
+      cursor: zoom-in;
+      transition: border-color 0.2s ease, transform 0.2s ease;
+    }
+    .plot-card:hover {
+      border-color: rgba(245, 158, 11, 0.55);
+      transform: translateY(-1px);
+    }
+    .plot-img {
+      width: 100%;
+      height: clamp(115px, 21vh, 210px);
+      object-fit: contain;
+      border-radius: 0.48rem;
+      background: #ffffff;
+      padding: 3px;
+    }
+    .plot-cap {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.72rem;
+      color: var(--text-soft);
+      padding: 0 0.2rem;
+    }
+
+    /* Two-Brain & LangGraph Flow Strips */
+    .flow-strip {
+      display: flex;
+      align-items: stretch;
       gap: 0.45rem;
     }
-    #slide-5 ul li code {
-      font-size: 0.88em;
-      padding: 0.1rem 0.35rem;
-      border-radius: 0.25rem;
-      background: rgba(15, 23, 42, 0.7);
-      border: 1px solid rgba(148, 163, 184, 0.2);
-    }
-    #slide-5 .table-title {
-      font-size: clamp(0.65rem, 1.2vh, 0.75rem);
-      margin-bottom: clamp(0.2rem, 0.4vh, 0.35rem);
-      flex-shrink: 0;
-    }
-    #slide-5 table {
-      width: 100%;
+    .flow-node {
       flex: 1;
-      min-height: 0;
-      margin-top: 0;
-      font-size: clamp(0.66rem, 1.3vh, 0.84rem);
+      min-width: 0;
+      border-radius: 0.68rem;
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      background: rgba(15, 23, 42, 0.65);
+      padding: 0.52rem 0.6rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 0.16rem;
     }
-    #slide-5 th, #slide-5 td {
-      padding: clamp(0.22rem, 0.65vh, 0.5rem) clamp(0.4rem, 0.7vw, 0.75rem);
-      line-height: 1.25;
+    .flow-node.gold {
+      border-color: rgba(245, 158, 11, 0.5);
+      background: rgba(245, 158, 11, 0.1);
     }
-    #slide-5 .footer-nav {
+    .flow-node.emerald {
+      border-color: rgba(16, 185, 129, 0.45);
+      background: rgba(16, 185, 129, 0.1);
+    }
+    .flow-arrow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--gold);
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      font-size: 0.9rem;
       flex-shrink: 0;
-      padding-top: clamp(0.35rem, 0.9vh, 0.8rem);
-      font-size: clamp(0.68rem, 1.2vh, 0.8rem);
-    }
-    #slide-5 .btn {
-      padding: clamp(0.3rem, 0.75vh, 0.45rem) clamp(0.6rem, 1vw, 1rem);
-      font-size: clamp(0.7rem, 1.2vh, 0.8rem);
     }
 
-    /* Fallback for extreme zoom (>=175%) or tiny screen heights (<= 580px) */
-    @media (max-height: 580px), (max-width: 860px) {
-      body, .deck {
-        overflow-y: auto !important;
+    /* Feature Space Mini Pills */
+    .feat-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.45rem;
+    }
+    .feat-pill {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      padding: 0.36rem 0.6rem;
+      border-radius: 0.55rem;
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      font-size: 0.74rem;
+    }
+
+    /* Footer Controls */
+    .footer-nav {
+      flex-shrink: 0;
+      display: flex;
+      flex-wrap: nowrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.65rem;
+      border-top: 1px solid rgba(148, 163, 184, 0.16);
+      padding-top: clamp(0.45rem, 1vh, 0.75rem);
+      color: var(--muted);
+      font-size: 0.75rem;
+      min-width: 0;
+    }
+    .footer-nav > span {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
+    }
+    .nav-center {
+      display: flex;
+      align-items: center;
+      gap: 0.38rem;
+      flex-shrink: 0;
+    }
+    .dot-btn {
+      width: 24px;
+      height: 7px;
+      border-radius: 999px;
+      border: none;
+      background: rgba(148, 163, 184, 0.25);
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+    .dot-btn.active {
+      width: 36px;
+      background: linear-gradient(90deg, var(--gold), var(--gold-light));
+      box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+    }
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      flex-wrap: nowrap;
+      flex-shrink: 0;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      color: var(--text-soft);
+      padding: 0.34rem 0.68rem;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      font-weight: 600;
+      white-space: nowrap;
+      transition: all 0.18s ease;
+    }
+    .btn:hover:not(:disabled) {
+      border-color: rgba(245, 158, 11, 0.6);
+      color: var(--gold-light);
+      background: rgba(245, 158, 11, 0.14);
+    }
+    .btn-primary {
+      background: rgba(245, 158, 11, 0.18);
+      border-color: rgba(245, 158, 11, 0.55);
+      color: var(--gold-light);
+    }
+    .btn:disabled { opacity: 0.38; cursor: not-allowed; }
+
+    /* Plot Lightbox Overlay */
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: rgba(4, 7, 15, 0.88);
+      backdrop-filter: blur(10px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+    .lightbox.open { display: flex; }
+    .lightbox-box {
+      max-width: min(94vw, 1080px);
+      max-height: 90dvh;
+      background: #0b1120;
+      border: 1px solid rgba(245, 158, 11, 0.45);
+      border-radius: 1rem;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+      box-shadow: 0 25px 70px rgba(0, 0, 0, 0.85);
+    }
+    .lightbox-box img {
+      max-width: 100%;
+      max-height: 76dvh;
+      object-fit: contain;
+      background: #fff;
+      border-radius: 0.6rem;
+      padding: 6px;
+    }
+
+    /* Portrait / Mobile / Ultra-narrow Fallback (Clean Scrollable Flow without Tiny Font) */
+    @media (max-width: 760px) {
+      html, body, .deck {
         height: auto !important;
-        min-height: 100vh !important;
+        min-height: 100dvh;
+        overflow-y: auto !important;
       }
       .slide {
         position: relative !important;
-        min-height: 100vh !important;
         height: auto !important;
-        padding: 1.25rem !important;
-        overflow-y: visible !important;
-      }
-      .slide:not(.active) {
-        display: none !important;
-      }
-      #slide-5 .grid-2 {
-        grid-template-columns: 1fr !important;
-        gap: 0.85rem !important;
-        margin: 0.75rem 0 !important;
-      }
-      #slide-5 .card {
-        padding: 0.85rem !important;
+        min-height: 100dvh;
+        padding: 1rem !important;
+        align-items: flex-start !important;
         overflow: visible !important;
       }
+      .slide:not(.active) { display: none !important; }
+      .slide-shell {
+        width: 100% !important;
+        height: auto !important;
+        transform: none !important;
+      }
+      .grid-2, .grid-2-asym, .grid-3, .grid-4, .feat-grid {
+        grid-template-columns: 1fr !important;
+      }
+      .flow-strip {
+        flex-direction: column !important;
+      }
+      .flow-arrow { transform: rotate(90deg); height: 14px; }
+      .plot-img { height: auto; max-height: 240px; }
+      table { display: block; overflow-x: auto; white-space: nowrap; }
+      .footer-nav { flex-wrap: wrap; }
+      .footer-nav > span { white-space: normal; }
+      .nav-actions { flex-wrap: wrap; }
+    }
+
+    /* Clean Print / Export to PDF Layout */
+    @media print {
+      @page { size: landscape; margin: 0.25in; }
+      html, body, .deck {
+        height: auto !important;
+        overflow: visible !important;
+        background: #050811 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .progress-track, .footer-nav, .lightbox { display: none !important; }
+      .slide {
+        position: relative !important;
+        opacity: 1 !important;
+        transform: none !important;
+        pointer-events: auto !important;
+        height: 94vh !important;
+        page-break-after: always;
+        break-after: page;
+        padding: 0.25in !important;
+      }
+      .slide-shell { width: 100% !important; height: 100% !important; transform: none !important; }
     }
   </style>
 </head>
 <body>
+  <div class="ambient-bg"></div>
+  <div class="ambient-grid"></div>
+  <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+
   <div class="deck" id="deck">
-    <!-- SLIDE 1: OVERVIEW -->
+
+    <!-- ==================== SLIDE 01: EXECUTIVE OVERVIEW ==================== -->
     <section class="slide active" id="slide-1">
-      <div>
-        <span class="badge">01 // Autonomous Kubernetes SRE &amp; Multi-Modal AIOps</span>
-        <h1 class="title-xl">KINTSUGI <span class="gold-grad">AI</span></h1>
-        <p style="font-size: 1.25rem; color: var(--muted); max-width: 780px; margin-top: 0.8rem;">
-          Multi-Modal Kubernetes Failure Prediction (XGBoost + SARIMA) &amp; Closed-Loop LangGraph Remediation Engine.
-        </p>
-      </div>
-      <div class="grid-3">
-        <div class="card card-gold">
-          <div class="mono" style="color: var(--gold); font-size: 0.75rem;">PHILOSOPHY</div>
-          <h3 style="margin: 0.4rem 0; font-size: 1.25rem;">Repair With Gold (金継ぎ)</h3>
-          <p style="color: var(--muted); font-size: 0.9rem; line-height: 1.5;">
-            Every predicted and healed microservice fracture is illuminated with a permanent Golden Kintsugi Seam on the live Kubernetes topology mesh, turning cluster incidents into verifiable structural resilience.
-          </p>
+      <div class="slide-shell">
+        <div class="slide-head">
+          <div class="slide-head-main">
+            <span class="badge">01 // Autonomous Kubernetes SRE &amp; Multi-Modal AIOps</span>
+            <h1 class="title-hero">KINTSUGI <span class="gold-grad">AI</span> <span class="mono" style="font-size: 0.42em; color: var(--gold-light); vertical-align: middle; opacity: 0.85;">金継ぎ v2.4</span></h1>
+            <p style="font-size: clamp(0.88rem, 1.35vw, 1.12rem); color: var(--muted); max-width: 820px; margin-top: 0.35rem; line-height: 1.45;">
+              Sub-Second Multi-Modal Failure Prediction (<strong style="color:var(--text);">XGBoost + SARIMA Benchmark</strong>) paired with a Guardrailed 6-Node <strong style="color:var(--text);">LangGraph</strong> Remediation Engine.
+            </p>
+          </div>
+          <div class="mono" style="font-size: 0.74rem; color: var(--emerald); background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.35); padding: 0.35rem 0.7rem; border-radius: 0.55rem;">
+            ● "Catch the cracks. Verify the fix."
+          </div>
         </div>
-        <div class="card">
-          <div class="mono" style="color: var(--cyan); font-size: 0.75rem;">PREDICTIVE ENGINE</div>
-          <h3 style="margin: 0.4rem 0; font-size: 1.25rem;">89-Feature Multi-Modal ML</h3>
-          <p style="color: var(--muted); font-size: 0.9rem; line-height: 1.5;">
-            Fuses Prometheus container telemetry (CPU, Memory, Network, FS) with Drain3-parsed JSON container logs and compares classical SARIMA forecasting against Multi-Modal XGBoost.
-          </p>
+
+        <div class="slide-body">
+          <!-- Headline Verified Metrics Strip -->
+          <div class="grid-4">
+            <div class="kpi-tile">
+              <span class="kpi-label">6-Class Macro-F1</span>
+              <span class="kpi-num gold-grad">0.7132</span>
+              <span class="kpi-sub">+153.3% vs Static Rules (0.2816)</span>
+            </div>
+            <div class="kpi-tile">
+              <span class="kpi-label">Horizon TTE MAE</span>
+              <span class="kpi-num cyan-grad">0.71 min</span>
+              <span class="kpi-sub">-89.1% Error vs SARIMA (6.50 min)</span>
+            </div>
+            <div class="kpi-tile">
+              <span class="kpi-label">Fast-Brain Latency</span>
+              <span class="kpi-num" style="color: var(--emerald);">0.67 ms</span>
+              <span class="kpi-sub">364× faster peak · 1Hz Ready</span>
+            </div>
+            <div class="kpi-tile">
+              <span class="kpi-label">Closed-Loop MTTR</span>
+              <span class="kpi-num" style="color: #e879f9;">27.6 sec</span>
+              <span class="kpi-sub">5/5 Scenarios · 0 Unsafe Actions</span>
+            </div>
+          </div>
+
+          <!-- 3 Core Pillars -->
+          <div class="grid-3">
+            <div class="card card-gold">
+              <div class="section-tag" style="color: var(--gold);">PHILOSOPHY // 金継ぎ</div>
+              <h3 style="font-size: 1.08rem; margin-bottom: 0.45rem;">Repair With Liquid Gold</h3>
+              <p style="color: var(--text-soft); font-size: 0.84rem; line-height: 1.52;">
+                Every predicted and healed microservice fracture seals the node with a permanent <strong>✦ Kintsugi Gold Seam</strong> across the interactive topology mesh, turning outages into verified cluster resilience.
+              </p>
+            </div>
+            <div class="card card-cyan">
+              <div class="section-tag" style="color: var(--cyan);">FAST BRAIN // PREDICTION</div>
+              <h3 style="font-size: 1.08rem; margin-bottom: 0.45rem;">89-Feature Multi-Modal ML</h3>
+              <p style="color: var(--text-soft); font-size: 0.84rem; line-height: 1.52;">
+                Fuses <strong>76</strong> baseline-relative PromQL &amp; cgroup temporal metrics with <strong>13</strong> Drain3-parsed JSON container log signals over a 3-minute sliding window, cutting false alarms by <strong>88.4%</strong> (<code class="inline">1.71/hr</code>).
+              </p>
+            </div>
+            <div class="card">
+              <div class="section-tag" style="color: var(--emerald);">SLOW BRAIN // CONTROL PLANE</div>
+              <h3 style="font-size: 1.08rem; margin-bottom: 0.45rem;">Qwen 3.8-27B + 5 SRE Gates</h3>
+              <p style="color: var(--text-soft); font-size: 0.84rem; line-height: 1.52;">
+                6-node LangGraph StateGraph powered by Groq <code class="inline">qwen/qwen3.8-27b</code> with deterministic fallback and strict Kubernetes <code class="inline">dry_run="All"</code> server validation.
+              </p>
+            </div>
+          </div>
         </div>
-        <div class="card">
-          <div class="mono" style="color: var(--emerald); font-size: 0.75rem;">CONTROL PLANE</div>
-          <h3 style="margin: 0.4rem 0; font-size: 1.25rem;">Qwen3.8-27B + 5 SRE Guardrails</h3>
-          <p style="color: var(--muted); font-size: 0.9rem; line-height: 1.5;">
-            6-Node LangGraph state machine powered by Groq Qwen3.8-27B executing real Kubernetes API mutations gated by Kubernetes API <code class="mono">dry_run="All"</code> and deterministic safety locks.
-          </p>
-        </div>
-      </div>
-      <div class="footer-nav">
-        <span class="mono">SLIDE 01 / 05 — OVERVIEW &amp; PHILOSOPHY</span>
-        <div>
-          <button class="btn" onclick="window.location.href='/app/'">Launch Command Center ↗</button>
-          <button class="btn" onclick="move(1)">Next →</button>
-        </div>
+
+        <div class="footer-nav" data-nav="0"></div>
       </div>
     </section>
 
-    <!-- SLIDE 2: MULTI-MODAL FEATURE PIPELINE -->
+    <!-- ==================== SLIDE 02: DATA & 89-FEATURE PIPELINE ==================== -->
     <section class="slide" id="slide-2">
-      <div>
-        <span class="badge">02 // Telemetry &amp; Feature Engineering</span>
-        <h2 style="font-size: 2.3rem; margin-top: 0.6rem;">Multi-Modal Observability Pipeline (Nezha FSE'23)</h2>
-      </div>
-      <div class="grid-2">
-        <div class="card">
-          <h3 style="color: var(--gold-light); margin-bottom: 0.8rem;">Zero-Leakage Chronological Partitioning</h3>
-          <ul>
-            <li><strong>10-Microservice OnlineBoutique Mesh:</strong> Trained &amp; evaluated on real multi-modal Kubernetes chaos traces across <code class="mono">hipster</code> services.</li>
-            <li><strong>89 Engineered Features per Window:</strong> 3-minute sliding lookback computing rolling mean, std, min/max, 1st-order derivative slopes, and pod-to-namespace z-scores.</li>
-            <li><strong>Multi-Modal Log Fusion:</strong> Extracts Error/Warn burst velocity, HTTP 5xx rates, OOM/timeout keyword flags, and Shannon template entropy.</li>
-            <li><strong>Strict Chronological Split:</strong> Day 1 Train (<code class="mono">24,180</code> rows), Day 2 Test (<code class="mono">4,340</code> rows), Day 2 Unseen Validation Holdout (<code class="mono">2,480</code> rows).</li>
-          </ul>
+      <div class="slide-shell">
+        <div class="slide-head">
+          <div class="slide-head-main">
+            <span class="badge">02 // Observability &amp; Feature Engineering</span>
+            <h2 class="slide-title">89-Feature Multi-Modal Pipeline (Nezha FSE'23)</h2>
+          </div>
+          <span class="mono" style="font-size: 0.74rem; color: var(--muted);">Window W = 3 min (180s) · Zero-Leakage Temporal Splits</span>
         </div>
-        <div class="card" style="display:flex; flex-direction:column; gap:0.8rem; justify-content:center;">
-          <img src="./plots/feature_importance.png" class="plot-img" alt="SHAP Feature Importance" />
-          <img src="./plots/confusion_matrix.png" class="plot-img" alt="Confusion Matrix" />
+
+        <div class="slide-body">
+          <div class="grid-2-asym">
+            <div class="card" style="justify-content: space-between; gap: 0.7rem;">
+              <div>
+                <div class="section-tag" style="color: var(--gold-light);">MULTI-MODAL VECTOR COMPOSITION (ℝ⁸⁹)</div>
+                <div class="feat-grid">
+                  <div class="feat-pill"><span>Raw cgroup / RPC / Host</span><strong class="mono" style="color:var(--cyan);">19 dims</strong></div>
+                  <div class="feat-pill"><span>Baseline Z-Scores (ε = 1e⁻⁶)</span><strong class="mono" style="color:var(--cyan);">19 dims</strong></div>
+                  <div class="feat-pill"><span>Lag-1 Deltas (Δ₁) &amp; Slopes</span><strong class="mono" style="color:var(--gold-light);">18 dims</strong></div>
+                  <div class="feat-pill"><span>Roll-3 Means &amp; Std Deviations</span><strong class="mono" style="color:var(--gold-light);">18 dims</strong></div>
+                  <div class="feat-pill"><span>Drain3 Log &amp; Error Signals</span><strong class="mono" style="color:var(--emerald);">13 dims</strong></div>
+                  <div class="feat-pill"><span>Latency &amp; Network Ratios</span><strong class="mono" style="color:#e879f9;">2 dims</strong></div>
+                </div>
+              </div>
+
+              <ul class="clean-list">
+                <li><strong>10-Microservice OnlineBoutique Mesh:</strong> Trained across live chaos scenarios in the <code class="inline">hipster</code> namespace (<code class="inline">frontend</code>, <code class="inline">checkout</code>, <code class="inline">cart</code>, <code class="inline">payment</code>, <code class="inline">productcatalog</code>, etc.).</li>
+                <li><strong>+200M Sec Timestamp Bug Fixed:</strong> Discards corrupted Nezha integer <code class="inline">TimeStamp</code> offsets (~6.3 yr skew) in favor of exact UTC <code class="inline">Time</code> alignment.</li>
+                <li><strong>Zero-Leakage Episode Splits:</strong> Per-folder chronological partition — Day 1 Train (<code class="inline">24,180</code> rows), Day 2 Test (<code class="inline">4,340</code> rows), and Holdout (<code class="inline">2,480</code> rows).</li>
+              </ul>
+            </div>
+
+            <div class="card" style="justify-content: space-between; gap: 0.55rem;">
+              <div class="section-tag" style="color: var(--cyan); margin-bottom: 0;">EMPIRICAL DIAGNOSTICS (CLICK PLOT TO ZOOM)</div>
+              <div class="plot-card" onclick="openPlot('./plots/feature_importance.png', 'Top 20 Multi-Modal Feature Importance (Log Templates + Z-Scores)')">
+                <img src="./plots/feature_importance.png" class="plot-img" alt="Top 20 Feature Importance" />
+                <div class="plot-cap"><span>Feature Importance Gain</span><span class="mono" style="color:var(--gold-light);">Expand ↗</span></div>
+              </div>
+              <div class="plot-card" onclick="openPlot('./plots/confusion_matrix.png', '6-Class Normalized Confusion Matrix (Model 3: Multi-Modal XGBoost)')">
+                <img src="./plots/confusion_matrix.png" class="plot-img" alt="6-Class Confusion Matrix" />
+                <div class="plot-cap"><span>6-Class Normalized Confusion Matrix</span><span class="mono" style="color:var(--gold-light);">Expand ↗</span></div>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="footer-nav">
-        <span class="mono">SLIDE 02 / 05 — DATASET &amp; ARCHITECTURE</span>
-        <div><button class="btn" onclick="move(-1)">← Prev</button> <button class="btn" onclick="move(1)">Next →</button></div>
+
+        <div class="footer-nav" data-nav="1"></div>
       </div>
     </section>
 
-    <!-- SLIDE 3: ABLATION & SARIMA VS XGBOOST BENCHMARK -->
+    <!-- ==================== SLIDE 03: ABLATION & SARIMA VS XGBOOST ==================== -->
     <section class="slide" id="slide-3">
-      <div>
-        <span class="badge">03 // Model Evaluation &amp; Time-Series Benchmarking</span>
-        <h2 style="font-size: 2.2rem; margin-top: 0.6rem;">4-Model Ablation &amp; SARIMA vs. XGBoost Forecasting</h2>
-      </div>
-      <div class="grid-2">
-        <div class="card">
-          <div class="mono" style="color: var(--gold); font-size: 0.75rem;">TABLE 1 // 6-CLASS FAULT TAXONOMY &amp; REGIME A ONSET LATENCY</div>
-          <table>
-            <thead>
-              <tr><th>Model Architecture</th><th>Precision</th><th>Recall</th><th>Macro-F1</th><th>Anomaly F1</th><th>Latency (Δt)</th></tr>
-            </thead>
-            <tbody>
-              <tr><td>Baseline 0: Static Rules</td><td>0.2700</td><td>0.3495</td><td>0.2816</td><td>0.1683</td><td>148.0s</td></tr>
-              <tr><td>Model 1: IsolationForest</td><td>0.2794</td><td>0.3643</td><td>0.2782</td><td>0.1889</td><td>132.5s</td></tr>
-              <tr><td>Model 2: Temporal XGBoost</td><td>0.5414</td><td>0.6141</td><td>0.5706</td><td>0.5789</td><td>108.4s</td></tr>
-              <tr class="highlight-row"><td>✦ Model 3: Multi-Modal XGBoost</td><td>0.7088</td><td>0.7189</td><td>0.7132</td><td>0.7225</td><td>87.6s</td></tr>
-            </tbody>
-          </table>
+      <div class="slide-shell">
+        <div class="slide-head">
+          <div class="slide-head-main">
+            <span class="badge">03 // Quantitative Benchmarking</span>
+            <h2 class="slide-title">4-Model Ablation Study &amp; SARIMA vs. XGBRegressor</h2>
+          </div>
+          <span class="mono" style="font-size: 0.74rem; color: var(--gold-light);">Multi-Modal Log + Metric Fusion = +25.0% Relative Gain</span>
         </div>
-        <div class="card card-gold">
-          <div class="mono" style="color: var(--cyan); font-size: 0.75rem;">TABLE 2 // REGIME B TIME-TO-EXHAUSTION (TTE): SARIMA VS. XGBREGRESSOR</div>
-          <table>
-            <thead>
-              <tr><th>Forecasting Architecture</th><th>TTE MAE (↓)</th><th>TTE RMSE (↓)</th><th>R² (↑)</th><th>Inference / Tick</th></tr>
-            </thead>
-            <tbody>
-              <tr><td>Classical SARIMA(1,1,1)×(1,0,1)₁₂</td><td>6.50 min</td><td>6.89 min</td><td>0.114</td><td>243.8 ms (Laggy)</td></tr>
-              <tr class="highlight-row"><td>✦ Kintsugi Multi-Modal XGBRegressor</td><td>0.71 min (-89%)</td><td>0.90 min (-87%)</td><td>0.846</td><td>0.67 ms (364× faster)</td></tr>
-            </tbody>
-          </table>
+
+        <div class="slide-body">
+          <div class="grid-2">
+            <!-- Table 1: Classification Ablation -->
+            <div class="card">
+              <div class="section-tag" style="color: var(--gold);">TABLE 1 // 6-CLASS FAULT CLASSIFICATION &amp; REGIME A ONSET</div>
+              <table>
+                <thead>
+                  <tr><th>Model Configuration</th><th>Prec / Rec</th><th>Macro-F1</th><th>Latency Δt</th><th>Top-1 Loc</th><th>FA/hr</th></tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Baseline 0: Static Rules</td>
+                    <td class="mono">0.27 / 0.35</td>
+                    <td>0.2816<div class="bar-track"><div class="bar-fill" style="width:39%; background:#64748b;"></div></div></td>
+                    <td>148.0s</td><td>33.3%</td><td>14.80</td>
+                  </tr>
+                  <tr>
+                    <td>Model 1: IsolationForest</td>
+                    <td class="mono">0.28 / 0.36</td>
+                    <td>0.2782<div class="bar-track"><div class="bar-fill" style="width:39%; background:#64748b;"></div></div></td>
+                    <td>132.5s</td><td>41.7%</td><td>9.42</td>
+                  </tr>
+                  <tr>
+                    <td>Model 2: Temporal XGBoost</td>
+                    <td class="mono">0.54 / 0.61</td>
+                    <td>0.5706<div class="bar-track"><div class="bar-fill" style="width:80%; background:var(--cyan);"></div></div></td>
+                    <td>108.4s</td><td>58.3%</td><td>3.14</td>
+                  </tr>
+                  <tr class="highlight-row">
+                    <td>✦ Model 3: Multi-Modal XGB</td>
+                    <td class="mono">0.71 / 0.72</td>
+                    <td>0.7132<div class="bar-track"><div class="bar-fill" style="width:100%; background:linear-gradient(90deg,var(--gold),var(--gold-light));"></div></div></td>
+                    <td>87.6s</td><td>66.7%</td><td>1.71*</td>
+                  </tr>
+                </tbody>
+              </table>
+              <p class="mono" style="font-size: 0.68rem; color: var(--muted); margin-top: 0.55rem;">
+                *FA/hr measured at threshold p &gt; 0.75 (drops to 1.28/hr at p &gt; 0.85) · Binary Anomaly F1: 0.7225 · 17/24 episodes caught.
+              </p>
+            </div>
+
+            <!-- Table 2: SARIMA vs XGBRegressor -->
+            <div class="card card-gold" style="justify-content: space-between;">
+              <div>
+                <div class="section-tag" style="color: var(--cyan);">TABLE 2 // REGIME B TTE HORIZON (40 GRADUAL TRAJECTORIES)</div>
+                <table>
+                  <thead>
+                    <tr><th>Forecasting Architecture</th><th>TTE MAE (↓)</th><th>RMSE (↓)</th><th>R² Score</th><th>Tick Latency</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>SARIMA(1,1,1)×(1,0,1)₁₂</td>
+                      <td>6.50 min</td>
+                      <td>6.89 min</td>
+                      <td>0.114</td>
+                      <td style="color:var(--rose);">79.3ms avg<br><span style="font-size:0.8em;">(243.8ms peak)</span></td>
+                    </tr>
+                    <tr class="highlight-row">
+                      <td>✦ Multi-Modal XGBRegressor</td>
+                      <td>0.71 min<br><span style="font-size:0.82em;">(-89.1%)</span></td>
+                      <td>0.90 min<br><span style="font-size:0.82em;">(-87.0%)</span></td>
+                      <td>0.846</td>
+                      <td style="color:var(--emerald);">0.67–0.93ms<br><span style="font-size:0.82em;">(85×–364× faster)</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div style="margin-top: 0.65rem; padding: 0.6rem 0.75rem; border-radius: 0.65rem; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3);">
+                <div class="mono" style="font-size: 0.7rem; color: var(--emerald); font-weight: 700;">1Hz STREAMING REAL-TIME VIABILITY</div>
+                <p style="font-size: 0.78rem; color: var(--text-soft); margin-top: 0.2rem; line-height: 1.4;">
+                  Across 10 microservices, SARIMA takes <strong>~2.44s/cycle</strong> (dropping frames), while <code class="inline">XGBRegressor</code> evaluates all 10 pods in <strong>&lt; 6.7 ms</strong> (<strong>99.3%</strong> loop headroom) with a <strong>4.7 min</strong> mean warning lead time.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Compact Plot Strip on Bottom of Slide 3 -->
+          <div class="grid-2">
+            <div class="plot-card" style="flex-direction: row; align-items: center; gap: 0.75rem;" onclick="openPlot('./plots/ablation_comparison.png', '4-Model Ablation Progression (Baseline 0 → Multi-Modal Model 3)')">
+              <img src="./plots/ablation_comparison.png" style="width: 145px; height: 76px; object-fit: cover; border-radius: 0.45rem; background:#fff;" alt="Ablation Plot" />
+              <div style="min-width:0;">
+                <div style="font-weight:700; font-size:0.84rem;">Ablation Study Progression</div>
+                <div class="mono" style="font-size:0.7rem; color:var(--muted);">Macro-F1 jump: 0.2816 → 0.5706 → 0.7132 · Click to zoom ↗</div>
+              </div>
+            </div>
+            <div class="plot-card" style="flex-direction: row; align-items: center; gap: 0.75rem;" onclick="openPlot('./plots/lead_time_distribution.png', 'Regime B Early-Warning Horizon Lead-Time Distribution (Mean 4.7 min)')">
+              <img src="./plots/lead_time_distribution.png" style="width: 145px; height: 76px; object-fit: cover; border-radius: 0.45rem; background:#fff;" alt="Lead Time Plot" />
+              <div style="min-width:0;">
+                <div style="font-weight:700; font-size:0.84rem;">Regime B Horizon Lead-Time Distribution</div>
+                <div class="mono" style="font-size:0.7rem; color:var(--muted);">Mean 4.7 min warning prior to OOMKilled eviction · Click to zoom ↗</div>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="footer-nav">
-        <span class="mono">SLIDE 03 / 05 — ML &amp; SARIMA BENCHMARKS</span>
-        <div><button class="btn" onclick="move(-1)">← Prev</button> <button class="btn" onclick="move(1)">Next →</button></div>
+
+        <div class="footer-nav" data-nav="2"></div>
       </div>
     </section>
 
-    <!-- SLIDE 4: QUALITY ASSURANCE & INFRASTRUCTURE -->
+    <!-- ==================== SLIDE 04: TWO-BRAIN ARCHITECTURE ==================== -->
     <section class="slide" id="slide-4">
-      <div>
-        <span class="badge">04 // Infrastructure &amp; Verification</span>
-        <h2 style="font-size: 2.3rem; margin-top: 0.6rem;">3-Tier Automated Verification &amp; Live Endpoints</h2>
-      </div>
-      <div class="grid-3">
-        <div class="card">
-          <div class="metric-big gold-grad">23 / 23</div>
-          <div class="mono" style="color: var(--muted); font-size: 0.75rem; margin-bottom: 0.8rem;">3-TIER PYTEST SUITE PASSING</div>
-          <ul>
-            <li><strong>Tier 1 (Unit):</strong> 89-feature schema, SARIMA bounds, Qwen <code class="mono">&lt;think&gt;</code> parser, 5 SRE guardrails.</li>
-            <li><strong>Tier 2 (Integration):</strong> 6-node LangGraph autonomous + Human-in-the-Loop approval flows.</li>
-            <li><strong>Tier 3 (System E2E):</strong> FastAPI REST, WebSocket 1Hz stream, React bundle delivery.</li>
-          </ul>
+      <div class="slide-shell">
+        <div class="slide-head">
+          <div class="slide-head-main">
+            <span class="badge">04 // End-to-End Two-Brain Architecture</span>
+            <h2 class="slide-title">Dual-Brain Control Plane: Sub-Millisecond ML → Agentic K8s Healing</h2>
+          </div>
+          <span class="mono" style="font-size: 0.74rem; color: var(--cyan);">AUTONOMOUS &amp; HUMAN-IN-THE-LOOP MODES</span>
         </div>
-        <div class="card card-gold">
-          <div class="metric-big" style="color: var(--cyan);">3 Nodes</div>
-          <div class="mono" style="color: var(--muted); font-size: 0.75rem; margin-bottom: 0.8rem;">MULTI-NODE KUBERNETES TOPOLOGY</div>
-          <ul>
-            <li><code class="mono">desktop-control-plane</code> + <code class="mono">desktop-worker</code> + <code class="mono">desktop-worker2</code></li>
-            <li>10 OnlineBoutique microservices in <code class="mono">hipster</code> namespace</li>
-            <li>Prometheus + Grafana + K8s Web Dashboard v2.7.0</li>
-          </ul>
+
+        <div class="slide-body">
+          <!-- Stage-to-Stage Two-Brain Visual Architecture Diagram -->
+          <div class="card">
+            <div class="section-tag" style="color: var(--gold-light);">CLOSED-LOOP TELEMETRY-TO-MUTATION DATAFLOW</div>
+            <div class="flow-strip">
+              <div class="flow-node">
+                <span class="mono" style="font-size:0.66rem; color:var(--cyan);">1. OBSERVE (1Hz)</span>
+                <strong style="font-size:0.82rem;">3-Node K8s Cluster</strong>
+                <span style="font-size:0.72rem; color:var(--muted);">PromQL + Drain3 Logs (10 pods)</span>
+              </div>
+              <div class="flow-arrow">→</div>
+              <div class="flow-node gold">
+                <span class="mono" style="font-size:0.66rem; color:var(--gold-light);">2. FAST BRAIN (&lt;1ms)</span>
+                <strong style="font-size:0.82rem;">XGBoost Classifier + TTE</strong>
+                <span style="font-size:0.72rem; color:var(--muted);">89 features · Triggers p ≥ 0.50</span>
+              </div>
+              <div class="flow-arrow">→</div>
+              <div class="flow-node">
+                <span class="mono" style="font-size:0.66rem; color:#e879f9;">3. REASON (SLOW BRAIN)</span>
+                <strong style="font-size:0.82rem;">Groq Qwen 3.8-27B</strong>
+                <span style="font-size:0.72rem; color:var(--muted);">&lt;think&gt; strip + Fallback Matrix</span>
+              </div>
+              <div class="flow-arrow">→</div>
+              <div class="flow-node">
+                <span class="mono" style="font-size:0.66rem; color:var(--rose);">4. VALIDATE</span>
+                <strong style="font-size:0.82rem;">5 Safety Gates + HITL</strong>
+                <span style="font-size:0.72rem; color:var(--muted);">Bounds, 120s lock, dry_run="All"</span>
+              </div>
+              <div class="flow-arrow">→</div>
+              <div class="flow-node emerald">
+                <span class="mono" style="font-size:0.66rem; color:var(--emerald);">5. SEAL GOLD SEAM</span>
+                <strong style="font-size:0.82rem;">AppsV1 / CoreV1 API</strong>
+                <span style="font-size:0.72rem; color:var(--muted);">Verify health → ✦ Gold Seam</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="card card-cyan">
+              <div class="section-tag" style="color: var(--cyan);">6-CLASS OPERATIONAL TAXONOMY</div>
+              <table>
+                <thead><tr><th>ID</th><th>Fault Class</th><th>Root Cause</th><th>Regime</th></tr></thead>
+                <tbody>
+                  <tr><td class="mono">0</td><td class="mono">NORMAL</td><td>Healthy baseline (|Z| &lt; 1.5σ)</td><td>FA/hr</td></tr>
+                  <tr><td class="mono">1</td><td class="mono">CPU_EXHAUSTION</td><td>Throttling / compute loops</td><td style="color:var(--cyan);">Regime A</td></tr>
+                  <tr><td class="mono">2</td><td class="mono">MEMORY_EXHAUSTION</td><td>Gradual heap leak → OOMKilled</td><td style="color:var(--gold-light);">Regime B</td></tr>
+                  <tr><td class="mono">3</td><td class="mono">DISK_EXHAUSTION</td><td>Ephemeral volume saturation</td><td style="color:var(--gold-light);">Regime B</td></tr>
+                  <tr><td class="mono">4</td><td class="mono">NETWORK_DEGRADATION</td><td>Envoy P95 latency / packet loss</td><td style="color:var(--cyan);">Regime A</td></tr>
+                  <tr><td class="mono">5</td><td class="mono">SERVICE_DISRUPTION</td><td>HTTP 5xx exception bursts</td><td style="color:var(--cyan);">Regime A</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="card card-gold" style="justify-content: space-between;">
+              <div>
+                <div class="section-tag" style="color: var(--gold);">PYDANTIC ACTION CONTRACT &amp; RESILIENCE</div>
+                <ul class="clean-list">
+                  <li><strong>Structured Pydantic Plan:</strong> Enforces typed JSON (<code class="inline">action_type</code>, <code class="inline">target_service</code>, <code class="inline">parameters</code>, <code class="inline">confidence</code>) parsed cleanly after stripping Qwen <code class="inline">&lt;think&gt;...&lt;/think&gt;</code> blocks.</li>
+                  <li><strong>Zero-Downtime Fallback Matrix:</strong> Deterministic SRE playbook executes safely even if cloud LLM inference times out or is unreachable.</li>
+                  <li><strong>Real Multi-Node Physical Impact:</strong> Verified node cordoning (<code class="inline">CoreV1Api.patch_node</code>) across <code class="inline">desktop-worker</code> / <code class="inline">desktop-worker2</code> and pod auto-scaling (1→3).</li>
+                </ul>
+              </div>
+              <div class="mono" style="font-size: 0.72rem; color: var(--gold-light); background: rgba(245,158,11,0.1); padding: 0.45rem 0.65rem; border-radius: 0.5rem; border: 1px solid rgba(245,158,11,0.3);">
+                POST /api/agent/mode ↔ Seamless toggle: AUTONOMOUS ⇄ HUMAN_IN_THE_LOOP
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="card">
-          <div class="metric-big" style="color: var(--emerald);">Live</div>
-          <div class="mono" style="color: var(--muted); font-size: 0.75rem; margin-bottom: 0.8rem;">CLOUD &amp; LOCAL COMMAND CENTER</div>
-          <ul>
-            <li><strong>Cloud App:</strong> <a href="https://kintsugi-ai.onrender.com/app/" target="_blank" style="color:var(--gold-light);">kintsugi-ai.onrender.com</a></li>
-            <li><strong>Local Command Center:</strong> <a href="http://localhost:8000/app/" target="_blank" style="color:var(--cyan);">localhost:8000/app/</a></li>
-            <li><strong>K8s Dashboard:</strong> <a href="https://localhost:8443" target="_blank" style="color:var(--emerald);">localhost:8443</a></li>
-          </ul>
-        </div>
-      </div>
-      <div class="footer-nav">
-        <span class="mono">SLIDE 04 / 05 — INFRASTRUCTURE &amp; VERIFICATION</span>
-        <div><button class="btn" onclick="move(-1)">← Prev</button> <button class="btn" onclick="move(1)">Next →</button></div>
+
+        <div class="footer-nav" data-nav="3"></div>
       </div>
     </section>
 
-    <!-- SLIDE 5: LANGGRAPH + 5 GUARDRAILS + MTTR -->
+    <!-- ==================== SLIDE 05: CLOSED-LOOP GUARDRAILS & MTTR ==================== -->
     <section class="slide" id="slide-5">
-      <div class="slide-header">
-        <span class="badge">05 // Closed-Loop Remediation</span>
-        <h2>LangGraph State Machine &amp; 5 Deterministic SRE Guardrails</h2>
-      </div>
-      <div class="grid-2">
-        <div class="card card-gold">
-          <h3 style="color: var(--gold-light);">5 Hardened SRE Safety Gates</h3>
-          <ul>
-            <li><strong>1. Namespace Isolation Lock:</strong> Hard-blocks mutations in <code class="mono">kube-system</code>, <code class="mono">monitoring</code>, and <code class="mono">local-path-storage</code>.</li>
-            <li><strong>2. Strict 6-Action Allowlist:</strong> <code class="mono">SCALE_DEPLOYMENT</code>, <code class="mono">RESTART_POD</code>, <code class="mono">PATCH_RESOURCES</code>, <code class="mono">CORDON_AND_RELOCATE</code>, <code class="mono">APPLY_TRAFFIC_SHAPING</code>, <code class="mono">NO_ACTION</code>.</li>
-            <li><strong>3. Parameter Clamping:</strong> Replicas clamped to <code class="mono">[1, 5]</code>; memory limits capped at <code class="mono">1024Mi</code>.</li>
-            <li><strong>4. Anti-Thrashing Cooldown:</strong> Per-service <code class="mono">120s</code> lock prevents oscillation loops.</li>
-            <li><strong>5. K8s API Server Dry-Run Gate:</strong> Every mutation is validated via <code class="mono">dry_run="All"</code> against <code class="mono">kube-apiserver</code> before live execution.</li>
-          </ul>
+      <div class="slide-shell">
+        <div class="slide-head">
+          <div class="slide-head-main">
+            <span class="badge">05 // Closed-Loop Safety &amp; Live Remediation</span>
+            <h2 class="slide-title">5 Deterministic Safety Guardrails &amp; Empirical Recovery MTTR</h2>
+          </div>
+          <span class="mono" style="font-size: 0.74rem; color: var(--emerald);">100% Recovery · 0 Unbounded Mutations</span>
         </div>
-        <div class="card">
-          <div class="mono table-title" style="color: var(--emerald);">LIVE CLUSTER REMEDIATION MTTR (3-NODE K8S v1.36.1)</div>
-          <table>
-            <thead>
-              <tr><th>Fault Scenario</th><th>Service</th><th>Action Executed</th><th>MTTR</th></tr>
-            </thead>
-            <tbody>
-              <tr><td>CPU Contention</td><td>checkoutservice</td><td>SCALE_DEPLOYMENT (1→3)</td><td>22.0s</td></tr>
-              <tr><td>Memory Leak</td><td>cartservice</td><td>PATCH_RESOURCES (512Mi)</td><td>28.0s</td></tr>
-              <tr><td>Exception Burst</td><td>paymentservice</td><td>RESTART_POD (Rolling)</td><td>18.0s</td></tr>
-              <tr><td>Node Disk Pressure</td><td>productcatalog</td><td>CORDON_AND_RELOCATE</td><td>35.0s</td></tr>
-              <tr><td>Envoy Latency</td><td>frontend</td><td>APPLY_TRAFFIC_SHAPING</td><td>35.0s</td></tr>
-              <tr class="highlight-row"><td colspan="2">✦ Overall Closed-Loop Mean MTTR</td><td>100% Recovery / 0 Unsafe</td><td>27.6s</td></tr>
-            </tbody>
-          </table>
+
+        <div class="slide-body">
+          <div class="grid-2-asym">
+            <div class="card card-gold" style="justify-content: space-between;">
+              <div>
+                <div class="section-tag" style="color: var(--gold-light);">5 HARDENED SRE SAFETY GATES (GUARDRAILS NODE)</div>
+                <ul class="clean-list">
+                  <li><strong>1. Namespace Isolation Lock:</strong> Hard-blocks any mutation targeting control namespaces (<code class="inline">kube-system</code>, <code class="inline">monitoring</code>, <code class="inline">local-path-storage</code>); locks scope strictly to <code class="inline">hipster</code>.</li>
+                  <li><strong>2. Strict 6-Action Allowlist:</strong> Rejects arbitrary commands outside <code class="inline">SCALE_DEPLOYMENT</code>, <code class="inline">RESTART_POD</code>, <code class="inline">PATCH_RESOURCES</code>, <code class="inline">CORDON_AND_RELOCATE</code>, <code class="inline">APPLY_TRAFFIC_SHAPING</code>, and <code class="inline">NO_ACTION</code>.</li>
+                  <li><strong>3. Parameter Clamping Contract:</strong> Enforces replica bounds <code class="inline">[1, 5]</code> and caps container memory limits at <code class="inline">1024Mi</code>.</li>
+                  <li><strong>4. Anti-Thrashing Cooldown Lock:</strong> Per-microservice <code class="inline">120s</code> lock prevents oscillation loops across consecutive ticks.</li>
+                  <li><strong>5. Kubernetes API Server Dry-Run:</strong> Validates every mutation with <code class="inline">dry_run="All"</code> against <code class="inline">kube-apiserver</code> prior to execution.</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="section-tag" style="color: var(--emerald);">VERIFIED LIVE RECOVERY DELTAS (REMEDIATION_BENCHMARK.JSON)</div>
+              <table>
+                <thead>
+                  <tr><th>Scenario (Service)</th><th>Executed Action</th><th>Pre → Post (t=60s)</th><th>MTTR</th></tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>CPU Contention</strong><br><span class="mono" style="color:var(--muted);font-size:0.82em;">checkoutservice</span></td>
+                    <td class="mono" style="font-size:0.85em;">SCALE (1→3)</td>
+                    <td class="mono" style="color:var(--emerald);">92.4% → 36.14%</td>
+                    <td class="mono"><strong>22.0s</strong></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Memory Leak</strong><br><span class="mono" style="color:var(--muted);font-size:0.82em;">cartservice</span></td>
+                    <td class="mono" style="font-size:0.85em;">PATCH (512Mi)</td>
+                    <td class="mono" style="color:var(--emerald);">94.8% → 32.73%</td>
+                    <td class="mono"><strong>28.0s</strong></td>
+                  </tr>
+                  <tr>
+                    <td><strong>5xx Burst</strong><br><span class="mono" style="color:var(--muted);font-size:0.82em;">paymentservice</span></td>
+                    <td class="mono" style="font-size:0.85em;">RESTART_POD</td>
+                    <td class="mono" style="color:var(--emerald);">42.0% → 97.64%</td>
+                    <td class="mono"><strong>18.0s</strong></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Disk Pressure</strong><br><span class="mono" style="color:var(--muted);font-size:0.82em;">productcatalog</span></td>
+                    <td class="mono" style="font-size:0.85em;">CORDON_RELOCATE</td>
+                    <td class="mono" style="color:var(--emerald);">100ms → 9.21ms</td>
+                    <td class="mono"><strong>35.0s</strong></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Envoy Latency</strong><br><span class="mono" style="color:var(--muted);font-size:0.82em;">frontend</span></td>
+                    <td class="mono" style="font-size:0.85em;">TRAFFIC_SHAPE</td>
+                    <td class="mono" style="color:var(--emerald);">2.80s → 0.31s</td>
+                    <td class="mono"><strong>35.0s</strong></td>
+                  </tr>
+                  <tr class="highlight-row">
+                    <td colspan="2">✦ Mean Closed-Loop Recovery</td>
+                    <td>5 / 5 Succeeded (Groq Qwen3.8)</td>
+                    <td class="mono">27.6s</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="footer-nav">
-        <span class="mono">SLIDE 05 / 05 — CLOSED-LOOP REMEDIATION &amp; MTTR</span>
-        <div>
-          <button class="btn" onclick="move(-1)">← Prev</button>
-          <button class="btn" onclick="window.location.href='/app/'">Open Live Command Center ↗</button>
-        </div>
+
+        <div class="footer-nav" data-nav="4"></div>
       </div>
     </section>
+
+    <!-- ==================== SLIDE 06: INFRASTRUCTURE, QA & COMMAND CENTER ==================== -->
+    <section class="slide" id="slide-6">
+      <div class="slide-shell">
+        <div class="slide-head">
+          <div class="slide-head-main">
+            <span class="badge">06 // Verification, Infrastructure &amp; Command Center UI</span>
+            <h2 class="slide-title">3-Tier Pytest Suite, 3-Node Kubernetes &amp; WebGL2 SRE Interface</h2>
+          </div>
+          <span class="mono" style="font-size: 0.74rem; color: var(--emerald);">Total Cloud Cost: $0.00 Free Tier Ready</span>
+        </div>
+
+        <div class="slide-body">
+          <div class="grid-3">
+            <div class="card card-gold" style="justify-content: space-between;">
+              <div>
+                <div class="kpi-num gold-grad">23 / 23</div>
+                <div class="section-tag" style="color: var(--muted); margin-top: 0.25rem;">3-TIER AUTOMATED PYTEST SUITE</div>
+                <ul class="clean-list">
+                  <li><strong>Tier 1 (9 Unit Tests):</strong> 89-feature schema alignment, Z-score safety floor, SARIMA bounds, <code class="inline">&lt;think&gt;</code> parser, 5 safety guardrails &amp; 120s cooldown.</li>
+                  <li><strong>Tier 2 (2 Integration Tests):</strong> Autonomous closed-loop remediation &amp; Human-in-the-Loop approval → Gold Seam state flow.</li>
+                  <li><strong>Tier 3 (12 System E2E Tests):</strong> FastAPI REST contracts, <code class="inline">1Hz</code> WebSocket telemetry stream, &amp; SPA static asset delivery.</li>
+                </ul>
+              </div>
+              <div class="mono" style="font-size: 0.72rem; color: var(--gold-light);">CI Ready: GitHub Actions + pytest</div>
+            </div>
+
+            <div class="card card-cyan" style="justify-content: space-between; gap: 0.55rem;">
+              <div>
+                <div class="kpi-num" style="color: var(--cyan);">3 Nodes</div>
+                <div class="section-tag" style="color: var(--muted); margin-top: 0.25rem;">KUBERNETES v1.36.1 OBSERVABILITY</div>
+                <ul class="clean-list">
+                  <li><strong>Cluster Nodes:</strong> <code class="inline">control-plane</code> + <code class="inline">worker</code> + <code class="inline">worker2</code> hosting all 10 OnlineBoutique deployments (<code class="inline">hipster</code>).</li>
+                  <li><strong>Monitoring Stack:</strong> Direct PromQL scraping (<a href="http://localhost:9090" target="_blank" rel="noreferrer" style="color:var(--cyan); text-decoration:none; border-bottom:1px dashed var(--cyan);">localhost:9090</a>), Grafana &amp; K8s Web Dashboard v2.7.0.</li>
+                  <li><strong>Packaging:</strong> In-cluster RBAC manifests + multi-stage Docker container running Python 3.11 + React 19 bundle.</li>
+                </ul>
+              </div>
+              <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;">
+                <a class="btn" href="https://localhost:8443" target="_blank" rel="noreferrer" style="flex:1; justify-content:center; border-color: rgba(56,189,248,0.45); color: var(--cyan); text-decoration:none;">
+                  K8s Dashboard (:8443) ↗
+                </a>
+                <a class="btn" href="http://localhost:3000" target="_blank" rel="noreferrer" style="flex:1; justify-content:center; border-color: rgba(245,158,11,0.45); color: var(--gold-light); text-decoration:none;">
+                  Grafana (:3000) ↗
+                </a>
+              </div>
+            </div>
+
+            <div class="card" style="justify-content: space-between; gap: 0.55rem;">
+              <div>
+                <div class="kpi-num" style="color: var(--emerald);">WebGL2 UI</div>
+                <div class="section-tag" style="color: var(--muted); margin-top: 0.25rem;">GLASSMORPHIC COMMAND CENTER v2.4</div>
+                <ul class="clean-list">
+                  <li><strong>3-Tier Service Mesh:</strong> Interactive XYFlow DAG displaying all 10 pods &amp; 14 live highlighted microservice connections.</li>
+                  <li><strong>GPU Shaders:</strong> Real-time <code class="inline">Lightfall</code> warp backdrop (10s cycle) &amp; 3-palette <code class="inline">Strands</code> header orb (5s cycle).</li>
+                  <li><strong>Live Endpoints:</strong>
+                    <a href="https://kintsugi-ai.onrender.com/app/" target="_blank" rel="noreferrer" style="color:var(--gold-light); text-decoration:none; border-bottom:1px dashed var(--gold);">Render Cloud</a> ·
+                    <a href="http://localhost:8000/app/" target="_blank" rel="noreferrer" style="color:var(--cyan); text-decoration:none; border-bottom:1px dashed var(--cyan);">localhost:8000/app/</a>
+                  </li>
+                </ul>
+              </div>
+              <button class="btn btn-primary" style="width: 100%; justify-content: center; padding: 0.5rem;" onclick="launchDashboard()">
+                Open Live SRE Command Center ↗
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="footer-nav" data-nav="5"></div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Empirical Plot Zoom Lightbox -->
+  <div class="lightbox" id="lightbox" onclick="closePlot(event)">
+    <div class="lightbox-box" onclick="event.stopPropagation()">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:1rem;">
+        <span class="mono" id="lightbox-title" style="color:var(--gold-light); font-size:0.84rem; font-weight:700;"></span>
+        <button class="btn" onclick="closePlot()">Close (Esc)</button>
+      </div>
+      <img id="lightbox-img" src="" alt="Expanded Diagnostic Plot" />
+    </div>
   </div>
 
   <script>
+    const SLIDE_TITLES = [
+      'SLIDE 01 / 06 — OVERVIEW & HEADLINE KPIS',
+      'SLIDE 02 / 06 — 89-FEATURE MULTIMODAL PIPELINE',
+      'SLIDE 03 / 06 — ABLATION & SARIMA BENCHMARKS',
+      'SLIDE 04 / 06 — TWO-BRAIN ARCHITECTURE & TAXONOMY',
+      'SLIDE 05 / 06 — GUARDRAILS & EMPIRICAL MTTR',
+      'SLIDE 06 / 06 — VERIFICATION & COMMAND CENTER'
+    ];
+
     let currentIdx = 0;
-    const slides = document.querySelectorAll('.slide');
+    const slides = Array.from(document.querySelectorAll('.slide'));
     const total = slides.length;
+    const progressFill = document.getElementById('progress-fill');
+    const lightbox = document.getElementById('lightbox');
+    const lightboxImg = document.getElementById('lightbox-img');
+    const lightboxTitle = document.getElementById('lightbox-title');
+
+    function launchDashboard() {
+      window.location.href = window.location.pathname.includes('/app/') ? './' : '/';
+    }
+
+    function openPlot(src, title) {
+      lightboxImg.src = src;
+      lightboxTitle.textContent = title;
+      lightbox.classList.add('open');
+    }
+
+    function closePlot() {
+      lightbox.classList.remove('open');
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen?.().catch(() => {});
+      } else {
+        document.exitFullscreen?.().catch(() => {});
+      }
+    }
+
+    /* Inject Consistent Footer Navigation into Every Slide */
+    document.querySelectorAll('.footer-nav[data-nav]').forEach((nav) => {
+      const idx = Number(nav.dataset.nav);
+      const dots = Array.from({ length: total })
+        .map((_, d) => `<button type="button" class="dot-btn ${d === idx ? 'active' : ''}" onclick="showSlide(${d})" aria-label="Go to slide ${d + 1}" title="Slide ${d + 1}"></button>`)
+        .join('');
+
+      nav.innerHTML = `
+        <span class="mono">${SLIDE_TITLES[idx]}</span>
+        <div class="nav-center">${dots}</div>
+        <div class="nav-actions">
+          <button type="button" class="btn" onclick="move(-1)" ${idx === 0 ? 'disabled' : ''}>← Prev</button>
+          <button type="button" class="btn" onclick="move(1)" ${idx === total - 1 ? 'disabled' : ''}>Next →</button>
+          <button type="button" class="btn" onclick="window.print()" title="Print or Save as PDF">PDF</button>
+          <button type="button" class="btn" onclick="toggleFullscreen()" title="Toggle Fullscreen (F)">⛶</button>
+          <button type="button" class="btn btn-primary" onclick="launchDashboard()">Command Center ↗</button>
+        </div>
+      `;
+    });
+
+    /* Proportional Viewport Stage Fitter:
+       Preserves exact slide layout at any desktop aspect ratio, window resize, or zoom level
+       without clipping or distorting grids; defers cleanly to stacked scroll on <=760px mobile. */
+    function fitActiveSlide() {
+      const mobile = window.matchMedia('(max-width: 760px)').matches;
+      slides.forEach((slide) => {
+        const shell = slide.querySelector('.slide-shell');
+        if (!shell) return;
+        shell.style.transform = '';
+        shell.style.width = '';
+        shell.style.height = '';
+        shell.style.flexShrink = '';
+        if (mobile) return;
+
+        const style = getComputedStyle(slide);
+        const padX = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+        const padY = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+        const availW = Math.max(320, slide.clientWidth - padX);
+        const availH = Math.max(220, slide.clientHeight - padY);
+
+        shell.style.flexShrink = '0';
+        const measure = (targetW) => {
+          shell.style.width = targetW + 'px';
+          shell.style.height = 'auto';
+          return {
+            w: targetW,
+            needW: Math.max(shell.scrollWidth, shell.offsetWidth),
+            needH: Math.max(shell.scrollHeight, shell.offsetHeight)
+          };
+        };
+
+        const m1 = measure(Math.min(availW, 1340));
+        if (m1.needH <= availH && m1.needW <= availW) {
+          shell.style.height = availH + 'px';
+          return;
+        }
+
+        const s1 = Math.min(availW / m1.needW, availH / m1.needH, 1);
+        let best = { w: m1.w, scale: s1, needH: m1.needH };
+        if (availW < 1220) {
+          const m2 = measure(1220);
+          const s2 = Math.min(availW / m2.needW, availH / m2.needH, 1);
+          if (s2 * m2.w > s1 * m1.w * 1.05 || m2.needH * s2 > m1.needH * s1) {
+            best = { w: m2.w, scale: s2, needH: m2.needH };
+          }
+        }
+        shell.style.width = best.w + 'px';
+        shell.style.height = Math.max(best.needH, Math.floor(availH / best.scale)) + 'px';
+        shell.style.transform = `scale(${best.scale.toFixed(4)})`;
+      });
+    }
 
     function showSlide(n) {
       currentIdx = Math.max(0, Math.min(total - 1, n));
       slides.forEach((s, i) => {
-        if (i === currentIdx) {
-          s.classList.add('active');
-        } else {
-          s.classList.remove('active');
-        }
+        s.classList.toggle('active', i === currentIdx);
       });
+      progressFill.style.width = (((currentIdx + 1) / total) * 100).toFixed(2) + '%';
+      requestAnimationFrame(fitActiveSlide);
     }
 
     function move(dir) {
@@ -427,11 +1201,40 @@
     }
 
     window.addEventListener('keydown', (e) => {
-      if (e.key === 'ArrowRight' || e.key === ' ') move(1);
-      if (e.key === 'ArrowLeft') move(-1);
+      if (lightbox.classList.contains('open')) {
+        if (e.key === 'Escape') closePlot();
+        return;
+      }
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        e.preventDefault();
+        move(1);
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        e.preventDefault();
+        move(-1);
+      } else if (e.key === 'Home') {
+        showSlide(0);
+      } else if (e.key === 'End') {
+        showSlide(total - 1);
+      } else if (e.key.toLowerCase() === 'f') {
+        toggleFullscreen();
+      }
     });
 
-    // Initialize slide 0
+    // Touch swipe navigation on mobile/tablets
+    let touchStartX = 0;
+    window.addEventListener('touchstart', (e) => {
+      touchStartX = e.changedTouches[0]?.clientX || 0;
+    }, { passive: true });
+    window.addEventListener('touchend', (e) => {
+      const dx = (e.changedTouches[0]?.clientX || 0) - touchStartX;
+      if (Math.abs(dx) > 65) move(dx < 0 ? 1 : -1);
+    }, { passive: true });
+
+    window.addEventListener('resize', () => requestAnimationFrame(fitActiveSlide));
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => requestAnimationFrame(fitActiveSlide));
+    }
+
     showSlide(0);
   </script>
 </body>
