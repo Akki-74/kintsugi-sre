@@ -56,10 +56,12 @@ export default function TopBar({
               cycleInterval={5}
               cycleTransition={2}
               glass
-              glassSize={1.08}
+              glassOpacity={0.62}
+              edgeFeather={0.16}
+              glassSize={0.98}
               energy={0.72}
               intensity={1.15}
-              glow={1.1}
+              glow={1.15}
               rim={1.15}
               speed={1.15}
               interactive
@@ -67,7 +69,7 @@ export default function TopBar({
             />
             <span className="pointer-events-none z-10 absolute bottom-0.5 right-0.5 flex h-2.5 w-2.5">
               <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${wsConnected ? 'bg-emerald-400' : 'bg-rose-400'}`} />
-              <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ring-2 ring-[#050811] ${wsConnected ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+              <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ring-2 ring-[#050811]/70 ${wsConnected ? 'bg-emerald-500' : 'bg-rose-500'}`} />
             </span>
           </div>
 

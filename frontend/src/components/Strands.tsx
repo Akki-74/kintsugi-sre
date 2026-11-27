@@ -289,9 +289,13 @@ void main() {
     float px = 1.0 / (min(res.x, res.y) * R);
     vec2 pc = p / R;
     float rho = length(pc);
+    vec3 auraCol = grade(clamp(0.42 * uColors[0] + 0.25 * uColors[3] + 0.45 * uColors[5], 0.0, 1.0));
+    float auraMask = (1.0 - uLight) * step(0.001, uEdgeFeather) * exp(-pow((rho - 0.97) / 0.12, 2.0)) * 0.22 * clamp(uGlow, 0.0, 1.5) * sstep(1.26, 0.98, rho) * appear;
+    vec3 auraRgb = auraCol * auraMask;
     if (rho > 1.0 + 2.0 * px) {
       float sh = uLight * 0.07 * exp(-pow((rho - 0.985) / 0.07, 2.0)) * smoothstep(-0.6, 0.4, -pc.y) * appear * uOpacity;
-      fragColor = vec4(0.0, 0.0, 0.0, sh);
+      float extA = max(sh, max(max(auraRgb.r, auraRgb.g), auraRgb.b));
+      fragColor = vec4(auraRgb * uOpacity, extA * uOpacity);
       return;
     }
     float r;
@@ -315,6 +319,9 @@ void main() {
     float hzk = 0.25 + 0.7 * pow(max(0.0, -d.x * 0.6 + d.y * 0.8), 2.0) + pow(max(0.0, d.x * 0.8 - d.y * 0.6), 2.0);
     float haze = exp(-pow((1.0 - r) / 0.09, 2.0)) * hzk * 0.13 * uRim;
     vec3 orb;
+    float aaEdge = clamp((1.0 - rho) / px + 0.5, 0.0, 1.0) * appear;
+    float featherCore = uEdgeFeather > 0.0 ? sstep(1.0, max(0.0, 1.0 - uEdgeFeather), rho) : 1.0;
+    float featherLight = uEdgeFeather > 0.0 ? sstep(1.0, max(0.0, 1.0 - uEdgeFeather * 0.45), rho) : 1.0;
     if (uLight > 0.5) {
       float lz = dot(d * r, vec2(-0.55, 0.83));
       vec3 body = mix(vec3(0.885, 0.893, 0.915), vec3(0.972, 0.975, 0.983), 0.5 + 0.5 * lz);
@@ -324,20 +331,17 @@ void main() {
       float spec = exp(-pow((r - 0.955) / 0.03, 2.0)) * pow(max(0.0, dot(d, vec2(-0.55, 0.83))), 3.0);
       orb = mix(orb, vec3(1.0), clamp(spec * 0.85 * uRim + haze * 0.6, 0.0, 1.0));
       float edge = exp(-pow((1.0 - r) / (0.01 + 1.2 * px), 2.0));
-      orb *= 1.0 - 0.12 * edge;
+      orb *= (1.0 - 0.12 * edge) * featherLight;
     } else {
-      vec3 baseGlass = vec3(0.04) * clamp(uGlassOpacity, 0.0, 1.0);
-      vec3 rimLight = (ring * key * uRim * (1.0 + 0.4 * level) + haze * vec3(1.0, 1.02, 1.04)) * mix(0.25, 1.0, uGlassOpacity);
-      orb = baseGlass + col * (1.0 + 0.1 * bend * uRim) + rimLight;
+      vec3 baseGlass = vec3(0.04) * clamp(uGlassOpacity, 0.0, 1.0) * featherCore;
+      vec3 rimLight = ring * key * uRim * (1.0 + 0.4 * level) + haze * vec3(1.0, 1.02, 1.04);
+      orb = baseGlass + (col * (1.0 + 0.1 * bend * uRim) + rimLight) * featherLight;
       orb = grade(clamp(orb, 0.0, 1.0));
     }
-    float inside = clamp((1.0 - rho) / px + 0.5, 0.0, 1.0) * appear;
-    if (uEdgeFeather > 0.0) {
-      inside *= sstep(1.0, max(0.0, 1.0 - uEdgeFeather), rho);
-    }
-    vec3 rgb = orb * inside;
-    float baseAlpha = inside * mix(clamp(uGlassOpacity, 0.0, 1.0), 1.0, uLight);
-    fragColor = vec4(rgb, max(baseAlpha, max(max(rgb.r, rgb.g), rgb.b))) * uOpacity;
+    float baseAlpha = aaEdge * featherCore * mix(clamp(uGlassOpacity, 0.0, 1.0), 1.0, uLight);
+    vec3 orbRgb = orb * aaEdge;
+    vec3 finalRgb = clamp(orbRgb + auraRgb * (1.0 - max(baseAlpha, max(max(orbRgb.r, orbRgb.g), orbRgb.b))), 0.0, 1.0);
+    fragColor = vec4(finalRgb, clamp(max(baseAlpha, max(max(finalRgb.r, finalRgb.g), finalRgb.b)), 0.0, 1.0)) * uOpacity;
   } else {
     float span = 0.5 * res.x / min(res.x, res.y);
     vec2 u = p * (0.78 / span) + vec2(0.0, -0.15);
