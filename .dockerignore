@@ -1,0 +1,40 @@
+# VCS & CI
+.git/
+.gitignore
+.github/
+
+# Python virtual environments & caches
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Node modules & host build output (Stage 1 builds fresh Linux assets)
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+npm-debug.log*
+
+# Secrets & local overrides (pass runtime env via -e or --env-file)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.kubeconfig
+
+# Offline Phase 1 datasets / training scripts / docs / tests / manifests
+phase1_prediction/dataset/
+phase1_prediction/data_pipeline.py
+phase1_prediction/train_and_evaluate.py
+phase1_prediction/sarima_benchmark.py
+docs/*.md
+tests/
+scripts/
+k8s_manifests/
+README.md
+render.yaml
+*.log
+kintsugi-incident-report-*.json

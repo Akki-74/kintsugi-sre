@@ -1,49 +1,75 @@
 # ==============================================================================
-# Kintsugi-AI — Multi-Stage Production Dockerfile ($0 Hugging Face Spaces & Cloud)
+# Kintsugi-AI — Multi-Stage Production Dockerfile
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
-# Stage 1: Build React 19 Frontend
+# Stage 1: Build React 19 + Vite Frontend
 # ------------------------------------------------------------------------------
 FROM node:20-slim AS frontend-builder
 WORKDIR /app/frontend
 
 COPY frontend/package*.json ./
-RUN npm install
+RUN npm ci
 
 COPY frontend/ ./
 RUN npm run build
 
 # ------------------------------------------------------------------------------
-# Stage 2: Python 3.11 FastAPI Backend & SRE Command Center
+# Stage 2: Build Python Dependencies into Isolated Virtualenv
 # ------------------------------------------------------------------------------
-FROM python:3.11-slim
-WORKDIR /app
+FROM python:3.11-slim AS python-builder
+WORKDIR /build
 
-# Install system build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     g++ \
-    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python requirements
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
-# Copy application backend, prediction models, and remediation agent
-COPY backend/ ./backend/
-COPY phase1_prediction/ ./phase1_prediction/
-COPY phase2_remediation/ ./phase2_remediation/
-COPY docs/ ./docs/
+# ------------------------------------------------------------------------------
+# Stage 3: Minimal Non-Root Python 3.11 Production Runtime
+# ------------------------------------------------------------------------------
+FROM python:3.11-slim AS runtime
+WORKDIR /app
 
-# Copy built frontend assets from Stage 1
-COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
+# Runtime libs: curl (Docker HEALTHCHECK) + libgomp1 (OpenMP runtime for XGBoost)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --gid 10001 appuser \
+    && useradd --uid 10001 --gid 10001 --create-home --shell /usr/sbin/nologin appuser
 
-# Default port for Hugging Face Spaces is 7860; can be overridden via $PORT
-ENV PORT=7860
-ENV PYTHONUNBUFFERED=1
+# Copy prebuilt virtualenv from Stage 2 (without gcc/g++ build toolchain)
+COPY --from=python-builder /opt/venv /opt/venv
 
-EXPOSE 7860
+# Copy runtime backend, Phase 2 LangGraph agent, and required Phase 1 / benchmark assets
+COPY --chown=appuser:appuser backend/ ./backend/
+COPY --chown=appuser:appuser phase2_remediation/ ./phase2_remediation/
+COPY --chown=appuser:appuser phase1_prediction/__init__.py ./phase1_prediction/__init__.py
+COPY --chown=appuser:appuser phase1_prediction/saved_models/ ./phase1_prediction/saved_models/
+COPY --chown=appuser:appuser phase1_prediction/plots/ ./phase1_prediction/plots/
+COPY --chown=appuser:appuser docs/remediation_benchmark.json ./docs/remediation_benchmark.json
+
+# Copy built frontend SPA from Stage 1 (diagnostic plots are served from phase1_prediction/plots/)
+COPY --chown=appuser:appuser --from=frontend-builder /app/frontend/dist ./frontend/dist
+
+ENV PATH="/opt/venv/bin:$PATH" \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PORT=8000
+
+EXPOSE 8000
+
+USER appuser
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD ["sh", "-c", "curl -fsS http://127.0.0.1:${PORT}/health || exit 1"]
 
 CMD ["sh", "-c", "uvicorn backend.main:app --host 0.0.0.0 --port ${PORT}"]

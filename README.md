@@ -501,10 +501,10 @@ Kintsugi-AI is deployed live on Render.com at **[https://kintsugi-ai.onrender.co
   - `GROQ_MODEL`: `qwen/qwen3.8-27b`
 
 ### Option B: Multi-Stage Docker Container (`Dockerfile`)
-Kintsugi-AI also includes a multi-stage Dockerfile (Node 20 Vite build stage + Python 3.11 runtime stage) that runs anywhere Docker is supported:
+Kintsugi-AI also includes a hardened 3-stage Dockerfile (Node 20 Vite build stage, Python 3.11 dependency builder, and non-root Python 3.11 runtime stage) with `.dockerignore` exclusion:
 ```bash
 docker build -t kintsugi-ai:latest .
-docker run -p 7860:7860 -e GROQ_API_KEY="your_key" kintsugi-ai:latest
+docker run -p 8000:8000 -e GROQ_API_KEY="your_key" kintsugi-ai:latest
 ```
 
 ---
@@ -951,7 +951,8 @@ docker stop desktop-control-plane desktop-worker desktop-worker2
 ```text
 kintsugi-sre/
 ├── .github/workflows/ci.yml        # GitHub Actions CI/CD (3-Tier pytest + frontend build check)
-├── Dockerfile                      # Multi-stage Node 20 + Python 3.11 production container
+├── .dockerignore                   # Excludes venv, node_modules, .env & offline CSVs from context
+├── Dockerfile                      # Multi-stage Node 20 + Python 3.11 non-root production container
 ├── render.yaml                     # Render.com Free Cloud Web Service IaC configuration
 ├── requirements.txt                # Production Python dependencies
 ├── backend/
